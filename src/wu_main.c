@@ -49,7 +49,7 @@ create_download_directory(unsigned char dd[1024]) {
 }
 
 void
-WriteConsoleA_INF(HANDLE conScreenBuffer, enum idmsg id, void *p) {
+WriteConsoleA_INFO(HANDLE conScreenBuffer, enum idmsg id, void *p) {
     DWORD written;
     unsigned char i;
     char outConBuf[1024];
@@ -215,7 +215,7 @@ int main(void)
     cursorPosition[0].Y = 2;
 
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INF(conScreenBuffer, INF_PROMOTE_WIFIUPLOAD, NULL);
+    WriteConsoleA_INFO(conScreenBuffer, INF_PROMOTE_WIFIUPLOAD, NULL);
 
     cursorPosition[0].Y++;
 
@@ -224,7 +224,7 @@ int main(void)
     SetConsoleCursorInfo(conScreenBuffer, &cursorInfo);
 
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_SERVICE, NULL);
+    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_SERVICE, NULL);
 
     cursorPosition[0].Y++;
 
@@ -234,7 +234,7 @@ int main(void)
     if (ret != NO_ERROR || ipAddrTable[0].dwNumEntries < 2) {
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, ERR_MSG_CONNECTIVITY, NULL);
+        WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CONNECTIVITY, NULL);
 
         while (1)
             Sleep(1000);
@@ -251,23 +251,23 @@ int main(void)
 
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
+        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
+        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
         cursorPosition[0].X -= 5;
 
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
         
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
+        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
 
         SetConsoleTextAttribute(conScreenBuffer, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
         cursorPosition[0].X -= 5;
@@ -295,21 +295,21 @@ int main(void)
         cursorPosition[0].Y += 2;
 
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, INF_MSG_TWO_AVAILABLE_ADDR, NULL);
+        WriteConsoleA_INFO(conScreenBuffer, INF_MSG_TWO_AVAILABLE_ADDR, NULL);
 
         cursorPosition[0].X += 4;
         cursorPosition[0].Y += 2;
 
         pStringIpAddr1 = inet_ntoa(inaddr1);
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
+        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
         cursorPosition[0].Y++;
         pStringIpAddr2 = inet_ntoa(inaddr2);
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
+        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
         cursorPosition[0].Y++;
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, INF_MSG_CHOICE_QUESTION, NULL);
+        WriteConsoleA_INFO(conScreenBuffer, INF_MSG_CHOICE_QUESTION, NULL);
         
         do {
             ZeroMemory(&inRec, sizeof(INPUT_RECORD));
@@ -330,7 +330,7 @@ int main(void)
         cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) - 1;
 
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
 
         cursorPosition[0].Y++;
 
@@ -341,7 +341,7 @@ int main(void)
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
             SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-            WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
+            WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
             SetConsoleTextAttribute(conScreenBuffer, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
             cursorPosition[0].X -= 5;
         }
@@ -352,14 +352,14 @@ int main(void)
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
             SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-            WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
+            WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
             cursorPosition[0].X -= 5;
         }
     }
     else {
     cursorPosition[0].Y++;
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INF(conScreenBuffer, ERR_MSG_TOO_MANY_ADDR, NULL);
+    WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_TOO_MANY_ADDR, NULL);
 
     while (1)
         Sleep(1000);
@@ -369,7 +369,7 @@ int main(void)
 
     cursorPosition[0].Y += 2;;
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
+    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
 
     ZeroMemory(dd, 1024);
     create_download_directory(dd);
@@ -377,7 +377,7 @@ int main(void)
     cursorPosition[0].X += 5;
     cursorPosition[0].Y += 2;
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
+    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
     cursorPosition[0].X -= 5;
 
     s = create_socket(conScreenBuffer, &cursorPosition[0]);
@@ -394,7 +394,7 @@ int main(void)
     cursorPosition[0].Y++;
 
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_UI_TX_RX, NULL);
+    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_UI_TX_RX, NULL);
  
     for (i = 0; ewumsg[i].id != INF_WIFIUPLOAD_UI_TX_RX; i++)
         ;
@@ -410,6 +410,8 @@ int main(void)
             clearTXRXPane(conScreenBuffer, cursorPosition);
     }
 */
+    for(;;)
+        ;
     WSACleanup();
     return 0;
 }
