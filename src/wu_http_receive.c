@@ -8,7 +8,7 @@
 #include "wu_http_receive.h"
 #include "wu_txstats.h"
 #include "wu_http.h"
-#include "wu_main_loop.h"
+#include "wu_http_loop.h"
 
 static HANDLE
 create_userfile_tmp(HANDLE conScreenBuffer,
