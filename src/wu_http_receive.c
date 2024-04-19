@@ -2,13 +2,13 @@
 #include <Windows.h>
 #include <strsafe.h>
 
-#include "ewu_msg.h"
-#include "ewu_main.h"
-#include "ewu_http_nv.h"
-#include "ewu_http_receive.h"
-#include "ewu_txstats.h"
-#include "ewu_http.h"
-#include "ewu_main_loop.h"
+#include "wu_msg.h"
+#include "wu_main.h"
+#include "wu_http_nv.h"
+#include "wu_http_receive.h"
+#include "wu_txstats.h"
+#include "wu_http.h"
+#include "wu_main_loop.h"
 
 static HANDLE
 create_userfile_tmp(HANDLE conScreenBuffer,

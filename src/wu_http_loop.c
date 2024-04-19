@@ -8,9 +8,10 @@
 #include "wu_http_receive.h"
 #include "wu_http.h"
 #include "wu_http_nv.h"
+#include "wu_content.h"
 
 
-const struct _http_resources http_resources[];
+extern const struct _http_resources http_resources[];
 extern ewu_msg ewumsg[];
 
 int
@@ -24,7 +25,7 @@ http_match_resource(char *res)
     return 1;
   }
   for (i = 2; http_resources[i].resource != NULL; i++) {
-      if (strcmp(res + 1, http_resource[i].resource) == 0)
+      if (strcmp(res + 1, http_resources[i].resource) == 0)
         return i;
   }
 
@@ -41,18 +42,18 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
     return 0;
   }
 
-  if (strcmp(http_resources[i]->type, "text/html") == 0) {
+  if (strcmp(http_resources[ires].type, "text/html") == 0) {
     strcat_s(curDir, 1024, "\\html\\");
     if (!theme)
       strcat_s(curDir, 1024, "light\\");
     else
-      strcat_s(curDir, 1024, "dark\\")
+      strcat_s(curDir, 1024, "dark\\");
 
     strcat_s(curDir, 1024, http_resources[ires].resource);
-  } else if (strcmp(http_resources[i]->type, "image/png") == 0) {
+  } else if (strcmp(http_resources[ires].type, "image/png") == 0) {
     strcat_s(curDir, 1024, "\\");
     strcat_s(curDir, 1024, http_resources[ires].resource);  
-  } else if (strcmp(http_resources[i].type, "x-icon") == 0) {}
+  } else if (strcmp(http_resources[ires].type, "x-icon") == 0) {
     strcat_s(curDir, 1024, "\\");
     strcat_s(curDir, 1024, http_resources[ires].resource);
   }
@@ -65,17 +66,17 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
   return errn;
 }
 
-void
-check_cookie_theme(struct header_nv hdrnv, int *theme) {
+int
+check_cookie_theme(struct header_nv hdrnv[], int *theme) {
   int res;
 
   res = nv_find_name_client(hdrnv, "Cookie");
   if (res < 0) {
     *theme = 0;
     return 1;
-  } else if (strcmp(hdrnv[res].value, "theme=dark") == 0) {
+  } else if (strcmp(hdrnv[res].value.v, "theme=dark") == 0) {
     *theme = 1;
-  } else if (strcmp[hdrnv[res].value, "theme=light"]) {
+  } else if (strcmp(hdrnv[res].value.v, "theme=light") == 0) {
     *theme = 0;
   }
 
@@ -124,7 +125,7 @@ webuiquit:
       ires = 0;
     }   
 */
-    check_cookie_theme(hdrnv, &theme);
+    check_cookie_theme(httpnv, &theme);
 
     ZeroMemory(&httplocalres, sizeof(struct http_resource));
     if (create_local_resource(&httplocalres, ires, theme) != 0) {
@@ -145,6 +146,7 @@ webuiquit:
       WriteConsoleA_INFO(conScreenBuffer, INF_MSG_INCOMING_CONNECTION, NULL);
       cursorPosition->Y++;
     }
+  }
 /*
   } else if (strcmp(reqline.method, "POST") == 0 && strcmp(reqline.resource, "/") == 0) {
     struct user_stats upstats;
