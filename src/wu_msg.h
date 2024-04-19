@@ -66,11 +66,10 @@ enum idmsg {
     INF_ERR_END
 };
 
-struct ewu_msg {
+struct wu_msg {
 	enum idmsg	 id;
 	CONST CCHAR* Msg;
 	DWORD     	 szMsg;
 	WORD		 wAtributes[2];
 };
 
-typedef struct ewu_msg ewu_msg;

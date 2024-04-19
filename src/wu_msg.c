@@ -9,7 +9,7 @@
 
 #ifdef VERSION_FR
 
-ewu_msg ewumsg[] = {
+struct wu_msg wumsg[] = {
     {
         INF_PROMOTE_WIFIUPLOAD,
         PROMOTE_EFFERVECREANET,
@@ -231,7 +231,7 @@ ewu_msg ewumsg[] = {
 
 #else
 
-ewu_msg ewumsg[] = {
+struct wu_msg wumsg[] = {
     {
         INF_PROMOTE_WIFIUPLOAD,
         PROMOTE_EFFERVECREANET,
