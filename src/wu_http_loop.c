@@ -8,10 +8,11 @@
 #include "wu_http_receive.h"
 #include "wu_http.h"
 #include "wu_http_nv.h"
+#include "wu_content.h"
 
 
 const struct _http_resources http_resources[];
-extern ewu_msg ewumsg[];
+extern wu_msg wumsg[];
 
 int
 http_match_resource(char *res)
