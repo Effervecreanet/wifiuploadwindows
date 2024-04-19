@@ -401,7 +401,7 @@ int main(void)
     cursorPosition[0].X += (USHORT)ewumsg[i].szMsg;
     
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-/*
+
     for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
         if (http_loop(conScreenBuffer, cursorPosition, s) == 1)
             break;
@@ -409,9 +409,7 @@ int main(void)
         if (cursorPosition[0].Y >= cursorPosition[1].Y + 6)
             clearTXRXPane(conScreenBuffer, cursorPosition);
     }
-*/
-    for(;;)
-        ;
+
     WSACleanup();
     return 0;
 }
