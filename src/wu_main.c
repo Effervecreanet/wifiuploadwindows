@@ -19,7 +19,7 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "userenv.lib")
 
-extern ewu_msg ewumsg[];
+extern struct wu_msg wumsg[];
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
@@ -54,19 +54,19 @@ WriteConsoleA_INFO(HANDLE conScreenBuffer, enum idmsg id, void *p) {
     unsigned char i;
     char outConBuf[1024];
 
-    for (i = 0; ewumsg[i].id != INF_ERR_END; i++)
-        if (ewumsg[i].id == id)
+    for (i = 0; wumsg[i].id != INF_ERR_END; i++)
+        if (wumsg[i].id == id)
             break;
     
-    SetConsoleTextAttribute(conScreenBuffer, ewumsg[i].wAtributes[0]);
+    SetConsoleTextAttribute(conScreenBuffer, wumsg[i].wAtributes[0]);
 
     if (p != NULL) {
         ZeroMemory(outConBuf, 1024);
-        StringCchPrintf(outConBuf, 1024, ewumsg[i].Msg, p);
+        StringCchPrintf(outConBuf, 1024, wumsg[i].Msg, p);
         WriteConsoleA(conScreenBuffer, outConBuf, (DWORD)strlen(outConBuf), &written, NULL);
     }
     else {
-        WriteConsoleA(conScreenBuffer, ewumsg[i].Msg, ewumsg[i].szMsg, &written, NULL);
+        WriteConsoleA(conScreenBuffer, wumsg[i].Msg, wumsg[i].szMsg, &written, NULL);
     }
 
     return;
@@ -396,9 +396,9 @@ int main(void)
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
     WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_UI_TX_RX, NULL);
  
-    for (i = 0; ewumsg[i].id != INF_WIFIUPLOAD_UI_TX_RX; i++)
+    for (i = 0; wumsg[i].id != INF_WIFIUPLOAD_UI_TX_RX; i++)
         ;
-    cursorPosition[0].X += (USHORT)ewumsg[i].szMsg;
+    cursorPosition[0].X += (USHORT)wumsg[i].szMsg;
     
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
 

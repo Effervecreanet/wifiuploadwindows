@@ -2,13 +2,13 @@
 #include <Windows.h>
 #include <strsafe.h>
 
-#include "ewu_msg.h"
-#include "ewu_main.h"
-#include "ewu_http_nv.h"
-#include "ewu_http_receive.h"
-#include "ewu_txstats.h"
-#include "ewu_http.h"
-#include "ewu_main_loop.h"
+#include "wu_msg.h"
+#include "wu_main.h"
+#include "wu_http_nv.h"
+#include "wu_http_receive.h"
+#include "wu_txstats.h"
+#include "wu_http.h"
+#include "wu_http_loop.h"
 
 static HANDLE
 create_userfile_tmp(HANDLE conScreenBuffer,
@@ -50,7 +50,7 @@ create_userfile_tmp(HANDLE conScreenBuffer,
     SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
 
     err = GetLastError();
-    WriteConsoleA_INF(conScreenBuffer, ERR_MSG_CANNOT_CREATE_FILE, (void*)&err);
+    WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_FILE, (void*)&err);
     
     cursorPosition->Y++;
     SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
@@ -207,7 +207,7 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
   cursorPosition->Y += 2;
   cursorPosition->X--;
   SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-  WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL);
+  WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL);
   WriteConsoleA(conScreenBuffer, upstats->filename, (DWORD)strlen(upstats->filename), &written, NULL);
   cursorPosition->Y -= 2;
   cursorPosition->X++;
@@ -222,7 +222,7 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
   coordPerCent.Y = cursorPosition->Y;
 
   SetConsoleCursorPosition(conScreenBuffer, coordPerCent);
-  WriteConsoleA_INF(conScreenBuffer, INF_ZERO_PERCENT, NULL);
+  WriteConsoleA_INFO(conScreenBuffer, INF_ZERO_PERCENT, NULL);
 
   while(content_length > 0) {
     if (content_length < (1024 + boundarylen + 8) && content_length > 1024) {
@@ -272,14 +272,14 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
         if (averageRateTX > 1000) {
           averageRateTX /= 1000.000;
           sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-          WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_TX_SPEED_UI_GO, strAverageRateTX);
+          WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_TX_SPEED_UI_GO, strAverageRateTX);
         } else {
           sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-          WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_TX_SPEED_UI_MO, strAverageRateTX);
+          WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_TX_SPEED_UI_MO, strAverageRateTX);
         }
       } else {
         sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-        WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_TX_SPEED_UI_KO, strAverageRateTX);
+        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_TX_SPEED_UI_KO, strAverageRateTX);
       }
 
       txstats.received_size_bak = txstats.received_size;
@@ -290,10 +290,10 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
     txstats.curr_percent = (u_char)(((float)txstats.received_size / (float)txstats.total_size) * 100);
     if (txstats.curr_percent > txstats.curr_percent_bak + 2) {
       SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-      WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_ONE_PBAR, NULL);
+      WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_ONE_PBAR, NULL);
       cursorPosition->X++;
       SetConsoleCursorPosition(conScreenBuffer, coordPerCent);
-      WriteConsoleA_INF(conScreenBuffer, INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent);
+      WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent);
       txstats.curr_percent_bak += 2;
     }
 
@@ -306,13 +306,13 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
     cursorPosition->Y += 3;
     cursorPosition->X = (cursorPosition + 1)->X;
     SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-    WriteConsoleA_INF(conScreenBuffer, ERR_MSG_FAIL_TX, NULL);
+    WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_FAIL_TX, NULL);
     cursorPosition->Y++;
     return -1;
   }
 
   SetConsoleCursorPosition(conScreenBuffer, coordPerCent);
-  WriteConsoleA_INF(conScreenBuffer, INF_CENT_PERCENT, NULL);
+  WriteConsoleA_INFO(conScreenBuffer, INF_CENT_PERCENT, NULL);
 
   GetSystemTime(&txstats.end);
 

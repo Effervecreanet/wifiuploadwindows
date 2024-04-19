@@ -1,5 +1,5 @@
 #include <Windows.h>
-
+#include <strsafe.h>
 #include "wu_http_nv.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"
@@ -9,7 +9,7 @@
 #define HTTP_METHOD_POST   "POST"
 #define HTTP_VERSION       "HTTP/1.1"
 
-extern const struct _http_resources http_resources[];
+extern struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 
 errno_t
@@ -264,7 +264,7 @@ err:
 
   return ret;
 }
-
+/*
 errno_t
 redir404(int s) {
   struct http_resource ewures;
@@ -275,3 +275,4 @@ redir404(int s) {
   
   return 0;
 }
+*/
