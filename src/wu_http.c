@@ -1,3 +1,12 @@
+#include <Windows.h>
+
+#include "wu_http.h"
+#include "wu_http_nv.c"
+
+#define HTTP_METHOD_GET    "GET"
+#define HTTP_METHOD_POST   "POST"
+#define HTTP_VERSION       "HTTP/1.1"
+
 errno_t
 http_recv_reqline(struct http_reqline* reqline, int s) {
   int i;
