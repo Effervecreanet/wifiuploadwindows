@@ -1,5 +1,8 @@
 #include <Windows.h>
 #include <strsafe.h>
+#include <time.h>
+
+
 #include "wu_http_nv.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"
@@ -11,6 +14,31 @@
 
 extern struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
+
+static void create_http_header_nv(struct http_resource *res,
+                                  struct header_nv *nv,
+                                  size_t fsize);
+
+static int send_http_header_nv(struct header_nv* nv,
+                               int s);
+
+static int
+time_to_httpdate(char* http_date)
+{
+  struct tm intmv;
+  time_t now;
+
+  time(&now);
+  ZeroMemory(&intmv, sizeof(struct tm));
+  gmtime_s(&intmv, &now);
+
+  ZeroMemory(http_date, HEADER_VALUE_MAX_SIZE);
+  if (strftime((char*)http_date, HEADER_VALUE_MAX_SIZE,
+               "%a, %d %b %Y %H:%M:%S GMT", &intmv) == 0)
+    return -1;
+
+  return 1;
+}
 
 errno_t
 http_recv_reqline(struct http_reqline* reqline, int s) {
@@ -115,6 +143,71 @@ http_recv_headernv(struct header_nv* httpnv, int s) {
   return 0;
 }
 
+static void
+create_http_header_nv(struct http_resource *res, struct header_nv *nv, size_t fsize) {
+  int i = 0;
+
+  (nv + i)->name.wsite = HTTP_HEADER_CACHE_CONTROL;
+  (nv + i++)->value.pv = HTTP_HEADER_CACHE_CONTROL_VALUE;
+
+  (nv + i)->name.wsite = "Connection";
+  (nv + i++)->value.pv = "Close";
+
+  (nv + i)->name.wsite = HTTP_HEADER_CONTENT_LANGUAGE;
+  (nv + i++)->value.pv = HTTP_HEADER_CONTENT_LANGUAGE_VALUE;
+
+  (nv + i)->name.wsite = HTTP_HEADER_CONTENT_LENGTH;
+  StringCchPrintfA((nv + i++)->value.v, HEADER_VALUE_MAX_SIZE, "%lu", fsize);
+
+  (nv + i)->name.wsite = HTTP_HEADER_CONTENT_TYPE;
+  strcpy_s((nv + i++)->value.v, HEADER_VALUE_MAX_SIZE, res->type);
+
+  (nv + i)->name.wsite = HTTP_HEADER_DATE;
+  time_to_httpdate((nv + i++)->value.v);
+  /*
+  (nv + i)->name.wsite = HTTP_HEADER_KEEP_ALIVE;
+  (nv + i++)->value.pv = HTTP_HEADER_KEEP_ALIVE_VALUE;
+  */
+  (nv + i)->name.wsite = HTTP_HEADER_SERVER;
+  (nv + i++)->value.pv = HTTP_HEADER_SERVER_VALUE;
+
+  return;
+}
+
+static int
+send_http_header_nv(struct header_nv* nv, int s) {
+  int i;
+  int ret;
+
+  for (i = 0; i < HEADER_NV_MAX_SIZE && (nv + i)->name.wsite != NULL; i++) {
+    ret = send(s, (nv + i)->name.wsite, (int)strlen((nv + i)->name.wsite), 0);
+    if (ret < 1)
+      return 1;
+    
+    ret = send(s, ": ", 2, 0);
+    if (ret != 2)
+      return 2;
+
+    if ((nv + i)->value.pv != NULL) {
+      ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
+      if (ret < 1)
+        return 3;
+    }
+    else {
+      ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
+      if (ret < 1)
+        return 3;
+    }
+
+    ret = send(s, "\r\n", 2, 0);
+    if (ret != 2)
+      return 4;
+  }
+
+  return 0;
+}
+  
+
 int
 http_serv_resource(struct http_resource *res, int s,
                    struct success_info *successinfo) {
@@ -152,6 +245,10 @@ http_serv_resource(struct http_resource *res, int s,
   if (ret != 2)
     return -1;
 
+  FILE *fp;
+  fp = fopen("debug.txt", "a+");
+  fprintf(fp, "|%s|\n", res->resource);
+  fclose(fp);
   hFile = CreateFile(res->resource, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   if (hFile == INVALID_HANDLE_VALUE)
     return GetLastError();
@@ -186,7 +283,7 @@ http_serv_resource(struct http_resource *res, int s,
       StringCchPrintf(hrmn, 6, "%hu:%hu", sysTime.wHour, sysTime.wMinute);
 
     plastBS = strrchr(res->resource, '\\') + 1;
-    if (strcmp(plastBS, "accueil") == 0 || strcmp(plastBS, "erreur_fichier_nul") == 0) {
+    if (strcmp(plastBS, "index") == 0 || strcmp(plastBS, "erreur_fichier_nul") == 0) {
       pbufferout = (char*)malloc(fsize + BufferUserNameSize + 6);
       ZeroMemory(pbufferout, fsize + BufferUserNameSize + 6);
       StringCchPrintfA(pbufferout, fsize + BufferUserNameSize + 6 - 1, pbufferin, BufferUserName, hrmn);

@@ -89,13 +89,15 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s) {
   struct http_reqline reqline;
   struct header_nv httpnv[HEADER_NV_MAX_SIZE];
   unsigned char webuiquit = 0;
+  struct http_resource httplocalres;
   int s_user;
   DWORD err;
   int theme;
 
+
 webuiquit:
   s_user = accept_conn(conScreenBuffer, cursorPosition, s);
-
+  
   ZeroMemory(&reqline, sizeof(struct http_reqline));
   if (http_recv_reqline(&reqline, s_user) != 0)
     goto err;
@@ -106,15 +108,12 @@ webuiquit:
 
   if (strcmp(reqline.method, "GET") == 0) {
     int ires;
-    struct http_resource httplocalres;
+    struct http_resource httplocalres;    
 
     ires = http_match_resource(reqline.resource);
     if (ires < 0)
       goto err;
-  }
-err:
-ExitProcess(0);
-}
+
 /*
      if (strcmp(reqline.resource + 1, "quit") == 0) {
       ires = 16;
@@ -128,7 +127,7 @@ ExitProcess(0);
         goto err;
       ires = 0;
     }   
-
+*/
     check_cookie_theme(httpnv, &theme);
 
     ZeroMemory(&httplocalres, sizeof(struct http_resource));
@@ -149,20 +148,18 @@ ExitProcess(0);
       SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
       WriteConsoleA_INFO(conScreenBuffer, INF_MSG_INCOMING_CONNECTION, NULL);
       cursorPosition->Y++;
+    } else if (strcmp(reqline.method, "POST") == 0 && strcmp(reqline.resource, "/") == 0) {
+      struct user_stats upstats;
+
+      clearTXRXPane(conScreenBuffer, cursorPosition);
+      ZeroMemory(&upstats, sizeof(struct user_stats));
+      err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats);
+      cursorPosition->Y++;
     }
-
-  } else if (strcmp(reqline.method, "POST") == 0 && strcmp(reqline.resource, "/") == 0) {
-    struct user_stats upstats;
-
-    clearTXRXPane(conScreenBuffer, cursorPosition);
-    ZeroMemory(&upstats, sizeof(struct user_stats));
-    err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats);
-    cursorPosition->Y++;
   }
-
+  goto webuiquit;
 err:
   closesocket(s_user);
 
   return 0;
 }
-*/
