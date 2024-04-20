@@ -340,10 +340,6 @@ err:
   else {
     char buffer[1024];
 
-  FILE *fp;
-  fp = fopen("debug.txt", "a+");
-  fprintf(fp, "|AAAAA|%s|\n", res->resource);
-
     ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
     create_http_header_nv(res, httpnv, fsize);
 
@@ -354,12 +350,11 @@ err:
     }
 
     while (ReadFile(hFile, buffer, 1024, &read, NULL)) {
-      fprintf(fp, "%s", buffer);
       send(s, buffer, read, 0);
       if (read < 1024)
         break;
     }
-  fclose(fp);
+
     CloseHandle(hFile);
     ret = 1;
   }

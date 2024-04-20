@@ -21,23 +21,14 @@ http_match_resource(char *res)
 
   if (res && *res == '/' && *(res + 1) == '\0') {
     return 0;
-  } else if (res && *res == '/' && strcmp(res + 1, "favicon.ico") == 0) {
+  } else if (res && *res && strcmp(res + 1, "favicon.ico") == 0) {
     return 1;
   }
-    FILE *fp;
-  fp = fopen("debug.txt", "a+");
-
-
   for (i = 2; http_resources[i].resource != NULL; i++) {
-      if (strcmp(res, http_resources[i].resource) == 0) {
-        fprintf(fp, "CC%sCC", http_resources[i].resource);
-        fclose(fp);
+      if (strcmp(res + 1, http_resources[i].resource) == 0)
         return i;
-      }
-      fprintf(fp, "CC%sCC", http_resources[i].resource);
   }
-        fprintf(fp, "DD%sDD", http_resources[i].resource);
-        fclose(fp);
+
   return -1;
 }
 
@@ -61,10 +52,7 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
     strcat_s(curDir, 1024, http_resources[ires].resource);
   } else if (strcmp(http_resources[ires].type, "image/png") == 0) {
     strcat_s(curDir, 1024, "\\");
-    if (!theme)
-      strcat_s(curDir, 1024, http_resources[ires].path_theme1);
-    else
-      strcat_s(curDir, 1024, http_resources[ires].path_theme2);
+    strcat_s(curDir, 1024, http_resources[ires].resource);  
   } else if (strcmp(http_resources[ires].type, "x-icon") == 0) {
     strcat_s(curDir, 1024, "\\");
     strcat_s(curDir, 1024, http_resources[ires].resource);
@@ -123,11 +111,10 @@ webuiquit:
     struct http_resource httplocalres;    
 
     ires = http_match_resource(reqline.resource);
-/*
     if (ires < 0)
       goto err;
 
-
+/*
      if (strcmp(reqline.resource + 1, "quit") == 0) {
       ires = 16;
       webuiquit = 8;
@@ -150,10 +137,7 @@ webuiquit:
       WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_GET_RESOURCE, NULL);
       Sleep(1000);
     }
-    FILE *fp;
-    fp = fopen("debug.txt", "a+");
-    fprintf(fp, "|%s|%s|\n", httplocalres.resource, httplocalres.type);
-    fclose(fp);
+
     err = http_serv_resource(&httplocalres, s_user, NULL);
     if (err > 1) {
       cursorPosition->Y++;
@@ -173,6 +157,9 @@ webuiquit:
       cursorPosition->Y++;
     }
   }
+  goto webuiquit;
 err:
+  closesocket(s_user);
+
   return 0;
 }
