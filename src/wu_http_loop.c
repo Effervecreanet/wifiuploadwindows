@@ -52,7 +52,7 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
     strcat_s(curDir, 1024, http_resources[ires].resource);
   } else if (strcmp(http_resources[ires].type, "image/png") == 0) {
     strcat_s(curDir, 1024, "\\");
-    strcat_s(curDir, 1024, http_resources[ires].resource);  
+    strcat_s(curDir, 1024, http_resources[ires].path_theme1);  
   } else if (strcmp(http_resources[ires].type, "x-icon") == 0) {
     strcat_s(curDir, 1024, "\\");
     strcat_s(curDir, 1024, http_resources[ires].resource);
