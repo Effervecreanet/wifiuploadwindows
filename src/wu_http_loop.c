@@ -160,6 +160,28 @@ webuiquit:
       err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats);
       cursorPosition->Y++;
     }
+  } else if (strcmp(reqline.method, "POST") == 0) {
+    if (strcmp(reqline.resource + 1, "theme") == 0) {
+      int clen;
+      int idxclen, i;
+      char buffer[sizeof("theme=light")];
+      DWORD written;
+
+      idxclen = nv_find_name_client(httpnv, "Content-Length");
+      if (idxclen < 0)
+        goto err;
+
+      clen = atoi(httpnv[idxclen].value.v);
+      for (i = 0; i < clen; i++) {
+        if (recv(s_user, &buffer[i], 1, 0) != 1)
+          break;
+      }
+      WriteConsoleA(conScreenBuffer, buffer, strlen(buffer), &written, 0);
+
+
+    }
+
+
   }
 //  goto webuiquit;
 err:
