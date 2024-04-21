@@ -53,9 +53,9 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
   } else if (strcmp(http_resources[ires].type, "image/png") == 0) {
     strcat_s(curDir, 1024, "\\");
     strcat_s(curDir, 1024, http_resources[ires].path_theme1);  
-  } else if (strcmp(http_resources[ires].type, "x-icon") == 0) {
+  } else if (strcmp(http_resources[ires].type, "image/x-icon") == 0) {
     strcat_s(curDir, 1024, "\\");
-    strcat_s(curDir, 1024, http_resources[ires].resource);
+    strcat_s(curDir, 1024, http_resources[ires].path_theme1);
   }
 
   strcpy_s(lres->type, HTTP_TYPE_MAX_LENGTH, http_resources[ires].type);
@@ -140,6 +140,10 @@ webuiquit:
 
     err = http_serv_resource(&httplocalres, s_user, NULL);
     if (err > 1) {
+      FILE *fp;
+      fp = fopen("debug.txt", "a+");
+      fprintf(fp, "cannot_serv:%s:%s\n", httplocalres.resource, httplocalres.type);
+      fclose(fp);
       cursorPosition->Y++;
       SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
       WriteConsoleA_INFO(conScreenBuffer, ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err);

@@ -5,7 +5,7 @@
 
 const struct _http_resources http_resources[] = {
   {"index", "text/html", "html\\light\\index", "html\\dark\\index"},
-  {"favicon.ico", "image/x-icon", "images/favicon.ico", "images/favicon.ico"},  
+  {"favicon.ico", "image/x-icon", "images\\favicon.ico", "images\\favicon.ico"},  
   {"credits", "text/html", "html\\light\\credits", "html\\dark\\credits"},
   {"settings", "text/html", "html\\light\\settings", "html\\dark\\settings"},
   {"success", "text/html", "html\\light\\success", "html\\dark\\success"},

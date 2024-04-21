@@ -338,7 +338,7 @@ http_serv_resource(struct http_resource *res, int s,
     free(pbufferout);
 err:
     CloseHandle(hFile);
-  } else if (strcmp(res->type, "image/png") == 0) {
+  } else if (strcmp(res->type, "image/png") == 0 || strcmp(res->type, "image/x-icon") == 0) {
     char buffer[1024];
 
     ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
