@@ -165,20 +165,37 @@ webuiquit:
       int clen;
       int idxclen, i;
       char buffer[sizeof("theme=light")];
-      DWORD written;
+      int ires;
 
       idxclen = nv_find_name_client(httpnv, "Content-Length");
       if (idxclen < 0)
         goto err;
 
+      ZeroMemory(buffer, sizeof("theme=light"));
       clen = atoi(httpnv[idxclen].value.v);
       for (i = 0; i < clen; i++) {
         if (recv(s_user, &buffer[i], 1, 0) != 1)
           break;
       }
-      WriteConsoleA(conScreenBuffer, buffer, strlen(buffer), &written, 0);
+      
+      if (strcmp(buffer, "theme=dark") == 0)
+        theme = 1;
+      else
+        theme = 0;
 
-
+      for (i = 0; http_resources[i].resource != ""; i++) {
+        if (strcmp(http_resources[i].resource, "settings") == 0){
+          break;
+        }
+      }
+      ires = i;
+      ZeroMemory(&httplocalres, sizeof(struct http_resource));
+      if (create_local_resource(&httplocalres, ires, theme) != 0) {
+        cursorPosition->Y++;
+        SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
+        WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_GET_RESOURCE, NULL);
+        Sleep(1000);
+      }
     }
 
 
