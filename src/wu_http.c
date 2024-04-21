@@ -204,6 +204,8 @@ send_http_header_nv(struct header_nv* nv, int s) {
       return 4;
   }
 
+  send(s, "\r\n", 2, 0);
+
   return 0;
 }
   
@@ -247,7 +249,7 @@ http_serv_resource(struct http_resource *res, int s,
 
   FILE *fp;
   fp = fopen("debug.txt", "a+");
-  fprintf(fp, "|%s|\n", res->resource);
+  fprintf(fp, "|%s|%s|\n", res->resource, res->type);
   fclose(fp);
   hFile = CreateFile(res->resource, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   if (hFile == INVALID_HANDLE_VALUE)
@@ -303,7 +305,7 @@ http_serv_resource(struct http_resource *res, int s,
       free(pbufferin);
       pbufferoutlen = strlen(pbufferout);
     }
-    else if (strcmp(plastBS, "credits") == 0 || strcmp(plastBS, "erreur_404") == 0) {
+    else if (strcmp(plastBS, "credits") == 0 || strcmp(plastBS, "erreur_404") == 0 || strcmp(plastBS, "settings") == 0) {
       pbufferout = (char*)malloc(fsize + 6);
       ZeroMemory(pbufferout, fsize + 6);
       StringCchPrintfA(pbufferout, fsize + 6, pbufferin, hrmn);
@@ -336,8 +338,7 @@ http_serv_resource(struct http_resource *res, int s,
     free(pbufferout);
 err:
     CloseHandle(hFile);
-  }
-  else {
+  } else if (strcmp(res->type, "image/png") == 0) {
     char buffer[1024];
 
     ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
@@ -351,8 +352,9 @@ err:
 
     while (ReadFile(hFile, buffer, 1024, &read, NULL)) {
       send(s, buffer, read, 0);
+
       if (read < 1024)
-        break;
+          break;
     }
 
     CloseHandle(hFile);
