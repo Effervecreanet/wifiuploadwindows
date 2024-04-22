@@ -45,9 +45,9 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
   if (strcmp(http_resources[ires].type, "text/html") == 0) {
     strcat_s(curDir, 1024, "\\html\\");
     if (!theme)
-      strcat_s(curDir, 1024, "light\\");
-    else
       strcat_s(curDir, 1024, "dark\\");
+    else
+      strcat_s(curDir, 1024, "light\\");
 
     strcat_s(curDir, 1024, http_resources[ires].resource);
   } else if (strcmp(http_resources[ires].type, "image/png") == 0) {
@@ -191,6 +191,9 @@ webuiquit:
         WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_GET_RESOURCE, NULL);
         Sleep(1000);
       }
+
+      err = http_serv_resource(&httplocalres, s_user, NULL);
+      /* Use ret here if you want */
     }
 
 

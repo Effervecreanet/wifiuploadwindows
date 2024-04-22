@@ -6,7 +6,7 @@
 </head>
 <body style="display: block; width: 100%%; height: 900px; background: black; padding: 0; margin: 0; background: url('images/ewu_bg.png') top left; background-size: 100%% auto; background-repeat: no-repeat;">
 
-  <div style="display: block; width: 100%%; margin: 0px 0 140px 0; padding: 70px 0 0 0; height: 220px; border-bottom: 2px solid #F0B116; background: url('/images/ewu_top_bg.png') top left; background-repeat: no-repeat; background-size: 100%% 100%%;">
+  <div style="display: block; width: 100%%; margin: 0px 0 140px 0; padding: 70px 0 0 0; height: 220px; border-bottom: 2px solid #C19C00; background: url('/images/ewu_top_bg.png') top left; background-repeat: no-repeat; background-size: 100%% 100%%;">
     <p style="text-align: center; margin: 0; padding: 7px 0; color:#C19C00; font-size: 50px;">
       <a href="/" style="text-align: center; margin: 0; padding: 0; color:#C19C00; font-size: 50px; text-decoration: none;">&nbsp;</a>
     </p>
@@ -14,7 +14,7 @@
 
   <form id="form1" style="display: block; margin: 0; padding: 0;" name="form_wuup" action="/upload" method="post" enctype="multipart/form-data">
 		
-	<label for="sel" style="display: block; width: 90%%; margin: 30px 5%%; padding: 11px 0; background: #CECECE; background-image: url('images/ewu_checkedfolder.png'); background-position: 14px; background-repeat: no-repeat; color: #000000; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;">Select file to send</label>
+	<label for="sel" style="display: block; width: 90%%; margin: 30px 5%%; padding: 11px 0; background: #767676; background-image: url('images/ewu_checkedfolder.png'); background-position: 14px; background-repeat: no-repeat; color: #F2F2F2; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;">Select file to send</label>
 	
 	<input id="sel" style="display: none;" type="file" name="filename_tosend" />
 
@@ -22,16 +22,16 @@
 	
 	<div style="display: block; width: 90%%; height: 500px; margin: 0 5%%; padding: 0; font-size: 43px;">
 		<div style="display: inline-block; margin: 0; width: 45%%; padding: 0; height: 500px; float: left;">
-			<p style="margin: 7px 0; padding: 0; color: #000000;text-align: left; height: 100px;">User:</p>
-			<p style="margin: 7px 0; padding: 0; color: #000000;text-align: left; height: 200px;">File to send:</p>
-			<p style="margin: 7px 0; padding: 0; color: #000000;text-align: left;height:  100px;">Download in:</p>
-			<p style="margin: 7px 0; padding: 0; color: #000000;text-align: left; height: 100px;">transfer:</p>
+			<p style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 100px;">User:</p>
+			<p style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 200px;">File to send:</p>
+			<p style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left;height:  100px;">Download in:</p>
+			<p style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 100px;">transfer:</p>
 		</div>
 		<div style="display: inline-block; margin: 0; width: 55%%; padding: 0; height: 500px float: right;">
-			<p style="margin: 7px 0; padding: 0; color: #000000;text-align: left; height: 100px;">%s</p>
-			<p id="fn1" style="margin: 7px 0; padding: 0; color: #000000;text-align: left; height: 200px; word-wrap: break-word; ">&nbsp;</p>
-			<p style="margin: 7px 0; padding: 0; color: #000000;text-align: left; height: 100px;">Downloads</p>
-			<p id="wait1" style="margin: 7px 0; padding: 0; color: #000000;text-align: left; height: 100px; font-size: 41px;">wait file select</p>
+			<p style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 100px;">%s</p>
+			<p id="fn1" style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 200px; word-wrap: break-word; ">&nbsp;</p>
+			<p style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 100px;">Downloads</p>
+			<p id="wait1" style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 100px; font-size: 41px;">wait file select</p>
 			<script language="javascript">
 
         document.getElementById('sel').onchange = function () {
@@ -51,19 +51,18 @@
 		</div>	
 	</div>
 	
-	<label for="send" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;  background: #CECECE; background-image: url('images/ewu_send.png'); background-position: 23px; background-repeat: no-repeat; color: #000000; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;">Send</label>
+	<label for="send" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;  background: #767676; background-image: url('images/ewu_send.png'); background-position: 23px; background-repeat: no-repeat; color: #F2F2F2; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;">Send</label>
 		
 	<input id="send" style="display:none;" type="submit" value="send"/>
-
   </form>
 
-  <a href="/quit" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;   background: #CECECE; background-image: url('images/ewu_quit.png'); background-position: 14px; background-repeat: no-repeat; color: #000000;  color: #000000; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Quit the app</a>
+  <a href="/quit" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;   background: #767676; background-image: url('images/ewu_quit.png'); background-position: 14px; background-repeat: no-repeat; color: #F2F2F2;  color: #F2F2F2; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Quit the app</a>
 	
-	<div style="display: block; width: 100%%; margin: 0; padding: 80px 0 0 0; height:80px; border-top: 2px solid #F0B116;">
+	<div style="display: block; width: 100%%; margin: 0; padding: 80px 0 0 0; height:80px; border-top: 2px solid #C19C00;">
 		<a href="/credits" style="text-decoration: none; display: inline-block; width: 25%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Credits</a>
     <a href="http://www.effervecrea.net/wirelessly-get-large-file-out-of-smartphone" style="text-decoration: none; display: inline-block; width: 24%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Help</a>
-    <a href="/settings" style="text-decoration: none; display: inline-block; width: 24%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Setttings</a>
-<p style="display: inline-block; width: 25%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">%s</p>
+    <a href="/settings" style="text-decoration: none; display: inline-block; width: 24%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Settings</a>
+		<p style="display: inline-block; width: 25%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">%s</p>
 	</div>
 </body>
 </html>
