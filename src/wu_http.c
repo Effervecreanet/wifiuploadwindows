@@ -247,10 +247,6 @@ http_serv_resource(struct http_resource *res, int s,
   if (ret != 2)
     return -1;
 
-  FILE *fp;
-  fp = fopen("debug.txt", "a+");
-  fprintf(fp, "|%s|%s|\n", res->resource, res->type);
-  fclose(fp);
   hFile = CreateFile(res->resource, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   if (hFile == INVALID_HANDLE_VALUE)
     return GetLastError();

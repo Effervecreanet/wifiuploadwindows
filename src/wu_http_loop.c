@@ -113,7 +113,6 @@ webuiquit:
     ires = http_match_resource(reqline.resource);
     if (ires < 0)
       goto err;
-
 /*
      if (strcmp(reqline.resource + 1, "quit") == 0) {
       ires = 16;
@@ -140,10 +139,6 @@ webuiquit:
 
     err = http_serv_resource(&httplocalres, s_user, NULL);
     if (err > 1) {
-      FILE *fp;
-      fp = fopen("debug.txt", "a+");
-      fprintf(fp, "cannot_serv:%s:%s\n", httplocalres.resource, httplocalres.type);
-      fclose(fp);
       cursorPosition->Y++;
       SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
       WriteConsoleA_INFO(conScreenBuffer, ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err);
