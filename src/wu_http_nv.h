@@ -40,6 +40,7 @@
 #define HTTP_HEADER_VARY_VALUE          "User-Agent"
 #define HTTP_HEADER_ACCEPT_RANGES_VALUE "bytes"
 #define HTTP_HEADER_CONTENT_LANGUAGE_VALUE "fr_FR"
+#define HTTP_HEADER_LOCATION            "Location"
 
 #define HEADER_MAX_SIZE       12001
 #define HEADER_NV_MAX_SIZE    24

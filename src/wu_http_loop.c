@@ -9,10 +9,12 @@
 #include "wu_http.h"
 #include "wu_http_nv.h"
 #include "wu_content.h"
+#include "wu_http_theme.h"
 
 
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
+
 
 int
 http_match_resource(char *res)
@@ -157,46 +159,25 @@ webuiquit:
     }
   } else if (strcmp(reqline.method, "POST") == 0) {
     if (strcmp(reqline.resource + 1, "theme") == 0) {
-      int clen;
-      int idxclen, i;
-      char buffer[sizeof("theme=light")];
-      int ires;
+      struct header_nv httpnv[HEADER_NV_MAX_SIZE];
+      char cookie[48];
+      int theme;
 
-      idxclen = nv_find_name_client(httpnv, "Content-Length");
-      if (idxclen < 0)
+      if (wu_http_recv_theme(httpnv, s_user, &theme) < 0)
         goto err;
 
-      ZeroMemory(buffer, sizeof("theme=light"));
-      clen = atoi(httpnv[idxclen].value.v);
-      for (i = 0; i < clen; i++) {
-        if (recv(s_user, &buffer[i], 1, 0) != 1)
-          break;
-      }
-      
-      if (strcmp(buffer, "theme=dark") == 0)
-        theme = 1;
+      ZeroMemory(cookie, 48);
+      if (theme == 0)
+        strcpy_s(cookie, 48, "theme=dark");
       else
-        theme = 0;
+        strcpy_s(cookie, 48, "theme=light");
 
-      for (i = 0; http_resources[i].resource != ""; i++) {
-        if (strcmp(http_resources[i].resource, "settings") == 0){
-          break;
-        }
-      }
-      ires = i;
-      ZeroMemory(&httplocalres, sizeof(struct http_resource));
-      if (create_local_resource(&httplocalres, ires, theme) != 0) {
-        cursorPosition->Y++;
-        SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-        WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_GET_RESOURCE, NULL);
-        Sleep(1000);
-      }
+      if (apply_theme(s_user, &theme) < 0)
+          return -1;
 
-      err = http_serv_resource(&httplocalres, s_user, NULL);
+
       /* Use ret here if you want */
     }
-
-
   }
 //  goto webuiquit;
 err:
@@ -204,3 +185,4 @@ err:
 
   return 0;
 }
+
