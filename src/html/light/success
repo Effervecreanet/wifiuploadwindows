@@ -23,6 +23,8 @@
 
 	<a href="/" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;  background: #CECECE; background-image: url('images/ewu_send.png'); background-position: 23px; background-repeat: no-repeat; color: black; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Send another file</a>
 	
+  <a href="/openRep" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;  background: #CECECE; background-image: url('images/ewu_send.png'); background-position: 23px; background-repeat: no-repeat; color: black; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Open directory</a>
+
 	<a href="/quit" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;   background: #CECECE; background-image: url('images/ewu_quit.png'); background-position: 14px; background-repeat: no-repeat; color: black;  color: black; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Quit the app</a>
 	
 	<div style="display: block; width: 100%%; margin: 0; padding: 80px 0 0 0; height:80px; border-top: 2px solid #F0B116;">

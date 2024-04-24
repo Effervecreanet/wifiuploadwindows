@@ -100,7 +100,6 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s) {
   int theme;
 
 
-webuiquit:
   s_user = accept_conn(conScreenBuffer, cursorPosition, s);
   
   ZeroMemory(&reqline, sizeof(struct http_reqline));
@@ -116,12 +115,27 @@ webuiquit:
     struct http_resource httplocalres;    
 
     ires = http_match_resource(reqline.resource);
-    if (ires < 0)
+    if (ires < 0) {
+      check_cookie_theme(httpnv, &theme);
+
+      for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
+
+      ZeroMemory(&httplocalres, sizeof(struct http_resource));
+      if (create_local_resource(&httplocalres, ires, theme) != 0) {
+        cursorPosition->Y++;
+        SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
+        WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_GET_RESOURCE, NULL);
+        Sleep(1000);
+      }
+
+      err = http_serv_resource(&httplocalres, s_user, NULL); 
+
       goto err;
-/*
+      }
+
      if (strcmp(reqline.resource + 1, "quit") == 0) {
-      ires = 16;
-      webuiquit = 8;
+        WSACleanup();
+        ExitProcess(0);
     } else if (strcmp(reqline.resource + 1, "openRep") == 0) {
       char dd[1024];
 
@@ -131,7 +145,7 @@ webuiquit:
         goto err;
       ires = 0;
     }   
-*/
+
     check_cookie_theme(httpnv, &theme);
 
     ZeroMemory(&httplocalres, sizeof(struct http_resource));
@@ -188,7 +202,7 @@ webuiquit:
         cursorPosition->Y++;      
     }
   }
-//  goto webuiquit;
+
 err:
   closesocket(s_user);
 

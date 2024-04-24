@@ -385,10 +385,7 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
       if (strcmp(http_resources[ires].resource, "success") == 0)
         break;
   }
-  FILE *fp;
-  fp = fopen("debug.txt", "a+");
-  fprintf(fp, "%d\n", ires);
-  fclose(fp);
+
   create_local_resource(&httpres, ires, theme);
   http_serv_resource(&httpres, s, &successinfo);
   

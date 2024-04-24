@@ -363,15 +363,3 @@ err:
 
   return ret;
 }
-/*
-errno_t
-redir404(int s) {
-  struct http_resource ewures;
-
-  ZeroMemory(&ewures, sizeof(struct http_resource));
-  memcpy_s(&ewures, sizeof(struct http_resource), &http_resources[16], sizeof(struct http_resource));
-  http_serv_resource(&ewures, s, NULL);
-  
-  return 0;
-}
-*/
