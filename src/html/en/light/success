@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Wifiupload - Successful transfer</title>
+</head>
+  <body style="display: block; width: 100%%; height: 900px; background: black; padding: 0; margin: 0; background: url('images/ewu_bg.png') top left; background-size: 100%% auto; background-repeat: no-repeat;">
+    <div style="display: block; width: 100%%; margin: 0px 0 140px 0; padding: 70px 0 0 0; height: 220px; border-bottom: 2px solid #C19C00; background: url('/images/ewu_top_bg.png') top left; background-repeat: no-repeat; background-size: 100%% 100%%;">
+      <p style="text-align: center; margin: 0; padding: 7px 0; color:#C19C00; font-size: 50px;">
+        <a href="/" style="text-align: center; margin: 0; padding: 0; color:#C19C00; font-size: 50px; text-decoration: none;">&nbsp;</a>
+      </p>
+    </div>
+
+
+      <p style="display: block; width: 90%%; margin: 30px 5%%; padding: 11px 0; background: #CECECE; color: black; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;background-image: url('images/ewu_ticksuccess.png'); background-position: 14px; background-repeat: no-repeat;">Successful transfer</p>
+<p style="width: 40%%; height: 100px; position: top left; display: inline-block;font-size: 43px; margin: 5%% 5%%;top: 0;">Uploaded file:<br></p><p style="font-size: 43px; width: 40%%; height: 100px; text-align: right; display:inline-block; position: top right; font-size: 43px; margin: auto auto; padding: 20px 0 0 0; word-wrap: break-word; ">%s</p>
+<p style="width: 40%%; display: inline-block;font-size: 43px; margin: 5%% 5%%;">File size:</p><p style=" font-size: 43px; width: 40%%; text-align: right; display:inline-block; font-size: 43px; margin: 0; padding: 0;">%s</p>
+<p style=" width: 40%%; display: inline-block;font-size: 43px; margin: 5%% 5%%;">Elapsed time:</p><p style=" font-size: 43px; width: 40%%; text-align: right; display:inline-block; font-size: 43px; margin: 0; padding: 0;">%s</p>
+<p style=" width: 40%%; display: inline-block;font-size: 43px; margin: 5%% 5%%;">Average Mo/s:</p><p style=" font-size: 43px; width: 40%%; text-align: right; display:inline-block; font-size: 43px; margin: 0; padding: 0;">%s</p>
+
+    </form>
+	
+
+	<a href="/" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;  background: #CECECE; background-image: url('images/ewu_send.png'); background-position: 23px; background-repeat: no-repeat; color: black; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Send another file</a>
+	
+  <a href="/openRep" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;  background: #CECECE; background-image: url('images/ewu_openfolder.png'); background-position: 23px; background-repeat: no-repeat; color: black; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Open directory</a>
+
+	<a href="/quit" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;   background: #CECECE; background-image: url('images/ewu_quit.png'); background-position: 14px; background-repeat: no-repeat; color: black;  color: black; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Quit the app</a>
+	
+	<div style="display: block; width: 100%%; margin: 0; padding: 80px 0 0 0; height:80px; border-top: 2px solid #F0B116;">
+		<a href="/credits" style="text-decoration: none; display: inline-block; width: 25%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Credits</a>
+    <a href="http://www.effervecrea.net/wirelessly-get-large-file-out-of-smartphone" style="text-decoration: none; display: inline-block; width: 24%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Help</a>
+    <a href="/settings" style="text-decoration: none; display: inline-block; width: 24%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Setttings</a>
+<p style="display: inline-block; width: 25%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">%s</p>
+	</div>
+</body>
+</html>
