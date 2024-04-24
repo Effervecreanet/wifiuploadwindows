@@ -134,6 +134,8 @@ http_recv_headernv(struct header_nv* httpnv, int s) {
     if (strcpy_s((httpnv + i)->name.client, HEADER_NAME_MAX_SIZE, buffer) != 0)
       return EINVAL;
 
+    if (buffer[0])
+
     colon += 2;
     
     if (strcpy_s((httpnv + i)->value.v, HEADER_VALUE_MAX_SIZE, colon) != 0)

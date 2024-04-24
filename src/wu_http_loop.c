@@ -47,14 +47,17 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
   if (strcmp(http_resources[ires].type, "text/html") == 0) {
     strcat_s(curDir, 1024, "\\html\\");
     if (!theme)
-      strcat_s(curDir, 1024, "dark\\");
-    else
       strcat_s(curDir, 1024, "light\\");
+    else
+      strcat_s(curDir, 1024, "dark\\");
 
     strcat_s(curDir, 1024, http_resources[ires].resource);
   } else if (strcmp(http_resources[ires].type, "image/png") == 0) {
     strcat_s(curDir, 1024, "\\");
-    strcat_s(curDir, 1024, http_resources[ires].path_theme1);  
+    if (!theme)
+      strcat_s(curDir, 1024, http_resources[ires].path_theme1);
+    else
+      strcat_s(curDir, 1024, http_resources[ires].path_theme2);  
   } else if (strcmp(http_resources[ires].type, "image/x-icon") == 0) {
     strcat_s(curDir, 1024, "\\");
     strcat_s(curDir, 1024, http_resources[ires].path_theme1);
@@ -76,9 +79,9 @@ check_cookie_theme(struct header_nv hdrnv[], int *theme) {
   if (res < 0) {
     *theme = 0;
     return;
-  } else if (strcmp(hdrnv[res].value.v, "theme=dark") == 0) {
+  } else if (strncmp(hdrnv[res].value.v, "theme=dark", sizeof("theme=dark") - 1) == 0) {
     *theme = 1;
-  } else if (strcmp(hdrnv[res].value.v, "theme=light") == 0) {
+  } else if (strncmp(hdrnv[res].value.v, "theme=light", sizeof("theme=light") - 1) == 0) {
     *theme = 0;
   }
 
@@ -159,7 +162,6 @@ webuiquit:
     }
   } else if (strcmp(reqline.method, "POST") == 0) {
     if (strcmp(reqline.resource + 1, "theme") == 0) {
-      struct header_nv httpnv[HEADER_NV_MAX_SIZE];
       char cookie[48];
       int theme;
 
@@ -172,7 +174,7 @@ webuiquit:
       else
         strcpy_s(cookie, 48, "theme=light");
 
-      if (apply_theme(s_user, &theme) < 0)
+      if (apply_theme(s_user, cookie) < 0)
           return -1;
 
 

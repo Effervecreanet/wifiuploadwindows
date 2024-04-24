@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <stdio.h>
 
 #include "wu_http_nv.h"
 
