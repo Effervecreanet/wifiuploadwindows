@@ -10,4 +10,4 @@ struct user_stats {
 
 int receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
                 struct header_nv *httpnv, int s,
-                struct user_stats *upstats);
+                struct user_stats *upstats, int theme);

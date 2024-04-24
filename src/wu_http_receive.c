@@ -9,6 +9,11 @@
 #include "wu_txstats.h"
 #include "wu_http.h"
 #include "wu_http_loop.h"
+#include "wu_content.h"
+
+
+extern const struct _http_resources http_resources[];
+extern struct wu_msg wumsg[];
 
 static HANDLE
 create_userfile_tmp(HANDLE conScreenBuffer,
@@ -127,7 +132,7 @@ receive_MIME_header(struct user_stats *upstats, int s, unsigned short *MIMElen)
 int
 receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
             struct header_nv *httpnv, int s,
-            struct user_stats *upstats) {
+            struct user_stats *upstats, int theme) {
   unsigned short MIMElen, boundarylen;
   HANDLE hFile;
   DWORD written, tick_start, tick_end, tick_diff;
@@ -153,6 +158,7 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
 #endif
   unsigned char idxunit;
   int ret;
+  int ires;
 
   ZeroMemory(&httpres, sizeof(struct http_resource));
   ret = nv_find_name_client(httpnv, "Content-Type");
@@ -375,7 +381,15 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
     sprintf_s(successinfo.averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_KO, average_speed / 100.00);
   
   ZeroMemory(&httpres, sizeof(struct http_resource));
-  create_local_resource(&httpres, 13);
+  for (ires = 0; http_resources[ires].resource != ""; ires++) {
+      if (strcmp(http_resources[ires].resource, "success") == 0)
+        break;
+  }
+  FILE *fp;
+  fp = fopen("debug.txt", "a+");
+  fprintf(fp, "%d\n", ires);
+  fclose(fp);
+  create_local_resource(&httpres, ires, theme);
   http_serv_resource(&httpres, s, &successinfo);
   
   return 0;

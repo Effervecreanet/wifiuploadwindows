@@ -157,7 +157,7 @@ webuiquit:
 
       clearTXRXPane(conScreenBuffer, cursorPosition);
       ZeroMemory(&upstats, sizeof(struct user_stats));
-      err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats);
+      err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats, theme);
       cursorPosition->Y++;
     }
   } else if (strcmp(reqline.method, "POST") == 0) {
@@ -179,6 +179,13 @@ webuiquit:
 
 
       /* Use ret here if you want */
+    } else if (strcmp(reqline.resource + 1, "upload") == 0) {
+        struct user_stats upstats;
+
+        clearTXRXPane(conScreenBuffer, cursorPosition);
+        ZeroMemory(&upstats, sizeof(struct user_stats));
+        err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats, theme);
+        cursorPosition->Y++;      
     }
   }
 //  goto webuiquit;

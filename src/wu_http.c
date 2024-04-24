@@ -292,7 +292,7 @@ http_serv_resource(struct http_resource *res, int s,
       free(pbufferin);
       pbufferoutlen = strlen(pbufferout);
     }
-    else if (strcmp(plastBS, "succes") == 0) {
+    else if (strcmp(plastBS, "success") == 0) {
       pbufferout = (char*)malloc(fsize + 254 + 6);
       ZeroMemory(pbufferout, fsize + 254 + 6);
       StringCchPrintfA(pbufferout, fsize + 254 + 6,
