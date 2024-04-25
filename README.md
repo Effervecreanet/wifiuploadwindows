@@ -24,7 +24,7 @@ communicate between us.
 
 Mais un peu de connaissances réseaux sont quand même nécessaires.
 Comme la notation adresse IP (xx.xxx.xx.xxx). Et comme trouver l'adresse bar de
-Chrome dans Android devient de plus en plus difficile pour le néophyte.
+navigation dans Android devient de plus en plus difficile pour le néophyte.
 
 Ce logiciel ou programme est certifié fonctionner sur tout les Windows avec une
 connexion wifi. Si vous lancez l'exécutable, vous aurez certainnement des mises
