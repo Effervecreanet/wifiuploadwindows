@@ -15,7 +15,7 @@ I know that bluetooth is *super-cool-genius* but for me beyond 100 Mo it's eithe
 transfer fail or too long. And the app I show here is for _big big_ (1Go or 2Go or
 plus) like long duration video.
 
-The transfer between computer and smartphone work only on wifi domestic network.
+The transfer between computer and smartphone work only on ***domestic wifi network***.
 And doesn't work on hotel, bibliotheque and other public wifi. Because on those
 network computer and mobile exist in two distinct network that doesn't
 communicate between us.
@@ -37,10 +37,10 @@ Je sais que le bluetooth est *super-cool-génial* mais pour moi au-delà de 100m
 c'est soit un échec de transfert soit très très long.
 Et le programme qui est présenté ici s'adresse avant tout au personne voulant
 sortir des fichiers volumineux de leurs mobiles sans passer par une récupération
-USB. Volumineux veut dire entre 700mo et 3go ou 60 minutes de films et plus selon
+USB. Volumineux veut dire entre _700mo et 3go ou 60 minutes de films et plus_ selon
 les formats vidéo.
 
-L'échange entre le mobile et l'ordi ne fonctionne que sur les réseaux wifi
+L'échange entre le mobile et l'ordi ne fonctionne que sur les ***réseaux wifi***
 domestiques (ou de particuliers) et ne fonctionne pas sur les réseaux d'hôtels,
 de bibliothèques et autres wifi publiques. Car, dans ces derniers, ordinateur et
 mobile sont présents sur deux réseaux distincts et isolé chaqun de l'autre.
