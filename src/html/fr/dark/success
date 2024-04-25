@@ -52,11 +52,10 @@
 
 	<a href="/quit" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;   background: #767676; background-image: url('images/ewu_quit.png'); background-position: 14px; background-repeat: no-repeat; color: #F2F2F2;  color: #F2F2F2; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Quitter l'appli</a>
 	
-	<div style="display: block; width: 100%%; margin: 0; padding: 120px 0 0 0; height:80px; border-top: 2px solid #C19C00;">
-		<a href="/credits" style="text-decoration: none; display: inline-block; width: 24%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: left;">Credits</a>
-    <a href="https://www.effervecrea.net/wirelessly-get-large-file-out-of-smartphone" style="text-decoration: none; display: inline-block; width: 24%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Aide</a>
-    <a href="/settings" style="text-decoration: none; display: inline-block; width: 24%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Param&egrave;tre</a>
-		<p style="display: inline-block; width: 24%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: right;">%s</p>
-	</div>
+  <div style="display: block; width: 100%%; margin: 0; padding: 80px 0 0 0; height:80px; border-top: 2px solid #C19C00;">
+  <a href="/" style="text-decoration: none; display: inline-block; width: 33%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;;">Entrance</a>
+      <a href="/settings" style="text-decoration: none; display: inline-block; width: 33%%; height:50px; font-size: 50px; color: #C19C00; padding:  7x 0; margin: 0;text-align: center;">Param&egrave;tre</a>
+  <p style="display: inline-block; width: 33%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center; ">%s</p>
+</div>
 </body>
 </html>
