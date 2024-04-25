@@ -2,7 +2,7 @@
 ## Get big files out of a smartphone
 
 A little knowledge is mandatory to use this appli. Network knowledge are necessary.
-For example, the IP address notation (xx.xxx.xx.xxx). And finding the address bar
+For example, _the IP address notation_ (xx.xxx.xx.xxx). And finding the address bar
 in smartphones isn't always easy. Once you have the IP address pasted in the
 browser page address.
 
@@ -23,7 +23,7 @@ communicate between us.
 ## Sortir les gros fichiers d'un mobile
 
 Mais un peu de connaissances réseaux sont quand même nécessaires.
-Comme la notation adresse IP (xx.xxx.xx.xxx). Et comme trouver l'adresse bar de
+Comme _la notation adresse IP_ (xx.xxx.xx.xxx). Et comme trouver l'adresse bar de
 navigation dans Android devient de plus en plus difficile pour le néophyte.
 
 Ce logiciel ou programme est certifié fonctionner sur tout les Windows avec une
