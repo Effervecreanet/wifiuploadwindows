@@ -40,7 +40,7 @@ sortir des fichiers volumineux de leurs mobiles sans passer par une récupérati
 USB. Volumineux veut dire entre _700mo et 3go ou 60 minutes de films et plus_ selon
 les formats vidéo.
 
-L'échange entre le mobile et l'ordi ne fonctionne que sur les ***réseaux wifi***
-domestiques (ou de particuliers) et ne fonctionne pas sur les réseaux d'hôtels,
+L'échange entre le mobile et l'ordi ne fonctionne que sur les ***réseaux wifi
+domestiques*** (ou de particuliers) et ne fonctionne pas sur les réseaux d'hôtels,
 de bibliothèques et autres wifi publiques. Car, dans ces derniers, ordinateur et
 mobile sont présents sur deux réseaux distincts et isolé chaqun de l'autre.
