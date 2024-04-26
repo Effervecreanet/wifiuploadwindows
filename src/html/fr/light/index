@@ -36,7 +36,7 @@
 
         document.getElementById('sel').onchange = function () {
         fn1.innerHTML = this.value.substring(this.value.lastIndexOf('\\') + 1);
-        wait1.innerHTML = 'wait send';
+        wait1.innerHTML = 'Attente envoie';
         };
 
         document.getElementById('form1').onsubmit = function () {
@@ -44,7 +44,7 @@
 			wait1.style.color = 'orange';
 			return false;
 		} else {
-			wait1.innerHTML = '<strong>sending</strong>';
+			wait1.innerHTML = '<strong>En cours d\'envoie</strong>';
 		}
         };
       </script>	

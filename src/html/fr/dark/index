@@ -14,7 +14,7 @@
 
   <form id="form1" style="display: block; margin: 0; padding: 0;" name="form_wuup" action="/upload" method="post" enctype="multipart/form-data">
 		
-	<label for="sel" style="display: block; width: 90%%; margin: 30px 5%%; padding: 11px 0; background: #767676; background-image: url('images/ewu_checkedfolder.png'); background-position: 14px; background-repeat: no-repeat; color: #F2F2F2; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;">S&egrave;lectionner le fichier &agrave; envoyer</label>
+	<label for="sel" style="display: block; width: 90%%; margin: 30px 5%%; padding: 11px 0; background: #767676; background-image: url('images/ewu_checkedfolder.png'); background-position: 14px; background-repeat: no-repeat; color: #F2F2F2; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;">S&eacute;lectionner le fichier &agrave; envoyer</label>
 	
 	<input id="sel" style="display: none;" type="file" name="filename_tosend" />
 
@@ -28,15 +28,15 @@
 			<p style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 100px;">Transfer:</p>
 		</div>
 		<div style="display: inline-block; margin: 0; width: 55%%; padding: 0; height: 500px float: right;">
-			<p style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 100px;">%s</p>
-			<p id="fn1" style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 200px; word-wrap: break-word; ">&nbsp;</p>
+			<p style="margin: 7px 0; padding: 0; color: #F2F2F2; text-align: left; height: 100px;">%s</p>
+			<p id="fn1" style="margin: 7px 0; padding: 0; color: #F2F2F2; text-align: left; height: 200px; word-wrap: break-word; ">&nbsp;</p>
 			<p style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 100px;">T&eacute;l&eacute;chargement</p>
-			<p id="wait1" style="margin: 7px 0; padding: 0; color: #F2F2F2;text-align: left; height: 100px; font-size: 41px;">Attente s&eacute;l&eacute;ction fichier</p>
+			<p id="wait1" style="margin: 7px 0; padding: 0; color: #F2F2F2; text-align: left; height: 100px; font-size: 41px;">Attente s&eacute;l&eacute;ction fichier</p>
 			<script language="javascript">
 
         document.getElementById('sel').onchange = function () {
         fn1.innerHTML = this.value.substring(this.value.lastIndexOf('\\') + 1);
-        wait1.innerHTML = 'wait send';
+        wait1.innerHTML = 'attente envoie';
         };
 
         document.getElementById('form1').onsubmit = function () {
@@ -44,7 +44,7 @@
 			wait1.style.color = 'orange';
 			return false;
 		} else {
-			wait1.innerHTML = '<strong>sending</strong>';
+			wait1.innerHTML = '<strong>en cours d\'envoie</strong>';
 		}
         };
       </script>	
