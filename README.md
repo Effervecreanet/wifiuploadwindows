@@ -43,4 +43,4 @@ les formats vidéo.
 L'échange entre le mobile et l'ordi ne fonctionne que sur les ***réseaux wifi
 domestiques*** (ou de particuliers) et ne fonctionne pas sur les réseaux d'hôtels,
 de bibliothèques et autres wifi publiques. Car, dans ces derniers, ordinateur et
-mobile sont présents sur deux réseaux distincts et isolé chaqun de l'autre.
+mobile sont présents sur deux réseaux distincts et isolé chacun de l'autre.
