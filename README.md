@@ -27,7 +27,7 @@ Comme _la notation adresse IP_ (xx.xxx.xx.xxx). Et comme trouver l'adresse bar d
 navigation dans Android devient de plus en plus difficile pour le néophyte.
 
 Ce logiciel ou programme est certifié fonctionner sur tout les Windows avec une
-connexion wifi. Si vous lancez l'exécutable, vous aurez certainnement des mises
+connexion wifi. Si vous lancez l'exécutable, vous aurez certainement des mises
 en garde de sécurité voire même peut-être averto virus que vous devrait dédaigner.
 Ces mises en garde concernent l'éditeur inconnu de l'exécutable ou programme
 ainsi que le pare-feu. Pour profiter pleinement du programme vous serez obligé(e)
