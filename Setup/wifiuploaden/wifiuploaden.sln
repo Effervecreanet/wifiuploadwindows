@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "wifiuploaden", "wifiuploaden.vdproj", "{343BE377-592A-4851-97A4-5683B1C2B6C3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Default = Debug|Default
+		Release|Default = Release|Default
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{343BE377-592A-4851-97A4-5683B1C2B6C3}.Debug|Default.ActiveCfg = Debug
+		{343BE377-592A-4851-97A4-5683B1C2B6C3}.Debug|Default.Build.0 = Debug
+		{343BE377-592A-4851-97A4-5683B1C2B6C3}.Release|Default.ActiveCfg = Release
+		{343BE377-592A-4851-97A4-5683B1C2B6C3}.Release|Default.Build.0 = Release
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C2D05BF8-9ACE-4DC4-A488-A6C034D824D1}
+	EndGlobalSection
+EndGlobal
