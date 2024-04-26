@@ -44,7 +44,6 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
     return 0;
   }
 
-
   if (strcmp(http_resources[ires].type, "text/html") == 0) {
 #ifdef VERSION_FR
     strcat_s(curDir, 1024, "\\html\\fr\\");
