@@ -58,7 +58,7 @@ main(int argc, char **argv)
 	HCRYPTKEY hKey = (HCRYPTKEY)NULL;
 	CERT_NAME_BLOB SubjectBlob;
 	BYTE pbEncodedName[128];
-	DWORD cbEncodedName;
+	DWORD cbEncodedName = 128;
 	WSADATA wsaData;
 	DWORD err;
 	int s;
@@ -91,17 +91,7 @@ main(int argc, char **argv)
 		return -1;
 	}
 
-	printf("Ok\n");
-
-	if (encodeObject(ipAddr, pbEncodedAltName, cbEncodedAltName) < 0) {
-		CryptDestroyKey(hKey);
-		CryptReleaseContext(hProv, 0);
-		return -1;
-	}
-
-	printf("Ok\n");
-
-	pCertContext =  (PCCERT_CONTEXT)createCertSelfSign(&SubjectBlob, hProv, pbEncodedAltName, cbEncodedAltName);
+	pCertContext =  (PCCERT_CONTEXT)createCertSelfSign(ipAddr, &SubjectBlob, hProv);
 
 	if (pCertContext == NULL) {
 		CryptDestroyKey(hKey);
@@ -109,10 +99,8 @@ main(int argc, char **argv)
 		return -1;
 	}
 
-	printf("Ok\n");
-
 	ZeroMemory(&credHandle, sizeof(CredHandle));
-	if (getCredHandle(credHandle, pCertContext) < 0) {
+	if (getCredHandle(&credHandle, pCertContext) < 0) {
 		CertFreeCertificateContext(pCertContext);
 		LocalFree(pbEncodedAltName);
 		CryptDestroyKey(hKey);
@@ -120,7 +108,7 @@ main(int argc, char **argv)
 		return -1;
 	}
 
-	printf("Ok\n");
+	acceptSecure(s, &credHandle);
 
 	CertFreeCertificateContext(pCertContext);
 	LocalFree(pbEncodedAltName);
