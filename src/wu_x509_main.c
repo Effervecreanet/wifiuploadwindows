@@ -15,7 +15,7 @@
 
 #include <sspi.h>
 
-#include "wu_x509_helpers.h"
+#include "wu_x509_conn.h"
 
 #pragma comment (lib, "secur32.lib")
 #pragma comment (lib, "crypt32.lib")
