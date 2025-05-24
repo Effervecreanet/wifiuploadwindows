@@ -22,7 +22,7 @@ const struct _http_resources http_resources[] = {
   {"images/ewu_ticksuccess.png", "image/png", "images\\wu_images_light_theme\\ewu_ticksuccess.png", "images\\wu_images_dark_theme\\ewu_ticksuccess.png"},
   {"images/ewu_tickwrong.png", "image/png", "images\\wu_images_light_theme\\ewu_tickwrong.png", "images\\wu_images_dark_theme\\ewu_tickwrong.png"},
   {"images/ewu_top_bg.png", "image/png", "images\\wu_images_light_theme\\ewu_top_bg.png", "images\\wu_images_dark_theme\\ewu_top_bg.png"},
-  {"images/logo4_effervecreanet.png", "image/png", "images\\wu_images_light_theme\\logo4_effervecreanet.png", "images\\wu_images_dark_theme\\logo4_effervecreanet.png"},
+  {"images/logo6_effervecreanet.png", "image/png", "images\\wu_images_light_theme\\logo6_effervecreanet.png", "images\\wu_images_dark_theme\\logo6_effervecreanet.png"},
   {"quit", NULL, NULL, NULL},
   {"openRep", NULL, NULL, NULL},
   {NULL, NULL, NULL, NULL}
