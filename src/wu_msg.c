@@ -180,6 +180,19 @@ struct wu_msg wumsg[] = {
         {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
     },
     {
+	    ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY,
+	    "Impossible de cr" "\xE9" "er le r" "\xE9" "pertoire (%s)",
+	    sizeof("Impossible de cr" "\xE9" "er le r" "\xE9" "pertoire (%s)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+    },
+    {
+	    ERR_MSG_CANNOT_CREATE_LOG_FILE,
+	    "Impossible de cr" "\xE9" "er le fichier de log (%s)",
+	    sizeof("Impossible de cr" "\xE9" "er le fichier de log (%s)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	    
+    },
+    {
         INF_ZERO_PERCENT,
         "   0 %",
         sizeof("   0 %") - 1,
@@ -400,6 +413,19 @@ struct wu_msg wumsg[] = {
         "Cannot create the file: disk is full or unsufficients permission (%i)",
         sizeof("Cannot create the file: disk is full or unsufficients permission (%i)") - 1,
         {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+    },
+    {
+	    ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY,
+	    "Cannot create \"log\" directory",
+	    sizeof("Cannot create \"log\" directory") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+    },
+    {
+	    ERRMSG_CANNOT_CREATE_LOG_FILE,
+	    "Cannot create log file (%)",
+	    sizeof("Cannot create log file (%)"),
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	    
     },
     {
         INF_ZERO_PERCENT,

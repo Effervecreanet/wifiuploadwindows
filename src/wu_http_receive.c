@@ -132,7 +132,8 @@ receive_MIME_header(struct user_stats *upstats, int s, unsigned short *MIMElen)
 int
 receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
             struct header_nv *httpnv, int s,
-            struct user_stats *upstats, int theme) {
+            struct user_stats *upstats, int theme,
+			int *bytesent) {
   unsigned short MIMElen, boundarylen;
   HANDLE hFile;
   DWORD written, tick_start, tick_end, tick_diff;
@@ -191,7 +192,7 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
     recv(s, buffer, boundarylen + 8, 0);
     ZeroMemory(&httpres, sizeof(struct http_resource));
     create_local_resource(&httpres, 12);
-    http_serv_resource(&httpres, s, NULL);
+    http_serv_resource(&httpres, s, NULL, bytesent);
     return -1;
   }
 
@@ -387,7 +388,7 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
   }
 
   create_local_resource(&httpres, ires, theme);
-  http_serv_resource(&httpres, s, &successinfo);
+  http_serv_resource(&httpres, s, &successinfo, bytesent);
   
   return 0;
 }

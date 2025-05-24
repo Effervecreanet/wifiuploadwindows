@@ -5,6 +5,7 @@
 #include <strsafe.h>
 #include <stdio.h>
 #include <locale.h>
+#include <sys\stat.h>
 
 
 #include "wu_msg.h"
@@ -20,6 +21,7 @@
 #pragma comment(lib, "userenv.lib")
 
 extern struct wu_msg wumsg[];
+FILE *fp_log;
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
@@ -28,6 +30,7 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
     case CTRL_CLOSE_EVENT:
     case CTRL_LOGOFF_EVENT:
     case CTRL_SHUTDOWN_EVENT:
+		fclose(fp_log);
         WSACleanup();
         ExitProcess(TRUE);
     default:
@@ -169,6 +172,12 @@ int main(void)
     struct in_addr inaddr;
     unsigned char i;
     int s;
+    struct _stat statbuff;
+    char logentry[256];
+    SYSTEMTIME systime;
+    char errMsgFormatStr[127];
+    char logpath[sizeof("logs\\1970\\01\\01\\log_19700101.txt")];
+    char log_filename[sizeof("log_19700101.txt")];
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
     SetConsoleTitleA(CONSOLE_TITLE);
@@ -402,9 +411,102 @@ int main(void)
     
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
 
+    ret = _stat("logs", &statbuff);
+    if (ret) {
+	    if (_mkdir("logs")) {
+		INPUT_RECORD inRec;
+		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
+			if (inRec.Event.KeyEvent.bKeyDown != TRUE)
+			    continue;
+		        WSACleanup();
+		        return 2;
+		    }
+	    } else {
+logyear:	INPUT_RECORD inRec;
+
+		GetSystemTime(&systime);
+		ZeroMemory(logpath, sizeof("logs\\1970\\01\\01\\log_19700101.txt"));
+		ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+		sprintf(logpath, "logs\\%i", systime.wYear);
+		
+		if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
+			INPUT_RECORD inRec;
+			WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
+				if (inRec.Event.KeyEvent.bKeyDown != TRUE)
+				    continue;
+				WSACleanup();
+				return 2;
+		    }
+		} else {
+			ZeroMemory(logpath, sizeof("logs\\1970\\01\\01\\log_19700101.txt"));
+			if (systime.wMonth < 10)
+				sprintf(logpath, "logs\\%i\\0%i", systime.wYear, systime.wMonth);
+			else
+				sprintf(logpath, "logs\\%i\\%i", systime.wYear, systime.wMonth);
+			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
+				INPUT_RECORD inRec;
+				WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
+					if (inRec.Event.KeyEvent.bKeyDown != TRUE)
+					    continue;
+				WSACleanup();
+				return 2;
+			        }
+			} else {
+				ZeroMemory(logpath, sizeof("logs\\1970\\01\\01\\log_19700101.txt"));
+				if (systime.wMonth < 10) {
+					if (systime.wDay < 10) {
+						sprintf(logpath, "logs\\%i\\0%i\\0%i", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf(log_filename, "log_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+					} else {
+						sprintf(logpath, "logs\\%i\\0%i\\%i", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf(log_filename, "log_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+					}
+				} else if (systime.wDay < 10) {
+					sprintf(logpath, "logs\\%i\\%i\\0%i", systime.wYear, systime.wMonth, systime.wDay);
+					sprintf(log_filename, "log_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+				} else {
+					sprintf(logpath, "logs\\%i\\%i\\%i", systime.wYear, systime.wMonth, systime.wDay);
+					sprintf(log_filename, "log_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+				}
+
+				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
+					INPUT_RECORD inRec;
+					WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
+						if (inRec.Event.KeyEvent.bKeyDown != TRUE)
+						    continue;
+					WSACleanup();
+					return 2;
+					}
+				}
+			}
+		}		
+	}
+    } else {
+	    goto logyear;
+    }
+
+    strcat(logpath, "\\");
+    strcat(logpath, log_filename);
+
+    fp_log = fopen(logpath, "a+");
+    if (!fp_log) {
+		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
+		WSACleanup();
+		return 3;
+    }
+
     for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
-        if (http_loop(conScreenBuffer, cursorPosition, s) == 1)
-            break;
+        ret = http_loop(conScreenBuffer, cursorPosition, s, logentry);
+
+		fprintf(fp_log, logentry);
+		fflush(fp_log);
+
+		if (ret == 1)
+			break;
 
         if (cursorPosition[0].Y >= cursorPosition[1].Y + 6)
             clearTXRXPane(conScreenBuffer, cursorPosition);

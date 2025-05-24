@@ -20,7 +20,7 @@ static void create_http_header_nv(struct http_resource *res,
                                   size_t fsize);
 
 static int send_http_header_nv(struct header_nv* nv,
-                               int s);
+                               int s, int *bytesent);
 
 static int
 time_to_httpdate(char* http_date)
@@ -179,7 +179,7 @@ create_http_header_nv(struct http_resource *res, struct header_nv *nv, size_t fs
 }
 
 static int
-send_http_header_nv(struct header_nv* nv, int s) {
+send_http_header_nv(struct header_nv* nv, int s, int *bytesent) {
   int i;
   int ret;
 
@@ -188,27 +188,40 @@ send_http_header_nv(struct header_nv* nv, int s) {
     if (ret < 1)
       return 1;
     
+	*bytesent += ret;
+
     ret = send(s, ": ", 2, 0);
     if (ret != 2)
       return 2;
+
+	*bytesent += ret;
 
     if ((nv + i)->value.pv != NULL) {
       ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
       if (ret < 1)
         return 3;
+
+	*bytesent += ret;
     }
     else {
       ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
       if (ret < 1)
         return 3;
+
+	*bytesent += ret;
     }
 
     ret = send(s, "\r\n", 2, 0);
+
+	*bytesent += ret;
+
     if (ret != 2)
       return 4;
   }
 
   send(s, "\r\n", 2, 0);
+
+	*bytesent += ret;
 
   return 0;
 }
@@ -216,7 +229,8 @@ send_http_header_nv(struct header_nv* nv, int s) {
 
 int
 http_serv_resource(struct http_resource *res, int s,
-                   struct success_info *successinfo) {
+                   struct success_info *successinfo,
+				   int *bytesent) {
   HANDLE hFile;
   DWORD fsize, read, err;
   DWORD BufferUserNameSize = 254;
@@ -233,23 +247,35 @@ http_serv_resource(struct http_resource *res, int s,
   if (ret != sizeof(HTTP_VERSION) - 1)
     return -1;
 
+	*bytesent += ret;
+
   if (send(s, " ", 1, 0) != 1)
     return -1;
+
+	*bytesent += ret;
 
   ret = send(s, HTTP_CODE_STATUS_OK_STR, sizeof(HTTP_CODE_STATUS_OK_STR) - 1, 0);
   if (ret != sizeof(HTTP_CODE_STATUS_OK_STR) - 1)
     return -1;
 
+	*bytesent += ret;
+
   if (send(s, " ", 1, 0) != 1)
     return -1;
+
+	*bytesent += ret;
 
   ret = send(s, HTTP_STRING_STATUS_OK, sizeof(HTTP_STRING_STATUS_OK) - 1, 0);
   if (ret != sizeof(HTTP_STRING_STATUS_OK) - 1)
     return -1;
 
+	*bytesent += ret;
+
   ret = send(s, "\r\n", 2, 0);
   if (ret != 2)
     return -1;
+
+	*bytesent += ret;
 
   hFile = CreateFile(res->resource, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   if (hFile == INVALID_HANDLE_VALUE)
@@ -320,7 +346,7 @@ http_serv_resource(struct http_resource *res, int s,
     ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
     create_http_header_nv(res, httpnv, pbufferoutlen);
 
-    ret = send_http_header_nv(httpnv, s);
+    ret = send_http_header_nv(httpnv, s, bytesent);
     if (ret > 0) {
       if (pbufferout)
         free(pbufferout);
@@ -328,11 +354,14 @@ http_serv_resource(struct http_resource *res, int s,
       return 8;
     }
 
-    if (send(s, pbufferout, (int)pbufferoutlen, 0) <= 0) {
+	ret = send(s, pbufferout, (int)pbufferoutlen, 0);
+	if (ret <= 0) {
       free(pbufferout);
       CloseHandle(hFile);
       return 10;
     }
+
+	*bytesent += ret;
 
     ret = 0;
     free(pbufferout);
@@ -344,14 +373,18 @@ err:
     ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
     create_http_header_nv(res, httpnv, fsize);
 
-    ret = send_http_header_nv(httpnv, s);
+    ret = send_http_header_nv(httpnv, s, bytesent);
     if (ret > 0) {
       CloseHandle(hFile);
       return 11;
     }
 
+	*bytesent += ret;
+
     while (ReadFile(hFile, buffer, 1024, &read, NULL)) {
-      send(s, buffer, read, 0);
+      ret = send(s, buffer, read, 0);
+
+		*bytesent += ret;
 
       if (read < 1024)
           break;

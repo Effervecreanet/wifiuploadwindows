@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <strsafe.h>
+#include <time.h>
 
 #include "wu_msg.h"
 #include "wu_main.h"
@@ -14,6 +15,7 @@
 
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
+extern FILE *fp_log;
 
 
 int
@@ -34,14 +36,14 @@ http_match_resource(char *res)
   return -1;
 }
 
-errno_t
+int
 create_local_resource(struct http_resource *lres, int ires, int theme) {
   unsigned char curDir[1024];
   int errn;
 
   ZeroMemory(curDir, 1024);
   if (!GetCurrentDirectoryA(1024, curDir)) {
-    return 0;
+    return 1;
   }
 
   if (strcmp(http_resources[ires].type, "text/html") == 0) {
@@ -71,9 +73,7 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
   strcpy_s(lres->type, HTTP_TYPE_MAX_LENGTH, http_resources[ires].type);
   strcpy_s(lres->resource, HTTP_RESSOURCE_MAX_LENGTH, curDir);
 
-  _get_errno(&errn);
-
-  return errn;
+  return 0;
 }
 
 void
@@ -95,7 +95,7 @@ check_cookie_theme(struct header_nv hdrnv[], int *theme) {
 
 
 int
-http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s) {
+http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s, char logentry[256]) {
   struct http_reqline reqline;
   struct header_nv httpnv[HEADER_NV_MAX_SIZE];
   unsigned char webuiquit = 0;
@@ -103,9 +103,16 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s) {
   int s_user;
   DWORD err;
   int theme;
+  char ipaddrstr[16];
+  int errn;
+	char log_timestr[42];
+	struct tm *tmval;
+	time_t wutime;
+	int bytesent;
 
-
-  s_user = accept_conn(conScreenBuffer, cursorPosition, s);
+	bytesent = 0;
+  memset(ipaddrstr, 0, 16);
+  s_user = accept_conn(conScreenBuffer, cursorPosition, s, ipaddrstr);
   
   ZeroMemory(&reqline, sizeof(struct http_reqline));
   if (http_recv_reqline(&reqline, s_user) != 0)
@@ -133,7 +140,7 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s) {
         Sleep(1000);
       }
 
-      err = http_serv_resource(&httplocalres, s_user, NULL); 
+      err = http_serv_resource(&httplocalres, s_user, NULL, &bytesent); 
 
       goto err;
       }
@@ -161,7 +168,7 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s) {
       Sleep(1000);
     }
 
-    err = http_serv_resource(&httplocalres, s_user, NULL);
+    err = http_serv_resource(&httplocalres, s_user, NULL, &bytesent);
     if (err > 1) {
       cursorPosition->Y++;
       SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
@@ -176,7 +183,7 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s) {
 
       clearTXRXPane(conScreenBuffer, cursorPosition);
       ZeroMemory(&upstats, sizeof(struct user_stats));
-      err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats, theme);
+      err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
       cursorPosition->Y++;
     }
   } else if (strcmp(reqline.method, "POST") == 0) {
@@ -203,10 +210,21 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s) {
 
         clearTXRXPane(conScreenBuffer, cursorPosition);
         ZeroMemory(&upstats, sizeof(struct user_stats));
-        err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats, theme);
+        err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
         cursorPosition->Y++;      
     }
   }
+
+	ZeroMemory(logentry, 256);
+	ZeroMemory(log_timestr, 42);
+
+	time(&wutime);
+	tmval = localtime(&wutime);
+
+	strftime(log_timestr, 42, "%d/%b/%Y:%T -0600", tmval);
+	sprintf(logentry, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddrstr, log_timestr,
+														   reqline.method, reqline.resource,
+														   reqline.version, bytesent);
 
 err:
   closesocket(s_user);

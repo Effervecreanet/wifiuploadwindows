@@ -64,7 +64,7 @@ bind_socket(HANDLE conScreenBuffer, COORD* cursorPosition, int s, struct in_addr
 }
 
 int
-accept_conn(HANDLE conScreenBuffer, COORD* cursorPosition, int s) {
+accept_conn(HANDLE conScreenBuffer, COORD* cursorPosition, int s, char ipaddrstr[16]) {
   int s_user, sainLen;
   struct sockaddr_in sainUser;
 
@@ -88,8 +88,12 @@ accept_conn(HANDLE conScreenBuffer, COORD* cursorPosition, int s) {
 
       Sleep(100);
     }
-    else
+    else {
+	    char *ipstr;
+	    ipstr = inet_ntoa(sainUser.sin_addr);
+	    memcpy(ipaddrstr, ipstr, strlen(ipstr));
       break;
+    }
   }
 
 
