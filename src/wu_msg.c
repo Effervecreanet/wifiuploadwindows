@@ -421,7 +421,7 @@ struct wu_msg wumsg[] = {
 	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
     },
     {
-	    ERRMSG_CANNOT_CREATE_LOG_FILE,
+	    ERR_MSG_CANNOT_CREATE_LOG_FILE,
 	    "Cannot create log file (%)",
 	    sizeof("Cannot create log file (%)"),
 	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
