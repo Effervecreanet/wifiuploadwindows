@@ -176,7 +176,7 @@ int main(void)
     char logentry[256];
     SYSTEMTIME systime;
     char errMsgFormatStr[127];
-    char logpath[sizeof("logs\\1970\\01\\01\\log_19700101.txt")];
+    char logpath[512];
     char log_filename[sizeof("log_19700101.txt")];
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
@@ -411,9 +411,11 @@ int main(void)
     
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
 
-    ret = _stat("logs", &statbuff);
+	ZeroMemory(logpath, 512);
+	sprintf(logpath, "%s\\%s", getenv("USERPROFILE"), LOG_DIRECTORY);
+    ret = _stat(logpath, &statbuff);
     if (ret) {
-	    if (_mkdir("logs")) {
+	    if (_mkdir(logpath)) {
 		INPUT_RECORD inRec;
 		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
@@ -424,11 +426,14 @@ int main(void)
 		    }
 	    } else {
 logyear:	INPUT_RECORD inRec;
+			char wYearStr[5];
 
 		GetSystemTime(&systime);
-		ZeroMemory(logpath, sizeof("logs\\1970\\01\\01\\log_19700101.txt"));
 		ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-		sprintf(logpath, "logs\\%i", systime.wYear);
+			ZeroMemory(wYearStr, 5);
+			sprintf(wYearStr, "%i", systime.wYear);
+			strcat(logpath, "\\");
+			strcat(logpath, wYearStr);
 		
 		if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 			INPUT_RECORD inRec;
@@ -440,11 +445,19 @@ logyear:	INPUT_RECORD inRec;
 				return 2;
 		    }
 		} else {
-			ZeroMemory(logpath, sizeof("logs\\1970\\01\\01\\log_19700101.txt"));
-			if (systime.wMonth < 10)
-				sprintf(logpath, "logs\\%i\\0%i", systime.wYear, systime.wMonth);
-			else
-				sprintf(logpath, "logs\\%i\\%i", systime.wYear, systime.wMonth);
+			char wMonthStr[3];
+			
+			if (systime.wMonth < 10) {
+				ZeroMemory(wMonthStr, 3);
+				sprintf(wMonthStr, "0%i", systime.wMonth);
+				strcat(logpath, "\\");
+				strcat(logpath, wMonthStr);
+			} else {
+				ZeroMemory(wMonthStr, 3);
+				sprintf(wMonthStr, "%i", systime.wMonth);
+				strcat(logpath, "\\");
+				strcat(logpath, wMonthStr);
+			}
 			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 				INPUT_RECORD inRec;
 				WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
@@ -455,21 +468,34 @@ logyear:	INPUT_RECORD inRec;
 				return 2;
 			        }
 			} else {
-				ZeroMemory(logpath, sizeof("logs\\1970\\01\\01\\log_19700101.txt"));
+				char wDayStr[3];
+
 				if (systime.wMonth < 10) {
 					if (systime.wDay < 10) {
-						sprintf(logpath, "logs\\%i\\0%i\\0%i", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf(wDayStr, "0%i", systime.wDay);
+						strcat(logpath, "\\");
+						strcat(logpath, wDayStr);
+						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
 						sprintf(log_filename, "log_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					} else {
-						sprintf(logpath, "logs\\%i\\0%i\\%i", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf(wDayStr, "%i", systime.wDay);
+						strcat(logpath, "\\");
+						strcat(logpath, wDayStr);
+						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
 						sprintf(log_filename, "log_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					}
 				} else if (systime.wDay < 10) {
-					sprintf(logpath, "logs\\%i\\%i\\0%i", systime.wYear, systime.wMonth, systime.wDay);
-					sprintf(log_filename, "log_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf(wDayStr, "0%i", systime.wDay);
+						strcat(logpath, "\\");
+						strcat(logpath, wDayStr);
+						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+						sprintf(log_filename, "log_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				} else {
-					sprintf(logpath, "logs\\%i\\%i\\%i", systime.wYear, systime.wMonth, systime.wDay);
-					sprintf(log_filename, "log_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf(wDayStr, "%i", systime.wDay);
+						strcat(logpath, "\\");
+						strcat(logpath, wDayStr);
+						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+						sprintf(log_filename, "log_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				}
 
 				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
