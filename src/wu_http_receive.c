@@ -14,6 +14,8 @@
 
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
+extern FILE *fp_log;
+
 
 static HANDLE
 create_userfile_tmp(HANDLE conScreenBuffer,
@@ -64,6 +66,7 @@ create_userfile_tmp(HANDLE conScreenBuffer,
       Sleep(1000);
 
     WSACleanup();
+	fclose(fp_log);
     ExitProcess(5);
   }
 

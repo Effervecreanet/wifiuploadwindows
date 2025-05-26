@@ -147,6 +147,7 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s, char logentry[25
 
      if (strcmp(reqline.resource + 1, "quit") == 0) {
         WSACleanup();
+		fclose(fp_log);
         ExitProcess(0);
     } else if (strcmp(reqline.resource + 1, "openRep") == 0) {
       char dd[1024];
