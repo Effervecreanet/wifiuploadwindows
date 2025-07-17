@@ -71,7 +71,7 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
 
 
   strcpy_s(lres->type, HTTP_TYPE_MAX_LENGTH, http_resources[ires].type);
-  strcpy_s(lres->resource, HTTP_RESSOURCE_MAX_LENGTH, curDir);
+  strcpy_s(lres->resource, HTTP_RESSOURCE_MAX_LENGTH - 1, curDir);
 
   return 0;
 }
