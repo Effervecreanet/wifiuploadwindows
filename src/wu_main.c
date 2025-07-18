@@ -1,3 +1,8 @@
+/*
+	Augmenter le HTTP_RESSOURCE_MAX_SIZE
+	Bien positioner le curseur apres "choix ? "
+	Verifier le champ Host navigateur client
+*/
 #include <Windows.h>
 #include <WinSock.h>
 #include <iphlpapi.h>
@@ -19,18 +24,33 @@
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "userenv.lib")
+#pragma comment(lib, "ncrypt.lib")
+
+DWORD WINAPI wu_x509_func(struct paramThread *prThread);
 
 extern struct wu_msg wumsg[];
-FILE *fp_log;
+FILE *fp_httplog;
+FILE *fp_httpslog;
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
 {
+	SYSTEMTIME systime;
+
     switch (dwCtrlType) {
     case CTRL_CLOSE_EVENT:
     case CTRL_LOGOFF_EVENT:
     case CTRL_SHUTDOWN_EVENT:
-		fclose(fp_log);
+		GetLocalTime(&systime);
+
+		fprintf(fp_httplog, "Close log at %i:%i:%i and quit the app.",
+						    systime.wHour, systime.wMinute, systime.wDay);
+		fclose(fp_httplog);
+
+		fprintf(fp_httpslog, "Close log at %i:%i:%i and quit the app.",
+						    systime.wHour, systime.wMinute, systime.wDay);
+		fclose(fp_httpslog);
+
         WSACleanup();
         ExitProcess(TRUE);
     default:
@@ -176,8 +196,13 @@ int main(void)
     char logentry[256];
     SYSTEMTIME systime;
     char errMsgFormatStr[127];
-    char logpath[512];
-    char log_filename[sizeof("log_19700101.txt")];
+    char httplogpath[512];
+    char httpslogpath[512];
+    char httplog_filename[sizeof("httplog_19700101.txt")];
+    char httpslog_filename[sizeof("httpslog_19700101.txt")];
+	struct paramThread prThread;
+	DWORD trd_id;
+		
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
     SetConsoleTitleA(CONSOLE_TITLE);
@@ -331,12 +356,13 @@ int main(void)
             dwUsrChoice = atoi((const char*)&inRec.Event.KeyEvent.uChar.AsciiChar);
         } while (dwUsrChoice >= ipAddrTable->dwNumEntries || dwUsrChoice == 0);
 
-        cursorPosition[0].X += sizeof(INF_MSG_CHOICE_QUESTION) + 5;
+        cursorPosition[0].X += sizeof(INF_MSG_CHOICE_QUESTION) + 4;
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
         WriteConsoleA(conScreenBuffer, &inRec.Event.KeyEvent.uChar.AsciiChar, 1, &written, NULL);
 
+
         cursorPosition[0].Y += 2;
-        cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 5;
+        cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 4;
 
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
         WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
@@ -411,11 +437,11 @@ int main(void)
     
     SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
 
-	ZeroMemory(logpath, 512);
-	sprintf(logpath, "%s\\%s", getenv("USERPROFILE"), LOG_DIRECTORY);
-    ret = _stat(logpath, &statbuff);
+	ZeroMemory(httplogpath, 512);
+	sprintf(httplogpath, "%s\\%s", getenv("USERPROFILE"), LOG_DIRECTORY);
+    ret = _stat(httplogpath, &statbuff);
     if (ret) {
-	    if (_mkdir(logpath)) {
+	    if (_mkdir(httplogpath)) {
 		INPUT_RECORD inRec;
 		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
@@ -428,16 +454,17 @@ int main(void)
 logyear:	INPUT_RECORD inRec;
 			char wYearStr[5];
 
-		GetSystemTime(&systime);
-		ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+		GetLocalTime(&systime);
+		ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
+		ZeroMemory(httpslog_filename, sizeof("httpslog_19700101.txt"));
 			ZeroMemory(wYearStr, 5);
 			sprintf(wYearStr, "%i", systime.wYear);
-			strcat(logpath, "\\");
-			strcat(logpath, wYearStr);
+			strcat(httplogpath, "\\");
+			strcat(httplogpath, wYearStr);
 		
-		if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
+		if (_stat(httplogpath, &statbuff) && _mkdir(httplogpath)) {
 			INPUT_RECORD inRec;
-			WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+			WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, httplogpath);
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
 				if (inRec.Event.KeyEvent.bKeyDown != TRUE)
 				    continue;
@@ -450,17 +477,17 @@ logyear:	INPUT_RECORD inRec;
 			if (systime.wMonth < 10) {
 				ZeroMemory(wMonthStr, 3);
 				sprintf(wMonthStr, "0%i", systime.wMonth);
-				strcat(logpath, "\\");
-				strcat(logpath, wMonthStr);
+				strcat(httplogpath, "\\");
+				strcat(httplogpath, wMonthStr);
 			} else {
 				ZeroMemory(wMonthStr, 3);
 				sprintf(wMonthStr, "%i", systime.wMonth);
-				strcat(logpath, "\\");
-				strcat(logpath, wMonthStr);
+				strcat(httplogpath, "\\");
+				strcat(httplogpath, wMonthStr);
 			}
-			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
+			if (_stat(httplogpath, &statbuff) && _mkdir(httplogpath)) {
 				INPUT_RECORD inRec;
-				WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+				WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, httplogpath);
 				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
 					if (inRec.Event.KeyEvent.bKeyDown != TRUE)
 					    continue;
@@ -473,34 +500,42 @@ logyear:	INPUT_RECORD inRec;
 				if (systime.wMonth < 10) {
 					if (systime.wDay < 10) {
 						sprintf(wDayStr, "0%i", systime.wDay);
-						strcat(logpath, "\\");
-						strcat(logpath, wDayStr);
-						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf(log_filename, "log_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						strcat(httplogpath, "\\");
+						strcat(httplogpath, wDayStr);
+						ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
+						sprintf(httplog_filename, "httplog_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						ZeroMemory(httpslog_filename, sizeof("httpslog_19700101.txt"));
+						sprintf(httpslog_filename, "httpslog_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					} else {
 						sprintf(wDayStr, "%i", systime.wDay);
-						strcat(logpath, "\\");
-						strcat(logpath, wDayStr);
-						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf(log_filename, "log_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						strcat(httplogpath, "\\");
+						strcat(httplogpath, wDayStr);
+						ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
+						sprintf(httplog_filename, "httplog_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						ZeroMemory(httpslog_filename, sizeof("httplogs_19700101.txt"));
+						sprintf(httpslog_filename, "httpslog_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					}
 				} else if (systime.wDay < 10) {
 						sprintf(wDayStr, "0%i", systime.wDay);
-						strcat(logpath, "\\");
-						strcat(logpath, wDayStr);
-						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf(log_filename, "log_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						strcat(httplogpath, "\\");
+						strcat(httplogpath, wDayStr);
+						ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
+						sprintf(httplog_filename, "httplog_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						ZeroMemory(httpslog_filename, sizeof("httpslog_19700101.txt"));
+						sprintf(httpslog_filename, "httpslog_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				} else {
 						sprintf(wDayStr, "%i", systime.wDay);
-						strcat(logpath, "\\");
-						strcat(logpath, wDayStr);
-						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf(log_filename, "log_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						strcat(httplogpath, "\\");
+						strcat(httplogpath, wDayStr);
+						ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
+						sprintf(httplog_filename, "httplog_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						ZeroMemory(httpslog_filename, sizeof("httpslog_19700101.txt"));
+						sprintf(httpslog_filename, "httpslog_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				}
 
-				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
+				if (_stat(httplogpath, &statbuff) && _mkdir(httplogpath)) {
 					INPUT_RECORD inRec;
-					WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+					WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, httplogpath);
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
 						if (inRec.Event.KeyEvent.bKeyDown != TRUE)
 						    continue;
@@ -515,22 +550,47 @@ logyear:	INPUT_RECORD inRec;
 	    goto logyear;
     }
 
-    strcat(logpath, "\\");
-    strcat(logpath, log_filename);
+    strcpy(httpslogpath, httplogpath);
+    strcat(httpslogpath, "\\");
+    strcat(httpslogpath, httpslog_filename);
 
-    fp_log = fopen(logpath, "a+");
-    if (!fp_log) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
+    strcat(httplogpath, "\\");
+    strcat(httplogpath, httplog_filename);
+
+    fp_httplog = fopen(httplogpath, "a+");
+    if (!fp_httplog) {
+		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_FILE, httplogpath);
 		WSACleanup();
 		return 3;
     }
 
-	fprintf(fp_log, "inet_ntoa: %s\n", inet_ntoa(inaddr));
-    for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
-        ret = http_loop(conScreenBuffer, cursorPosition, &inaddr, s, logentry);
+	fprintf(fp_httplog, "Wifiupload started at %i:%i:%i on %s with port 80 (http)\n",
+						systime.wHour, systime.wMinute, systime.wSecond,
+						inet_ntoa(inaddr));
+						
 
-		fprintf(fp_log, logentry);
-		fflush(fp_log);
+    fp_httpslog = fopen(httpslogpath, "a+");
+    if (!fp_httpslog) {
+		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_FILE, httpslogpath);
+		WSACleanup();
+		return 3;
+    }
+
+	fprintf(fp_httpslog, "Wifiupload started at %i:%i:%i on %s with port 443 (https)\n",
+						systime.wHour, systime.wMinute, systime.wSecond,
+						inet_ntoa(inaddr));
+	
+	memcpy(&prThread.inaddr, &inaddr, sizeof(struct in_addr));
+	prThread.conScreenBuffer = conScreenBuffer;
+	memcpy(&prThread.cursorPosition, &cursorPosition, sizeof(COORD));
+
+	CreateThread(NULL, 0, wu_x509_func, (void*)&prThread, 0, &trd_id);
+
+    for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
+        ret = http_loop(conScreenBuffer, cursorPosition, s, logentry);
+
+		fprintf(fp_httplog, logentry);
+		fflush(fp_httplog);
 
 		if (ret == 1)
 			break;
