@@ -95,7 +95,7 @@ check_cookie_theme(struct header_nv hdrnv[], int *theme) {
 
 
 int
-http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s, char logentry[256]) {
+http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[256]) {
   struct http_reqline reqline;
   struct header_nv httpnv[HEADER_NV_MAX_SIZE];
   unsigned char webuiquit = 0;
@@ -109,6 +109,8 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s, char logentry[25
 	struct tm *tmval;
 	time_t wutime;
 	int bytesent;
+	int i;
+	char host_field[sizeof("http://255.255.255.255")];
 
 	bytesent = 0;
   memset(ipaddrstr, 0, 16);
@@ -121,6 +123,10 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, int s, char logentry[25
   ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
   if (http_recv_headernv(httpnv, s_user) != 0)
     goto err;
+
+	i = nv_find_name_client(httpnv, "Host");
+	if (i < 0 || strcmp(httpnv[i].value.v, inet_ntoa(*inaddr)) != 0)
+		goto err;
 
   if (strcmp(reqline.method, "GET") == 0) {
     int ires;

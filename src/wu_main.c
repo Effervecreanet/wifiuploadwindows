@@ -525,8 +525,9 @@ logyear:	INPUT_RECORD inRec;
 		return 3;
     }
 
+	fprintf(fp_log, "inet_ntoa: %s\n", inet_ntoa(inaddr));
     for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
-        ret = http_loop(conScreenBuffer, cursorPosition, s, logentry);
+        ret = http_loop(conScreenBuffer, cursorPosition, &inaddr, s, logentry);
 
 		fprintf(fp_log, logentry);
 		fflush(fp_log);
