@@ -331,12 +331,12 @@ int main(void)
             dwUsrChoice = atoi((const char*)&inRec.Event.KeyEvent.uChar.AsciiChar);
         } while (dwUsrChoice >= ipAddrTable->dwNumEntries || dwUsrChoice == 0);
 
-        cursorPosition[0].X += sizeof(INF_MSG_CHOICE_QUESTION) + 4;
+        cursorPosition[0].X += sizeof(INF_MSG_CHOICE_QUESTION) + 5;
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
         WriteConsoleA(conScreenBuffer, &inRec.Event.KeyEvent.uChar.AsciiChar, 1, &written, NULL);
 
         cursorPosition[0].Y += 2;
-        cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 4;
+        cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 5;
 
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
         WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
