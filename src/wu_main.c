@@ -584,7 +584,7 @@ logyear:	INPUT_RECORD inRec;
 	prThread.conScreenBuffer = conScreenBuffer;
 	memcpy(&prThread.cursorPosition, &cursorPosition, sizeof(COORD));
 
-	CreateThread(NULL, 0, wu_x509_func, (void*)&prThread, 0, &trd_id);
+	// CreateThread(NULL, 0, wu_x509_func, (void*)&prThread, 0, &trd_id);
 
     for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
         ret = http_loop(conScreenBuffer, cursorPosition, s, logentry);

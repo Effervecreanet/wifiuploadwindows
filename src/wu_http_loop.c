@@ -15,7 +15,6 @@
 
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
-extern FILE *fp_log;
 
 
 int
@@ -153,7 +152,6 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
 
      if (strcmp(reqline.resource + 1, "quit") == 0) {
         WSACleanup();
-		fclose(fp_log);
         ExitProcess(0);
     } else if (strcmp(reqline.resource + 1, "openRep") == 0) {
       char dd[1024];
