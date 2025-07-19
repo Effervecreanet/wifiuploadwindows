@@ -1,20 +1,7 @@
 #define CONSOLE_TITLE "Effervecreanet - Wifiupload"
 #define PROMOTE_EFFERVECREANET CONSOLE_TITLE
 
-#ifdef LOCAL_EN
-
-#define ERR_FMT_MSG_INIT_CONSOLE "Cannot initialize win32 console, err: %lu\n"
-#define ERR_FMT_MSG_INIT_WINSOCK "Cannot initialize network stack Winsock, error: %lu\n"
-
-#define EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_GO "%.2f GB/s"
-#define EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_MO "%.2f MB/s"
-#define EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_KO "%.2f KB/s"
-
-#define ERROR_MESSAGE_SOCKET_1 "Cannot create socket error: %lu"
-#define ERROR_MESSAGE_SOCKET_2 "Cannot bind socket error: %i"
-#define ERROR_MESSAGE_SOCKET_3 "Cannot accept connection: %i"
-
-#else
+#ifdef VERSION_FR
 
 #define ERR_FMT_MSG_INIT_CONSOLE "Erreur lors de l'initialisation de la console, err: %lu\n"
 #define ERR_FMT_MSG_INIT_WINSOCK "Erreur lors de l'initialisation de la pile r" "\xE9" "seau, err: %lu\n"
@@ -27,7 +14,22 @@
 #define ERROR_MESSAGE_SOCKET_2 "Impossible de lier le socket erreur: %i"
 #define ERROR_MESSAGE_SOCKET_3 "Impossible d'accepter la connexion erreur: %i"
 
+#else
+
+#define ERR_FMT_MSG_INIT_CONSOLE "Cannot initialize win32 console, err: %lu\n"
+#define ERR_FMT_MSG_INIT_WINSOCK "Cannot initialize network stack Winsock, error: %lu\n"
+
+#define EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_GO "%.2f GB/s"
+#define EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_MO "%.2f MB/s"
+#define EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_KO "%.2f KB/s"
+
+#define ERROR_MESSAGE_SOCKET_1 "Cannot create socket error: %lu"
+#define ERROR_MESSAGE_SOCKET_2 "Cannot bind socket error: %i"
+#define ERROR_MESSAGE_SOCKET_3 "Cannot accept connection: %i"
+
 #endif
+
+
 
 
 
