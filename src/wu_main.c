@@ -1,8 +1,3 @@
-/*
-	Augmenter le HTTP_RESSOURCE_MAX_SIZE
-	Bien positioner le curseur apres "choix ? "
-	Verifier le champ Host navigateur client
-*/
 #include <Windows.h>
 #include <WinSock.h>
 #include <iphlpapi.h>
@@ -584,10 +579,10 @@ logyear:	INPUT_RECORD inRec;
 	prThread.conScreenBuffer = conScreenBuffer;
 	memcpy(&prThread.cursorPosition, &cursorPosition, sizeof(COORD));
 
-	// CreateThread(NULL, 0, wu_x509_func, (void*)&prThread, 0, &trd_id);
+	CreateThread(NULL, 0, wu_x509_func, (void*)&prThread, 0, &trd_id);
 
     for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
-        ret = http_loop(conScreenBuffer, cursorPosition, s, logentry);
+        ret = http_loop(conScreenBuffer, cursorPosition, &inaddr, s, logentry);
 
 		fprintf(fp_httplog, logentry);
 		fflush(fp_httplog);
