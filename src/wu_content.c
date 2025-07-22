@@ -21,6 +21,7 @@ const struct _http_resources http_resources[] = {
   {"images/ewu_send.png", "image/png", "images\\wu_images_light_theme\\ewu_send.png", "images\\wu_images_dark_theme\\ewu_send.png"},
   {"images/ewu_ticksuccess.png", "image/png", "images\\wu_images_light_theme\\ewu_ticksuccess.png", "images\\wu_images_dark_theme\\ewu_ticksuccess.png"},
   {"images/eloge-merite-IA.png", "image/png", "images\\wu_images_light_theme\\eloge-merite-IA.png", "images\\wu_images_dark_theme\\eloge-merite-IA.png"},
+  {"images/illustration-parametre-theme.png", "image/png", "images\\wu_images_light_theme\\illustration-parametre-theme.png", "images\\wu_images_dark_theme\\illustration-parametre-theme.png"},
   {"images/ewu_tickwrong.png", "image/png", "images\\wu_images_light_theme\\ewu_tickwrong.png", "images\\wu_images_dark_theme\\ewu_tickwrong.png"},
   {"images/ewu_top_bg.png", "image/png", "images\\wu_images_light_theme\\ewu_top_bg.png", "images\\wu_images_dark_theme\\ewu_top_bg.png"},
   {"images/logo6_effervecreanet.png", "image/png", "images\\wu_images_light_theme\\logo6_effervecreanet.png", "images\\wu_images_dark_theme\\logo6_effervecreanet.png"},
