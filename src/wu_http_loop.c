@@ -16,7 +16,7 @@
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 extern FILE *fp_log;
-
+extern int *usersocket;
 
 int
 http_match_resource(char *res)
@@ -116,6 +116,8 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
   memset(ipaddrstr, 0, 16);
   s_user = accept_conn(conScreenBuffer, cursorPosition, s, ipaddrstr);
   
+  usersocket = &s_user;
+
   ZeroMemory(&reqline, sizeof(struct http_reqline));
   if (http_recv_reqline(&reqline, s_user) != 0)
     goto err;
@@ -152,6 +154,8 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
       }
 
      if (strcmp(reqline.resource + 1, "quit") == 0) {
+		closesocket(s_user);
+		closesocket(s);
         WSACleanup();
 		fclose(fp_log);
         ExitProcess(0);
@@ -235,6 +239,7 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
 
 err:
   closesocket(s_user);
+  s_user = 0;
 
   return 0;
 }

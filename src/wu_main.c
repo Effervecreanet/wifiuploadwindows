@@ -22,6 +22,8 @@
 
 extern struct wu_msg wumsg[];
 FILE *fp_log;
+int *listensocket;
+int *usersocket;
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
@@ -30,7 +32,12 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
     case CTRL_CLOSE_EVENT:
     case CTRL_LOGOFF_EVENT:
     case CTRL_SHUTDOWN_EVENT:
-		fclose(fp_log);
+		if (fp_log != NULL)
+			fclose(fp_log);
+		if (usersocket != NULL && *usersocket != 0)
+			closesocket(*usersocket);
+		if (listensocket != NULL)
+			closesocket(*listensocket);
         WSACleanup();
         ExitProcess(TRUE);
     default:
@@ -178,6 +185,9 @@ int main(void)
     char errMsgFormatStr[127];
     char logpath[512];
     char log_filename[sizeof("log_19700101.txt")];
+
+	listensocket = usersocket = NULL;
+	fp_log = NULL;
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
     SetConsoleTitleA(CONSOLE_TITLE);

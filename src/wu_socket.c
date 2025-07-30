@@ -5,6 +5,8 @@
 
 #define LISTEN_PORT 80
 
+int *listensocket;
+
 int
 create_socket(HANDLE conScreenBuffer, COORD *cursorPosition) {
   int s;
@@ -59,6 +61,8 @@ bind_socket(HANDLE conScreenBuffer, COORD* cursorPosition, int s, struct in_addr
   setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char*)&tval, sizeof(char));
 
   listen(s, 10);
+
+  listensocket = &s;
 
   return;
 }
