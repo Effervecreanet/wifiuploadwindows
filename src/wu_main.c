@@ -24,6 +24,7 @@ extern struct wu_msg wumsg[];
 FILE *fp_log;
 int *listensocket;
 int *usersocket;
+HANDLE *consoleScreenBuffer;
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
@@ -38,6 +39,8 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 			closesocket(*usersocket);
 		if (listensocket != NULL)
 			closesocket(*listensocket);
+		if (consoleScreenBuffer != NULL)
+			CloseHandle(*consoleScreenBuffer);
         WSACleanup();
         ExitProcess(TRUE);
     default:
@@ -188,6 +191,7 @@ int main(void)
 
 	listensocket = usersocket = NULL;
 	fp_log = NULL;
+	consoleScreenBuffer = NULL;
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
     SetConsoleTitleA(CONSOLE_TITLE);
@@ -211,11 +215,14 @@ int main(void)
 
     if (conScreenBuffer == INVALID_HANDLE_VALUE) {
         printf(ERR_FMT_MSG_INIT_CONSOLE, GetLastError());
+		consoleScreenBuffer = NULL;
         while (1)
             Sleep(1000);
 
         ExitProcess(1);
     }
+
+	consoleScreenBuffer = &conScreenBuffer;
 
     SetConsoleMode(conScreenBuffer, ENABLE_LVB_GRID_WORLDWIDE);
 
