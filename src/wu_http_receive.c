@@ -51,7 +51,9 @@ create_userfile_tmp(HANDLE conScreenBuffer,
                          FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH,
                          NULL);
   if (hFile == INVALID_HANDLE_VALUE) {
+	INPUT_RECORD inRec;
     DWORD err;
+    DWORD read;
 
     cursorPosition->Y += 3;
     SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
@@ -62,12 +64,8 @@ create_userfile_tmp(HANDLE conScreenBuffer,
     cursorPosition->Y++;
     SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
     
-    while (1)
-      Sleep(1000);
+	while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
-    WSACleanup();
-	fclose(fp_log);
-    ExitProcess(5);
   }
 
   return hFile;

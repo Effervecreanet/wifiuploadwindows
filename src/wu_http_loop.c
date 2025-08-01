@@ -142,13 +142,17 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
 
       ZeroMemory(&httplocalres, sizeof(struct http_resource));
       if (create_local_resource(&httplocalres, ires, theme) != 0) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
         cursorPosition->Y++;
         SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
         WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_GET_RESOURCE, NULL);
-        Sleep(1000);
+
+	while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
       }
 
-      err = http_serv_resource(&httplocalres, s_user, NULL, &bytesent); 
+      http_serv_resource(&httplocalres, s_user, NULL, &bytesent); 
 
       goto err;
       }

@@ -216,10 +216,8 @@ int main(void)
     if (conScreenBuffer == INVALID_HANDLE_VALUE) {
         printf(ERR_FMT_MSG_INIT_CONSOLE, GetLastError());
 		consoleScreenBuffer = NULL;
-        while (1)
-            Sleep(1000);
-
-        ExitProcess(1);
+		_getch();
+		ExitProcess(FALSE);
     }
 
 	consoleScreenBuffer = &conScreenBuffer;
@@ -229,10 +227,8 @@ int main(void)
     ZeroMemory(&wsaData, sizeof(WSADATA));
     if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
         printf(ERR_FMT_MSG_INIT_WINSOCK, GetLastError());
-        while (1)
-            Sleep(1000);
-
-        ExitProcess(2);
+		_getch();
+		ExitProcess(FALSE);
     }
 
     SetConsoleActiveScreenBuffer(conScreenBuffer);
@@ -258,14 +254,15 @@ int main(void)
     ret = GetIpAddrTable((PMIB_IPADDRTABLE)&ipAddrTable, &sizeIpAddrTable, TRUE);
 
     if (ret != NO_ERROR || ipAddrTable[0].dwNumEntries < 2) {
+        INPUT_RECORD inRec;
+		DWORD read;
+
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
         WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CONNECTIVITY, NULL);
 
-        while (1)
-            Sleep(1000);
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
-        ExitProcess(3);
     } 
     else if (ipAddrTable[0].dwNumEntries == 2) {
         PCHAR pStringIpAddr;
@@ -383,14 +380,14 @@ int main(void)
         }
     }
     else {
-    cursorPosition[0].Y++;
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_TOO_MANY_ADDR, NULL);
+        INPUT_RECORD inRec;
+		cursorPosition[0].Y++;
+		SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
+		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_TOO_MANY_ADDR, NULL);
 
-    while (1)
-        Sleep(1000);
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
-    ExitProcess(4);
+		ExitProcess(4);
     }
 
     cursorPosition[0].Y += 2;;
@@ -435,16 +432,11 @@ int main(void)
 	    if (_mkdir(logpath)) {
 		INPUT_RECORD inRec;
 		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
-			if (inRec.Event.KeyEvent.bKeyDown != TRUE)
-			    continue;
-		        WSACleanup();
-		        return 2;
-		    }
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	    } else {
 logyear:	INPUT_RECORD inRec;
 			char wYearStr[5];
-
+	
 		GetSystemTime(&systime);
 		ZeroMemory(log_filename, sizeof("log_19700101.txt"));
 			ZeroMemory(wYearStr, 5);
@@ -455,12 +447,7 @@ logyear:	INPUT_RECORD inRec;
 		if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 			INPUT_RECORD inRec;
 			WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
-				if (inRec.Event.KeyEvent.bKeyDown != TRUE)
-				    continue;
-				WSACleanup();
-				return 2;
-		    }
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		} else {
 			char wMonthStr[3];
 			
@@ -478,12 +465,7 @@ logyear:	INPUT_RECORD inRec;
 			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 				INPUT_RECORD inRec;
 				WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
-					if (inRec.Event.KeyEvent.bKeyDown != TRUE)
-					    continue;
-				WSACleanup();
-				return 2;
-			        }
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 			} else {
 				char wDayStr[3];
 
@@ -518,16 +500,11 @@ logyear:	INPUT_RECORD inRec;
 				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 					INPUT_RECORD inRec;
 					WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
-						if (inRec.Event.KeyEvent.bKeyDown != TRUE)
-						    continue;
-					WSACleanup();
-					return 2;
+					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 					}
 				}
 			}
 		}		
-	}
     } else {
 	    goto logyear;
     }

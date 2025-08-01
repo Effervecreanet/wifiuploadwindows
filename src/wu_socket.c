@@ -9,7 +9,9 @@ int *listensocket;
 
 int
 create_socket(HANDLE conScreenBuffer, COORD *cursorPosition) {
-  int s;
+	int s;
+	INPUT_RECORD inRec;
+	DWORD read;
 
   s = (int)socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   
@@ -25,9 +27,8 @@ create_socket(HANDLE conScreenBuffer, COORD *cursorPosition) {
     SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
     WriteConsoleA(conScreenBuffer, Buffer, (DWORD)strlen(Buffer), &written, NULL);
 
-    while (1)
-      Sleep(1000);
-  }
+	while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
 
   return s;
 }
@@ -45,6 +46,8 @@ bind_socket(HANDLE conScreenBuffer, COORD* cursorPosition, int s, struct in_addr
   if (0 != bind(s, (const struct sockaddr*)&sainServer, sizeof(struct sockaddr_in))) {
     CHAR Buffer[1024];
     DWORD written;
+	INPUT_RECORD inRec;
+	DWORD read;
 
     ZeroMemory(Buffer, 1024);
 
@@ -54,8 +57,7 @@ bind_socket(HANDLE conScreenBuffer, COORD* cursorPosition, int s, struct in_addr
     SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
     WriteConsoleA(conScreenBuffer, Buffer, (DWORD)strlen(Buffer), &written, NULL);
 
-    while (1)
-      Sleep(1000);
+	while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
   }
 
   setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char*)&tval, sizeof(char));
