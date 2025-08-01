@@ -28,14 +28,15 @@ time_to_httpdate(char* http_date)
   struct tm intmv;
   time_t now;
 
-  time(&now);
-  ZeroMemory(&intmv, sizeof(struct tm));
-  gmtime_s(&intmv, &now);
+	time(&now);
 
-  ZeroMemory(http_date, HEADER_VALUE_MAX_SIZE);
-  if (strftime((char*)http_date, HEADER_VALUE_MAX_SIZE,
-               "%a, %d %b %Y %H:%M:%S GMT", &intmv) == 0)
-    return -1;
+	ZeroMemory(&intmv, sizeof(struct tm));
+	gmtime_s(&intmv, &now);
+
+	ZeroMemory(http_date, HEADER_VALUE_MAX_SIZE);
+	if (strftime((char*)http_date, HEADER_VALUE_MAX_SIZE,
+					"%a, %d %b %Y %H:%M:%S GMT", &intmv) == 0)
+		return -1;
 
   return 1;
 }

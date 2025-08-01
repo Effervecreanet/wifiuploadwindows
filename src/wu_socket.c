@@ -5,10 +5,11 @@
 
 #define LISTEN_PORT 80
 
-int *listensocket;
+extern int *g_listensocket;
+extern HANDLE g_hConsoleOutput;
 
 int
-create_socket(HANDLE conScreenBuffer, COORD *cursorPosition) {
+create_socket(COORD *cursorPosition) {
 	int s;
 	INPUT_RECORD inRec;
 	DWORD read;
@@ -24,8 +25,8 @@ create_socket(HANDLE conScreenBuffer, COORD *cursorPosition) {
     StringCchPrintf(Buffer, 1024, ERROR_MESSAGE_SOCKET_1, WSAGetLastError());
     cursorPosition->Y++;
     
-    SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-    WriteConsoleA(conScreenBuffer, Buffer, (DWORD)strlen(Buffer), &written, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+    WriteConsoleA(g_hConsoleOutput, Buffer, (DWORD)strlen(Buffer), &written, NULL);
 
 	while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
@@ -34,7 +35,7 @@ create_socket(HANDLE conScreenBuffer, COORD *cursorPosition) {
 }
 
 void
-bind_socket(HANDLE conScreenBuffer, COORD* cursorPosition, int s, struct in_addr inaddr) {
+bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
   struct sockaddr_in sainServer;
   char tval = 1;
 
@@ -54,8 +55,8 @@ bind_socket(HANDLE conScreenBuffer, COORD* cursorPosition, int s, struct in_addr
     StringCchPrintf(Buffer, 1024, ERROR_MESSAGE_SOCKET_2, WSAGetLastError());
     cursorPosition->Y++;
 
-    SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-    WriteConsoleA(conScreenBuffer, Buffer, (DWORD)strlen(Buffer), &written, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+    WriteConsoleA(g_hConsoleOutput, Buffer, (DWORD)strlen(Buffer), &written, NULL);
 
 	while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
   }
@@ -64,13 +65,13 @@ bind_socket(HANDLE conScreenBuffer, COORD* cursorPosition, int s, struct in_addr
 
   listen(s, 10);
 
-  listensocket = &s;
+  g_listensocket = &s;
 
   return;
 }
 
 int
-accept_conn(HANDLE conScreenBuffer, COORD* cursorPosition, int s, char ipaddrstr[16]) {
+accept_conn(COORD* cursorPosition, int s, char ipaddrstr[16]) {
   int s_user, sainLen;
   struct sockaddr_in sainUser;
 
@@ -89,8 +90,8 @@ accept_conn(HANDLE conScreenBuffer, COORD* cursorPosition, int s, char ipaddrstr
       StringCchPrintf(Buffer, 1024, ERROR_MESSAGE_SOCKET_3, WSAGetLastError());
       cursorPosition->Y++;
 
-      SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-      WriteConsoleA(conScreenBuffer, Buffer, (DWORD)strlen(Buffer), &written, NULL);
+      SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+      WriteConsoleA(g_hConsoleOutput, Buffer, (DWORD)strlen(Buffer), &written, NULL);
 
       Sleep(100);
     }

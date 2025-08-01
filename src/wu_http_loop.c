@@ -15,8 +15,9 @@
 
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
-extern FILE *fp_log;
-extern int *usersocket;
+extern FILE *g_fplog;
+extern int *g_usersocket;
+extern HANDLE g_hConsoleOutput;
 
 int
 http_match_resource(char *res)
@@ -39,7 +40,6 @@ http_match_resource(char *res)
 int
 create_local_resource(struct http_resource *lres, int ires, int theme) {
   unsigned char curDir[1024];
-  int errn;
 
   ZeroMemory(curDir, 1024);
   if (!GetCurrentDirectoryA(1024, curDir)) {
@@ -95,28 +95,25 @@ check_cookie_theme(struct header_nv hdrnv[], int *theme) {
 
 
 int
-http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[256]) {
-  struct http_reqline reqline;
-  struct header_nv httpnv[HEADER_NV_MAX_SIZE];
-  unsigned char webuiquit = 0;
-  struct http_resource httplocalres;
-  int s_user;
-  DWORD err;
-  int theme;
-  char ipaddrstr[16];
-  int errn;
-	char log_timestr[42];
+http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[256]) {
+	struct http_reqline reqline;
+	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
+	unsigned char webuiquit = 0;
+	int s_user;
+	DWORD err;
+	int theme;
+	char ipaddrstr[16];
 	struct tm *tmval;
 	time_t wutime;
 	int bytesent;
 	int i;
-	char host_field[sizeof("http://255.255.255.255")];
+	char log_timestr[42];
 
 	bytesent = 0;
   memset(ipaddrstr, 0, 16);
-  s_user = accept_conn(conScreenBuffer, cursorPosition, s, ipaddrstr);
+  s_user = accept_conn(cursorPosition, s, ipaddrstr);
   
-  usersocket = &s_user;
+  g_usersocket = &s_user;
 
   ZeroMemory(&reqline, sizeof(struct http_reqline));
   if (http_recv_reqline(&reqline, s_user) != 0)
@@ -146,10 +143,10 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
 		DWORD read;
 
         cursorPosition->Y++;
-        SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-        WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_GET_RESOURCE, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+        WriteConsoleA_INFO(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
 
-	while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
       }
 
       http_serv_resource(&httplocalres, s_user, NULL, &bytesent); 
@@ -161,7 +158,8 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
 		closesocket(s_user);
 		closesocket(s);
         WSACleanup();
-		fclose(fp_log);
+		fclose(g_fplog);
+		CloseHandle(g_hConsoleOutput);
         ExitProcess(0);
     } else if (strcmp(reqline.resource + 1, "openRep") == 0) {
       char dd[1024];
@@ -178,27 +176,27 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
     ZeroMemory(&httplocalres, sizeof(struct http_resource));
     if (create_local_resource(&httplocalres, ires, theme) != 0) {
       cursorPosition->Y++;
-      SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-      WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_GET_RESOURCE, NULL);
+      SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+      WriteConsoleA_INFO(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
       Sleep(1000);
     }
 
     err = http_serv_resource(&httplocalres, s_user, NULL, &bytesent);
     if (err > 1) {
       cursorPosition->Y++;
-      SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-      WriteConsoleA_INFO(conScreenBuffer, ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err);
+      SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+      WriteConsoleA_INFO(ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err);
       Sleep(1000);
     } else if (err == 0) {
-      SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-      WriteConsoleA_INFO(conScreenBuffer, INF_MSG_INCOMING_CONNECTION, NULL);
+      SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+      WriteConsoleA_INFO(INF_MSG_INCOMING_CONNECTION, NULL);
       cursorPosition->Y++;
     } else if (strcmp(reqline.method, "POST") == 0 && strcmp(reqline.resource, "/") == 0) {
       struct user_stats upstats;
 
-      clearTXRXPane(conScreenBuffer, cursorPosition);
+      clearTXRXPane(cursorPosition);
       ZeroMemory(&upstats, sizeof(struct user_stats));
-      err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
+      err = receiveFile(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
       cursorPosition->Y++;
     }
   } else if (strcmp(reqline.method, "POST") == 0) {
@@ -223,9 +221,9 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
     } else if (strcmp(reqline.resource + 1, "upload") == 0) {
         struct user_stats upstats;
 
-        clearTXRXPane(conScreenBuffer, cursorPosition);
+        clearTXRXPane(cursorPosition);
         ZeroMemory(&upstats, sizeof(struct user_stats));
-        err = receiveFile(conScreenBuffer, cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
+        err = receiveFile(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
         cursorPosition->Y++;      
     }
   }
@@ -237,7 +235,7 @@ http_loop(HANDLE conScreenBuffer, COORD *cursorPosition, struct in_addr *inaddr,
 	tmval = localtime(&wutime);
 
 	strftime(log_timestr, 42, "%d/%b/%Y:%T -0600", tmval);
-	sprintf(logentry, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddrstr, log_timestr,
+	sprintf_s(logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddrstr, log_timestr,
 														   reqline.method, reqline.resource,
 														   reqline.version, bytesent);
 

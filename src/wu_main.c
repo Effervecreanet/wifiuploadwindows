@@ -21,10 +21,10 @@
 #pragma comment(lib, "userenv.lib")
 
 extern struct wu_msg wumsg[];
-FILE *fp_log;
-int *listensocket;
-int *usersocket;
-HANDLE *consoleScreenBuffer;
+FILE *g_fplog;
+int *g_listensocket;
+int *g_usersocket;
+HANDLE g_hConsoleOutput;
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
@@ -33,14 +33,14 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
     case CTRL_CLOSE_EVENT:
     case CTRL_LOGOFF_EVENT:
     case CTRL_SHUTDOWN_EVENT:
-		if (fp_log != NULL)
-			fclose(fp_log);
-		if (usersocket != NULL && *usersocket != 0)
-			closesocket(*usersocket);
-		if (listensocket != NULL)
-			closesocket(*listensocket);
-		if (consoleScreenBuffer != NULL)
-			CloseHandle(*consoleScreenBuffer);
+		if (g_fplog != NULL)
+			fclose(g_fplog);
+		if (g_usersocket != NULL && *g_usersocket != 0)
+			closesocket(*g_usersocket);
+		if (g_listensocket != NULL)
+			closesocket(*g_listensocket);
+		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
+			CloseHandle(g_hConsoleOutput);
         WSACleanup();
         ExitProcess(TRUE);
     default:
@@ -62,7 +62,7 @@ create_download_directory(unsigned char dd[1024]) {
 }
 
 void
-WriteConsoleA_INFO(HANDLE conScreenBuffer, enum idmsg id, void *p) {
+WriteConsoleA_INFO(enum idmsg id, void *p) {
     DWORD written;
     unsigned char i;
     char outConBuf[1024];
@@ -71,98 +71,98 @@ WriteConsoleA_INFO(HANDLE conScreenBuffer, enum idmsg id, void *p) {
         if (wumsg[i].id == id)
             break;
     
-    SetConsoleTextAttribute(conScreenBuffer, wumsg[i].wAtributes[0]);
+    SetConsoleTextAttribute(g_hConsoleOutput, wumsg[i].wAtributes[0]);
 
     if (p != NULL) {
         ZeroMemory(outConBuf, 1024);
         StringCchPrintf(outConBuf, 1024, wumsg[i].Msg, p);
-        WriteConsoleA(conScreenBuffer, outConBuf, (DWORD)strlen(outConBuf), &written, NULL);
+        WriteConsoleA(g_hConsoleOutput, outConBuf, (DWORD)strlen(outConBuf), &written, NULL);
     }
     else {
-        WriteConsoleA(conScreenBuffer, wumsg[i].Msg, wumsg[i].szMsg, &written, NULL);
+        WriteConsoleA(g_hConsoleOutput, wumsg[i].Msg, wumsg[i].szMsg, &written, NULL);
     }
 
     return;
 };
 
 void
-clearTXRXPane(HANDLE conScreenBuffer, COORD* cursorPosition) {
+clearTXRXPane(COORD* cursorPosition) {
     DWORD written;
     COORD coordCR;
 
     for (coordCR.Y = cursorPosition[1].Y, coordCR.X = cursorPosition[1].X; coordCR.Y <= cursorPosition[1].Y + 6; coordCR.Y++) {
-        SetConsoleCursorPosition(conScreenBuffer, coordCR);
-        WriteConsoleA(conScreenBuffer, "                                                                                     ",
+        SetConsoleCursorPosition(g_hConsoleOutput, coordCR);
+        WriteConsoleA(g_hConsoleOutput, "                                                                                     ",
             sizeof("                                                                               ") - 1, &written, NULL);
     }
 
     cursorPosition->Y = (cursorPosition + 1)->Y;
     cursorPosition->X = (cursorPosition + 1)->X;
-    SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
+    SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 
     return;
 }
 
 static void
-consDrawRect(HANDLE hConScreenBuf, COORD cursPosStart) {
+consDrawRect(COORD cursPosStart) {
     COORD cursPosEnd;
     DWORD written;
 
     cursPosStart.X = 1;
 
-    SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     
     cursPosStart.X++;
     
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
     for (cursPosEnd.X = cursPosStart.X + 115, cursPosEnd.Y = cursPosStart.Y;
         cursPosStart.X <= cursPosEnd.X;
         cursPosStart.X++) {
-        SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-        WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     }
 
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
     for (cursPosEnd.Y = cursPosStart.Y + 9, cursPosStart.Y++;
         cursPosStart.Y < cursPosEnd.Y;
         cursPosStart.Y++) {
-        SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-        WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     }
 
-    SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
     for (cursPosEnd.X = cursPosStart.X - 117, cursPosEnd.Y = cursPosStart.Y;
         cursPosStart.X >= cursPosEnd.X;
         cursPosStart.X--) {
-        SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-        WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     }
 
     cursPosStart.X++;
     cursPosStart.Y--;
-    SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
     for (;
         cursPosStart.Y > cursPosEnd.Y - 9;
         cursPosStart.Y--) {
-        SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-        WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     }
 
     return;
@@ -170,7 +170,6 @@ consDrawRect(HANDLE hConScreenBuf, COORD cursPosStart) {
 
 int main(void)
 {
-    HANDLE conScreenBuffer;
     DWORD written, read, ret;
     WSADATA wsaData;
     MIB_IPADDRTABLE ipAddrTable[4];
@@ -185,13 +184,12 @@ int main(void)
     struct _stat statbuff;
     char logentry[256];
     SYSTEMTIME systime;
-    char errMsgFormatStr[127];
     char logpath[512];
     char log_filename[sizeof("log_19700101.txt")];
 
-	listensocket = usersocket = NULL;
-	fp_log = NULL;
-	consoleScreenBuffer = NULL;
+	g_listensocket = g_usersocket = NULL;
+	g_fplog = NULL;
+	g_hConsoleOutput = INVALID_HANDLE_VALUE;
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
     SetConsoleTitleA(CONSOLE_TITLE);
@@ -207,22 +205,20 @@ int main(void)
     consoleWindow = GetConsoleWindow();
     SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
 
-    conScreenBuffer = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE,
+    g_hConsoleOutput = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE,
         0,
         NULL,
         CONSOLE_TEXTMODE_BUFFER,
         NULL);
 
-    if (conScreenBuffer == INVALID_HANDLE_VALUE) {
+    if (g_hConsoleOutput == INVALID_HANDLE_VALUE) {
         printf(ERR_FMT_MSG_INIT_CONSOLE, GetLastError());
-		consoleScreenBuffer = NULL;
+		g_hConsoleOutput = INVALID_HANDLE_VALUE;
 		_getch();
 		ExitProcess(FALSE);
     }
 
-	consoleScreenBuffer = &conScreenBuffer;
-
-    SetConsoleMode(conScreenBuffer, ENABLE_LVB_GRID_WORLDWIDE);
+    SetConsoleMode(g_hConsoleOutput, ENABLE_LVB_GRID_WORLDWIDE);
 
     ZeroMemory(&wsaData, sizeof(WSADATA));
     if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
@@ -231,22 +227,22 @@ int main(void)
 		ExitProcess(FALSE);
     }
 
-    SetConsoleActiveScreenBuffer(conScreenBuffer);
+    SetConsoleActiveScreenBuffer(g_hConsoleOutput);
 
     cursorPosition[0].X = 2;
     cursorPosition[0].Y = 2;
 
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_PROMOTE_WIFIUPLOAD, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    WriteConsoleA_INFO(INF_PROMOTE_WIFIUPLOAD, NULL);
 
     cursorPosition[0].Y++;
 
-    GetConsoleCursorInfo(conScreenBuffer, &cursorInfo);
+    GetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
     cursorInfo.bVisible = FALSE;
-    SetConsoleCursorInfo(conScreenBuffer, &cursorInfo);
+    SetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
 
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_SERVICE, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    WriteConsoleA_INFO(INF_WIFIUPLOAD_SERVICE, NULL);
 
     cursorPosition[0].Y++;
 
@@ -258,8 +254,8 @@ int main(void)
 		DWORD read;
 
         cursorPosition[0].Y += 2;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CONNECTIVITY, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(ERR_MSG_CONNECTIVITY, NULL);
 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
@@ -273,26 +269,26 @@ int main(void)
         pStringIpAddr = inet_ntoa(inaddr);
 
         cursorPosition[0].Y += 2;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
         cursorPosition[0].X -= 5;
 
         cursorPosition[0].Y += 2;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
         
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
 
-        SetConsoleTextAttribute(conScreenBuffer, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
         cursorPosition[0].X -= 5;
     } 
     else if (ipAddrTable[0].dwNumEntries == 3) {
@@ -317,22 +313,22 @@ int main(void)
 
         cursorPosition[0].Y += 2;
 
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_MSG_TWO_AVAILABLE_ADDR, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(INF_MSG_TWO_AVAILABLE_ADDR, NULL);
 
         cursorPosition[0].X += 4;
         cursorPosition[0].Y += 2;
 
         pStringIpAddr1 = inet_ntoa(inaddr1);
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
         cursorPosition[0].Y++;
         pStringIpAddr2 = inet_ntoa(inaddr2);
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
         cursorPosition[0].Y++;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_MSG_CHOICE_QUESTION, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(INF_MSG_CHOICE_QUESTION, NULL);
         
         do {
             ZeroMemory(&inRec, sizeof(INPUT_RECORD));
@@ -346,14 +342,14 @@ int main(void)
         } while (dwUsrChoice >= ipAddrTable->dwNumEntries || dwUsrChoice == 0);
 
         cursorPosition[0].X += sizeof(INF_MSG_CHOICE_QUESTION) + 5;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA(conScreenBuffer, &inRec.Event.KeyEvent.uChar.AsciiChar, 1, &written, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA(g_hConsoleOutput, &inRec.Event.KeyEvent.uChar.AsciiChar, 1, &written, NULL);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 5;
 
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA_INFO(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
 
         cursorPosition[0].Y++;
 
@@ -363,9 +359,9 @@ int main(void)
 
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
-            SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-            WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
-            SetConsoleTextAttribute(conScreenBuffer, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+            SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+            WriteConsoleA_INFO(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
+            SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
             cursorPosition[0].X -= 5;
         }
         else {
@@ -374,16 +370,16 @@ int main(void)
 
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
-            SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-            WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
+            SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+            WriteConsoleA_INFO(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
             cursorPosition[0].X -= 5;
         }
     }
     else {
         INPUT_RECORD inRec;
 		cursorPosition[0].Y++;
-		SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_TOO_MANY_ADDR, NULL);
+		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+		WriteConsoleA_INFO(ERR_MSG_TOO_MANY_ADDR, NULL);
 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
@@ -391,115 +387,114 @@ int main(void)
     }
 
     cursorPosition[0].Y += 2;;
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    WriteConsoleA_INFO(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
 
     ZeroMemory(dd, 1024);
     create_download_directory(dd);
 
     cursorPosition[0].X += 5;
     cursorPosition[0].Y += 2;
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    WriteConsoleA_INFO(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
     cursorPosition[0].X -= 5;
 
-    s = create_socket(conScreenBuffer, &cursorPosition[0]);
-    bind_socket(conScreenBuffer, &cursorPosition[0], s, inaddr);
+    s = create_socket(&cursorPosition[0]);
+    bind_socket(&cursorPosition[0], s, inaddr);
 
     cursorPosition[0].Y += ((ipAddrTable->dwNumEntries < 3) ? 3 : 2);
 
     cursorPosition[1].Y = cursorPosition[0].Y;
     cursorPosition[1].X = cursorPosition[0].X;
-    consDrawRect(conScreenBuffer, cursorPosition[0]);
+    consDrawRect(cursorPosition[0]);
     cursorPosition[0].Y = cursorPosition[1].Y;
     cursorPosition[0].X = cursorPosition[1].X;
 
     cursorPosition[0].Y++;
 
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_UI_TX_RX, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    WriteConsoleA_INFO(INF_WIFIUPLOAD_UI_TX_RX, NULL);
  
     for (i = 0; wumsg[i].id != INF_WIFIUPLOAD_UI_TX_RX; i++)
         ;
     cursorPosition[0].X += (USHORT)wumsg[i].szMsg;
     
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
 
 	ZeroMemory(logpath, 512);
-	sprintf(logpath, "%s\\%s", getenv("USERPROFILE"), LOG_DIRECTORY);
+	sprintf_s(logpath, 512, "%s\\%s", getenv("USERPROFILE"), LOG_DIRECTORY);
     ret = _stat(logpath, &statbuff);
     if (ret) {
 	    if (_mkdir(logpath)) {
-		INPUT_RECORD inRec;
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+			INPUT_RECORD inRec;
+			WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	    } else {
-logyear:	INPUT_RECORD inRec;
-			char wYearStr[5];
+logyear:	char wYearStr[5];
 	
-		GetSystemTime(&systime);
-		ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+			GetSystemTime(&systime);
+			ZeroMemory(log_filename, sizeof("log_19700101.txt"));
 			ZeroMemory(wYearStr, 5);
-			sprintf(wYearStr, "%i", systime.wYear);
-			strcat(logpath, "\\");
-			strcat(logpath, wYearStr);
+			sprintf_s(wYearStr, 5, "%i", systime.wYear);
+			strcat_s(logpath, 512, "\\");
+			strcat_s(logpath, 512, wYearStr);
 		
 		if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 			INPUT_RECORD inRec;
-			WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+			WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		} else {
 			char wMonthStr[3];
 			
 			if (systime.wMonth < 10) {
 				ZeroMemory(wMonthStr, 3);
-				sprintf(wMonthStr, "0%i", systime.wMonth);
-				strcat(logpath, "\\");
-				strcat(logpath, wMonthStr);
+				sprintf_s(wMonthStr, 3, "0%i", systime.wMonth);
+				strcat_s(logpath, 512, "\\");
+				strcat_s(logpath, 512, wMonthStr);
 			} else {
 				ZeroMemory(wMonthStr, 3);
-				sprintf(wMonthStr, "%i", systime.wMonth);
-				strcat(logpath, "\\");
-				strcat(logpath, wMonthStr);
+				sprintf_s(wMonthStr, 3, "%i", systime.wMonth);
+				strcat_s(logpath, 512, "\\");
+				strcat_s(logpath, 512, wMonthStr);
 			}
 			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 				INPUT_RECORD inRec;
-				WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+				WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 			} else {
 				char wDayStr[3];
 
 				if (systime.wMonth < 10) {
 					if (systime.wDay < 10) {
-						sprintf(wDayStr, "0%i", systime.wDay);
-						strcat(logpath, "\\");
-						strcat(logpath, wDayStr);
+						sprintf_s(wDayStr, 3, "0%i", systime.wDay);
+						strcat_s(logpath, 512, "\\");
+						strcat_s(logpath, 512, wDayStr);
 						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf(log_filename, "log_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					} else {
-						sprintf(wDayStr, "%i", systime.wDay);
-						strcat(logpath, "\\");
-						strcat(logpath, wDayStr);
+						sprintf_s(wDayStr, 3, "%i", systime.wDay);
+						strcat_s(logpath, 512, "\\");
+						strcat_s(logpath, 512, wDayStr);
 						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf(log_filename, "log_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					}
 				} else if (systime.wDay < 10) {
-						sprintf(wDayStr, "0%i", systime.wDay);
-						strcat(logpath, "\\");
-						strcat(logpath, wDayStr);
+						sprintf_s(wDayStr, 3, "0%i", systime.wDay);
+						strcat_s(logpath, 512, "\\");
+						strcat_s(logpath, 512, wDayStr);
 						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf(log_filename, "log_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				} else {
-						sprintf(wDayStr, "%i", systime.wDay);
-						strcat(logpath, "\\");
-						strcat(logpath, wDayStr);
+						sprintf_s(wDayStr, 3, "%i", systime.wDay);
+						strcat_s(logpath, 512, "\\");
+						strcat_s(logpath, 512, wDayStr);
 						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf(log_filename, "log_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				}
 
 				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 					INPUT_RECORD inRec;
-					WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+					WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 					}
 				}
@@ -509,28 +504,27 @@ logyear:	INPUT_RECORD inRec;
 	    goto logyear;
     }
 
-    strcat(logpath, "\\");
-    strcat(logpath, log_filename);
+    strcat_s(logpath, 512, "\\");
+    strcat_s(logpath, 512, log_filename);
 
-    fp_log = fopen(logpath, "a+");
-    if (!fp_log) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
+    g_fplog = fopen(logpath, "a+");
+    if (!g_fplog) {
+		WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
 		WSACleanup();
 		return 3;
     }
 
-	fprintf(fp_log, "inet_ntoa: %s\n", inet_ntoa(inaddr));
     for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
-        ret = http_loop(conScreenBuffer, cursorPosition, &inaddr, s, logentry);
+        ret = http_loop(cursorPosition, &inaddr, s, logentry);
 
-		fprintf(fp_log, logentry);
-		fflush(fp_log);
+		fprintf(g_fplog, logentry);
+		fflush(g_fplog);
 
 		if (ret == 1)
 			break;
 
         if (cursorPosition[0].Y >= cursorPosition[1].Y + 6)
-            clearTXRXPane(conScreenBuffer, cursorPosition);
+            clearTXRXPane(cursorPosition);
     }
 
     WSACleanup();
