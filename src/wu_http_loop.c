@@ -103,7 +103,7 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
 	DWORD err;
 	int theme;
 	char ipaddrstr[16];
-	struct tm *tmval;
+	struct tm tmval;
 	time_t wutime;
 	int bytesent;
 	int i;
@@ -232,9 +232,11 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
 	ZeroMemory(log_timestr, 42);
 
 	time(&wutime);
-	tmval = localtime(&wutime);
 
-	strftime(log_timestr, 42, "%d/%b/%Y:%T -0600", tmval);
+	ZeroMemory(&tmval, sizeof(struct tm));
+	localtime_s(&tmval, &wutime);
+
+	strftime(log_timestr, 42, "%d/%b/%Y:%T -0600", &tmval);
 	sprintf_s(logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddrstr, log_timestr,
 														   reqline.method, reqline.resource,
 														   reqline.version, bytesent);

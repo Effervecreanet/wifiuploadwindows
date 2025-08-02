@@ -2,4 +2,4 @@
 
 void WriteConsoleA_INFO(enum idmsg id, void *p);
 void clearTXRXPane(COORD* cursorPosition);
-int CreateDownloadDirectory(unsigned char dd[1024]);
+void create_download_directory(unsigned char dd[1024]);

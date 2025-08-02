@@ -4,6 +4,8 @@
 #include <UserEnv.h>
 #include <strsafe.h>
 #include <stdio.h>
+#include <conio.h>
+#include <direct.h>
 #include <locale.h>
 #include <sys\stat.h>
 
@@ -11,6 +13,7 @@
 #include "wu_msg.h"
 #include "wu_main.h"
 #include "wu_socket.h"
+#include "wu_http_loop.h"
 
 
 #pragma comment(lib, "ws2_32.lib")
@@ -50,7 +53,7 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
     return FALSE;
 }
 
-int
+void
 create_download_directory(unsigned char dd[1024]) {
     DWORD szdd = 1024;
 
@@ -58,7 +61,7 @@ create_download_directory(unsigned char dd[1024]) {
     GetUserProfileDirectoryA(GetCurrentProcessToken(), dd, &szdd);
     strcat_s(dd, 1024, "\\Downloads\\");
 
-    return 1;
+    return;
 }
 
 void

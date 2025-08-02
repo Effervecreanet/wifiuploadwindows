@@ -190,7 +190,7 @@ receiveFile(COORD *cursorPosition,
   if (strlen(upstats->filename) == 0) {
     recv(s, buffer, boundarylen + 8, 0);
     ZeroMemory(&httpres, sizeof(struct http_resource));
-    create_local_resource(&httpres, 12);
+    create_local_resource(&httpres, 6, theme);
     http_serv_resource(&httpres, s, NULL, bytesent);
     return -1;
   }
