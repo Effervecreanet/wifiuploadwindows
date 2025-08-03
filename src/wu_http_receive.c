@@ -15,6 +15,8 @@
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 extern HANDLE g_hConsoleOutput;
+extern HANDLE g_hNewFile;
+extern unsigned char g_sNewFile_tmp[1024];
 
 
 static HANDLE
@@ -65,6 +67,11 @@ create_userfile_tmp(COORD* cursorPosition,
 	while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
   }
+
+	g_hNewFile = hFile;
+
+	ZeroMemory(g_sNewFile_tmp, 1024);
+	strcpy_s(g_sNewFile_tmp, 1024, userfile_tmp);
 
   return hFile;
 }

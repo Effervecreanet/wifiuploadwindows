@@ -28,6 +28,8 @@ FILE *g_fplog;
 int *g_listensocket;
 int *g_usersocket;
 HANDLE g_hConsoleOutput;
+HANDLE g_hNewFile;
+unsigned char g_sNewFile_tmp[1024];
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
@@ -44,6 +46,10 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 			closesocket(*g_listensocket);
 		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
 			CloseHandle(g_hConsoleOutput);
+		if (g_hNewFile != INVALID_HANDLE_VALUE){
+			CloseHandle(g_hNewFile);
+			DeleteFileA((LPCSTR)g_sNewFile_tmp);
+		}
         WSACleanup();
         ExitProcess(TRUE);
     default:
@@ -189,10 +195,11 @@ int main(void)
     SYSTEMTIME systime;
     char logpath[512];
     char log_filename[sizeof("log_19700101.txt")];
+	char userprofile[255 + sizeof(LOG_DIRECTORY)];
 
 	g_listensocket = g_usersocket = NULL;
 	g_fplog = NULL;
-	g_hConsoleOutput = INVALID_HANDLE_VALUE;
+	g_hNewFile = g_hConsoleOutput = INVALID_HANDLE_VALUE;
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
     SetConsoleTitleA(CONSOLE_TITLE);
@@ -425,7 +432,9 @@ int main(void)
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
 
 	ZeroMemory(logpath, 512);
-	sprintf_s(logpath, 512, "%s\\%s", getenv("USERPROFILE"), LOG_DIRECTORY);
+	ZeroMemory(userprofile, 255 + sizeof(LOG_DIRECTORY));
+	getenv_s((size_t*)&ret, userprofile, (size_t)(255 + sizeof(LOG_DIRECTORY)), "USERPROFILE");
+	sprintf_s(logpath, 255 + 1 + sizeof(LOG_DIRECTORY), "%s\\%s", userprofile, LOG_DIRECTORY);
     ret = _stat(logpath, &statbuff);
     if (ret) {
 	    if (_mkdir(logpath)) {
@@ -510,8 +519,7 @@ logyear:	char wYearStr[5];
     strcat_s(logpath, 512, "\\");
     strcat_s(logpath, 512, log_filename);
 
-    g_fplog = fopen(logpath, "a+");
-    if (!g_fplog) {
+    if (fopen_s(&g_fplog, logpath, "a+")) {
 		WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
 		WSACleanup();
 		return 3;
