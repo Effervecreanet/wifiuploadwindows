@@ -15,7 +15,7 @@
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 extern HANDLE g_hConsoleOutput;
-extern HANDLE g_hNewFile;
+extern HANDLE g_hNewFile_tmp;
 extern unsigned char g_sNewFile_tmp[1024];
 
 
@@ -68,7 +68,7 @@ create_userfile_tmp(COORD* cursorPosition,
 
   }
 
-	g_hNewFile = hFile;
+	g_hNewFile_tmp = hFile;
 
 	ZeroMemory(g_sNewFile_tmp, 1024);
 	strcpy_s(g_sNewFile_tmp, 1024, userfile_tmp);
@@ -194,13 +194,8 @@ receiveFile(COORD *cursorPosition,
   if (receive_MIME_header(upstats, s, &MIMElen) != 0)
     return -1;
 
-  if (strlen(upstats->filename) == 0) {
-    recv(s, buffer, boundarylen + 8, 0);
-    ZeroMemory(&httpres, sizeof(struct http_resource));
-    create_local_resource(&httpres, 6, theme);
-    http_serv_resource(&httpres, s, NULL, bytesent);
+  if (strlen(upstats->filename) == 0)
     return -1;
-  }
 
   clearTXRXPane(cursorPosition);
   coordAverageTX.X = cursorPosition->X;

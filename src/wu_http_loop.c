@@ -18,7 +18,7 @@ extern struct wu_msg wumsg[];
 extern FILE *g_fplog;
 extern int *g_usersocket;
 extern HANDLE g_hConsoleOutput;
-extern HANDLE g_hNewFile;
+extern HANDLE g_hNewFile_tmp;
 
 
 int
@@ -246,7 +246,7 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
 err:
 	closesocket(s_user);
 	s_user = 0;
-	g_hNewFile = INVALID_HANDLE_VALUE;
+	g_hNewFile_tmp = INVALID_HANDLE_VALUE;
 
   return 0;
 }

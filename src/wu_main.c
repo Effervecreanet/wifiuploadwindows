@@ -28,7 +28,7 @@ FILE *g_fplog;
 int *g_listensocket;
 int *g_usersocket;
 HANDLE g_hConsoleOutput;
-HANDLE g_hNewFile;
+HANDLE g_hNewFile_tmp;
 unsigned char g_sNewFile_tmp[1024];
 
 BOOL WINAPI
@@ -46,8 +46,8 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 			closesocket(*g_listensocket);
 		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
 			CloseHandle(g_hConsoleOutput);
-		if (g_hNewFile != INVALID_HANDLE_VALUE){
-			CloseHandle(g_hNewFile);
+		if (g_hNewFile_tmp != INVALID_HANDLE_VALUE){
+			CloseHandle(g_hNewFile_tmp);
 			DeleteFileA((LPCSTR)g_sNewFile_tmp);
 		}
         WSACleanup();
@@ -199,7 +199,7 @@ int main(void)
 
 	g_listensocket = g_usersocket = NULL;
 	g_fplog = NULL;
-	g_hNewFile = g_hConsoleOutput = INVALID_HANDLE_VALUE;
+	g_hNewFile_tmp = g_hConsoleOutput = INVALID_HANDLE_VALUE;
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
     SetConsoleTitleA(CONSOLE_TITLE);
