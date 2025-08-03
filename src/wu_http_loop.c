@@ -18,6 +18,8 @@ extern struct wu_msg wumsg[];
 extern FILE *g_fplog;
 extern int *g_usersocket;
 extern HANDLE g_hConsoleOutput;
+extern HANDLE g_hNewFile;
+
 
 int
 http_match_resource(char *res)
@@ -242,8 +244,9 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
 														   reqline.version, bytesent);
 
 err:
-  closesocket(s_user);
-  s_user = 0;
+	closesocket(s_user);
+	s_user = 0;
+	g_hNewFile = INVALID_HANDLE_VALUE;
 
   return 0;
 }
