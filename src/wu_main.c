@@ -60,7 +60,7 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 }
 
 void
-create_download_directory(unsigned char dd[1024]) {
+create_download_directory(char dd[1024]) {
     DWORD szdd = 1024;
 
     ZeroMemory(dd, 1024);

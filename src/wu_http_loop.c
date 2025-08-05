@@ -100,7 +100,6 @@ int
 http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[256]) {
 	struct http_reqline reqline;
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
-	unsigned char webuiquit = 0;
 	int s_user;
 	DWORD err;
 	int theme;

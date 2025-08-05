@@ -182,7 +182,7 @@ create_http_header_nv(struct http_resource *res, struct header_nv *nv, size_t fs
 static int
 send_http_header_nv(struct header_nv* nv, int s, int *bytesent) {
   int i;
-  int ret;
+  int ret = 0;
 
   for (i = 0; i < HEADER_NV_MAX_SIZE && (nv + i)->name.wsite != NULL; i++) {
     ret = send(s, (nv + i)->name.wsite, (int)strlen((nv + i)->name.wsite), 0);

@@ -21,7 +21,7 @@ extern char g_sNewFile_tmp[1024];
 
 static HANDLE
 create_userfile_tmp(COORD* cursorPosition,
-                    unsigned char *filename,
+                    char *filename,
                     char *userfile_tmp);
 static errno_t
 receive_MIME_header(struct user_stats *upstats,
@@ -31,7 +31,7 @@ receive_MIME_header(struct user_stats *upstats,
 
 static HANDLE
 create_userfile_tmp(COORD* cursorPosition,
-                    unsigned char *filename,
+                    char *filename,
                     char *userfile_tmp)
 {
   char download_dir[1024];
@@ -152,8 +152,8 @@ receiveFile(COORD *cursorPosition,
   COORD coordAverageTX;
   struct http_resource httpres;
   struct success_info successinfo;
-  unsigned char userfile_tmp[FILENAME_MAX_SIZE + 6 + 1024];
-  unsigned char *newFile;
+  char userfile_tmp[FILENAME_MAX_SIZE + 6 + 1024];
+  char *newFile;
   LARGE_INTEGER len_li;
   u_int64 sizeNewFile = 0;
   u_int64 sizeNewFileDup = 0;
@@ -300,7 +300,7 @@ receiveFile(COORD *cursorPosition,
       WriteConsoleA_INFO(INF_WIFIUPLOAD_ONE_PBAR, NULL);
       cursorPosition->X++;
       SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
-      WriteConsoleA_INFO(INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent);
+      WriteConsoleA_INFO(INF_WIFIUPLOAD_CURRENT_PERCENT, (char*)txstats.curr_percent);
       txstats.curr_percent_bak += 2;
     }
 
