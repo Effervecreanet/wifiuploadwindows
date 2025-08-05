@@ -300,7 +300,7 @@ receiveFile(COORD *cursorPosition,
       WriteConsoleA_INFO(INF_WIFIUPLOAD_ONE_PBAR, NULL);
       cursorPosition->X++;
       SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
-      WriteConsoleA_INFO(INF_WIFIUPLOAD_CURRENT_PERCENT, (char*)txstats.curr_percent);
+      WriteConsoleA_INFO(INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent);
       txstats.curr_percent_bak += 2;
     }
 
@@ -382,7 +382,7 @@ receiveFile(COORD *cursorPosition,
     sprintf_s(successinfo.averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_KO, average_speed / 100.00);
   
   ZeroMemory(&httpres, sizeof(struct http_resource));
-  for (ires = 0; http_resources[ires].resource != ""; ires++) {
+  for (ires = 0; http_resources[ires].resource != NULL; ires++) {
       if (strcmp(http_resources[ires].resource, "success") == 0)
         break;
   }

@@ -13,6 +13,9 @@
 #include "wu_msg.h"
 #include "wu_main.h"
 #include "wu_socket.h"
+#include "wu_http_nv.h"
+#include "wu_http_receive.h"
+#include "wu_http.h"
 #include "wu_http_loop.h"
 
 
@@ -200,6 +203,7 @@ int main(void)
 	g_listensocket = g_usersocket = NULL;
 	g_fplog = NULL;
 	g_hNewFile_tmp = g_hConsoleOutput = INVALID_HANDLE_VALUE;
+	inaddr.s_addr = 0;
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
     SetConsoleTitleA(CONSOLE_TITLE);
@@ -261,7 +265,6 @@ int main(void)
 
     if (ret != NO_ERROR || ipAddrTable[0].dwNumEntries < 2) {
         INPUT_RECORD inRec;
-		DWORD read;
 
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);

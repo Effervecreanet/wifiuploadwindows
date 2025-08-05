@@ -102,7 +102,7 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
 	int s_user;
 	DWORD err;
-	int theme;
+	int theme = 0;
 	char ipaddrstr[16];
 	struct tm tmval;
 	time_t wutime;
@@ -203,7 +203,6 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
   } else if (strcmp(reqline.method, "POST") == 0) {
     if (strcmp(reqline.resource + 1, "theme") == 0) {
       char cookie[48];
-      int theme;
 
       if (wu_http_recv_theme(httpnv, s_user, &theme) < 0)
         goto err;
