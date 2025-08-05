@@ -16,13 +16,13 @@ extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 extern HANDLE g_hConsoleOutput;
 extern HANDLE g_hNewFile_tmp;
-extern unsigned char g_sNewFile_tmp[1024];
+extern char g_sNewFile_tmp[1024];
 
 
 static HANDLE
 create_userfile_tmp(COORD* cursorPosition,
                     unsigned char *filename,
-                    unsigned char *userfile_tmp);
+                    char *userfile_tmp);
 static errno_t
 receive_MIME_header(struct user_stats *upstats,
                     int s, unsigned short *MIMELen);
@@ -32,16 +32,16 @@ receive_MIME_header(struct user_stats *upstats,
 static HANDLE
 create_userfile_tmp(COORD* cursorPosition,
                     unsigned char *filename,
-                    unsigned char *userfile_tmp)
+                    char *userfile_tmp)
 {
-  unsigned char download_dir[1024];
+  char download_dir[1024];
   HANDLE hFile;
 
   ZeroMemory(userfile_tmp, FILENAME_MAX_SIZE + 6 + 1024);
 
   create_download_directory(download_dir);
 
-  strcpy_s(userfile_tmp, 1024, download_dir);
+  strcpy_s(userfile_tmp, 1024, &download_dir[0]);
   strcat_s(userfile_tmp, 1024, filename);
   strcat_s(userfile_tmp, 1024, ".tmp");
   

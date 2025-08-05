@@ -5,10 +5,10 @@
 #include "wu_msg.h"
 #include "wu_main.h"
 #include "wu_socket.h"
-#include "wu_http_loop.h"
+#include "wu_http_nv.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"
-#include "wu_http_nv.h"
+#include "wu_http_loop.h"
 #include "wu_content.h"
 #include "wu_http_theme.h"
 
@@ -41,7 +41,7 @@ http_match_resource(char *res)
 
 int
 create_local_resource(struct http_resource *lres, int ires, int theme) {
-  unsigned char curDir[1024];
+  char curDir[1024];
 
   ZeroMemory(curDir, 1024);
   if (!GetCurrentDirectoryA(1024, curDir)) {
