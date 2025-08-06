@@ -59,7 +59,7 @@ create_userfile_tmp(COORD* cursorPosition,
     SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 
     err = GetLastError();
-    WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_FILE, (void*)&err);
+    write_info_in_console(ERR_MSG_CANNOT_CREATE_FILE, (void*)&err);
     
     cursorPosition->Y++;
     SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
@@ -197,7 +197,8 @@ receiveFile(COORD *cursorPosition,
   if (strlen(upstats->filename) == 0)
     return -1;
 
-  clearTXRXPane(cursorPosition);
+  clear_txrx_pane(cursorPosition);
+
   coordAverageTX.X = cursorPosition->X;
   coordAverageTX.Y = cursorPosition->Y + 1;
   SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
@@ -214,7 +215,7 @@ receiveFile(COORD *cursorPosition,
   cursorPosition->Y += 2;
   cursorPosition->X--;
   SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-  WriteConsoleA_INFO(INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL);
+  write_info_in_console(INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL);
   WriteConsoleA(g_hConsoleOutput, upstats->filename, (DWORD)strlen(upstats->filename), &written, NULL);
   cursorPosition->Y -= 2;
   cursorPosition->X++;
@@ -229,7 +230,7 @@ receiveFile(COORD *cursorPosition,
   coordPerCent.Y = cursorPosition->Y;
 
   SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
-  WriteConsoleA_INFO(INF_ZERO_PERCENT, NULL);
+  write_info_in_console(INF_ZERO_PERCENT, NULL);
 
   while(content_length > 0) {
     if (content_length < (1024 + boundarylen + 8) && content_length > 1024) {
@@ -279,14 +280,14 @@ receiveFile(COORD *cursorPosition,
         if (averageRateTX > 1000) {
           averageRateTX /= 1000.000;
           sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-          WriteConsoleA_INFO(INF_WIFIUPLOAD_TX_SPEED_UI_GO, strAverageRateTX);
+          write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_GO, strAverageRateTX);
         } else {
           sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-          WriteConsoleA_INFO(INF_WIFIUPLOAD_TX_SPEED_UI_MO, strAverageRateTX);
+          write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_MO, strAverageRateTX);
         }
       } else {
         sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-        WriteConsoleA_INFO(INF_WIFIUPLOAD_TX_SPEED_UI_KO, strAverageRateTX);
+        write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_KO, strAverageRateTX);
       }
 
       txstats.received_size_bak = txstats.received_size;
@@ -297,10 +298,10 @@ receiveFile(COORD *cursorPosition,
     txstats.curr_percent = (u_char)(((float)txstats.received_size / (float)txstats.total_size) * 100);
     if (txstats.curr_percent > txstats.curr_percent_bak + 2) {
       SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-      WriteConsoleA_INFO(INF_WIFIUPLOAD_ONE_PBAR, NULL);
+      write_info_in_console(INF_WIFIUPLOAD_ONE_PBAR, NULL);
       cursorPosition->X++;
       SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
-      WriteConsoleA_INFO(INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent);
+      write_info_in_console(INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent);
       txstats.curr_percent_bak += 2;
     }
 
@@ -313,13 +314,13 @@ receiveFile(COORD *cursorPosition,
     cursorPosition->Y += 3;
     cursorPosition->X = (cursorPosition + 1)->X;
     SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-    WriteConsoleA_INFO(ERR_MSG_FAIL_TX, NULL);
+    write_info_in_console(ERR_MSG_FAIL_TX, NULL);
     cursorPosition->Y++;
     return -1;
   }
 
   SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
-  WriteConsoleA_INFO(INF_CENT_PERCENT, NULL);
+  write_info_in_console(INF_CENT_PERCENT, NULL);
 
   GetSystemTime(&txstats.end);
 

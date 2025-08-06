@@ -74,7 +74,7 @@ create_download_directory(char dd[1024]) {
 }
 
 void
-WriteConsoleA_INFO(enum idmsg id, void *p) {
+write_info_in_console(enum idmsg id, void *p) {
     DWORD written;
     unsigned char i;
     char outConBuf[1024];
@@ -98,7 +98,7 @@ WriteConsoleA_INFO(enum idmsg id, void *p) {
 };
 
 void
-clearTXRXPane(COORD* cursorPosition) {
+clear_txrx_pane(COORD* cursorPosition) {
     DWORD written;
     COORD coordCR;
 
@@ -116,7 +116,7 @@ clearTXRXPane(COORD* cursorPosition) {
 }
 
 static void
-consDrawRect(COORD cursPosStart) {
+draw_rectangle_in_console(COORD cursPosStart) {
     COORD cursPosEnd;
     DWORD written;
 
@@ -247,7 +247,7 @@ int main(void)
     cursorPosition[0].Y = 2;
 
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    WriteConsoleA_INFO(INF_PROMOTE_WIFIUPLOAD, NULL);
+    write_info_in_console(INF_PROMOTE_WIFIUPLOAD, NULL);
 
     cursorPosition[0].Y++;
 
@@ -256,7 +256,7 @@ int main(void)
     SetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
 
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    WriteConsoleA_INFO(INF_WIFIUPLOAD_SERVICE, NULL);
+    write_info_in_console(INF_WIFIUPLOAD_SERVICE, NULL);
 
     cursorPosition[0].Y++;
 
@@ -268,7 +268,7 @@ int main(void)
 
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(ERR_MSG_CONNECTIVITY, NULL);
+        write_info_in_console(ERR_MSG_CONNECTIVITY, NULL);
 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
@@ -283,23 +283,23 @@ int main(void)
 
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
+        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
+        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
         cursorPosition[0].X -= 5;
 
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
         
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
+        write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
 
         SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
         cursorPosition[0].X -= 5;
@@ -327,21 +327,21 @@ int main(void)
         cursorPosition[0].Y += 2;
 
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(INF_MSG_TWO_AVAILABLE_ADDR, NULL);
+        write_info_in_console(INF_MSG_TWO_AVAILABLE_ADDR, NULL);
 
         cursorPosition[0].X += 4;
         cursorPosition[0].Y += 2;
 
         pStringIpAddr1 = inet_ntoa(inaddr1);
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
+        write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
         cursorPosition[0].Y++;
         pStringIpAddr2 = inet_ntoa(inaddr2);
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
+        write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
         cursorPosition[0].Y++;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(INF_MSG_CHOICE_QUESTION, NULL);
+        write_info_in_console(INF_MSG_CHOICE_QUESTION, NULL);
         
         do {
             ZeroMemory(&inRec, sizeof(INPUT_RECORD));
@@ -362,7 +362,7 @@ int main(void)
         cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 5;
 
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        WriteConsoleA_INFO(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
 
         cursorPosition[0].Y++;
 
@@ -373,7 +373,7 @@ int main(void)
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
             SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-            WriteConsoleA_INFO(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
+            write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
             SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
             cursorPosition[0].X -= 5;
         }
@@ -384,7 +384,7 @@ int main(void)
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
             SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-            WriteConsoleA_INFO(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
+            write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
             cursorPosition[0].X -= 5;
         }
     }
@@ -392,7 +392,7 @@ int main(void)
         INPUT_RECORD inRec;
 		cursorPosition[0].Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-		WriteConsoleA_INFO(ERR_MSG_TOO_MANY_ADDR, NULL);
+		write_info_in_console(ERR_MSG_TOO_MANY_ADDR, NULL);
 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
@@ -401,7 +401,7 @@ int main(void)
 
     cursorPosition[0].Y += 2;;
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    WriteConsoleA_INFO(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
+    write_info_in_console(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
 
     ZeroMemory(dd, 1024);
     create_download_directory(dd);
@@ -409,7 +409,7 @@ int main(void)
     cursorPosition[0].X += 5;
     cursorPosition[0].Y += 2;
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    WriteConsoleA_INFO(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
+    write_info_in_console(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
     cursorPosition[0].X -= 5;
 
     s = create_socket(&cursorPosition[0]);
@@ -419,14 +419,16 @@ int main(void)
 
     cursorPosition[1].Y = cursorPosition[0].Y;
     cursorPosition[1].X = cursorPosition[0].X;
-    consDrawRect(cursorPosition[0]);
+
+    draw_rectangle_in_console(cursorPosition[0]);
+
     cursorPosition[0].Y = cursorPosition[1].Y;
     cursorPosition[0].X = cursorPosition[1].X;
 
     cursorPosition[0].Y++;
 
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    WriteConsoleA_INFO(INF_WIFIUPLOAD_UI_TX_RX, NULL);
+    write_info_in_console(INF_WIFIUPLOAD_UI_TX_RX, NULL);
  
     for (i = 0; wumsg[i].id != INF_WIFIUPLOAD_UI_TX_RX; i++)
         ;
@@ -442,7 +444,7 @@ int main(void)
     if (ret) {
 	    if (_mkdir(logpath)) {
 			INPUT_RECORD inRec;
-			WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
+			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	    } else {
 logyear:	char wYearStr[5];
@@ -456,7 +458,7 @@ logyear:	char wYearStr[5];
 		
 		if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 			INPUT_RECORD inRec;
-			WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		} else {
 			char wMonthStr[3];
@@ -474,7 +476,7 @@ logyear:	char wYearStr[5];
 			}
 			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 				INPUT_RECORD inRec;
-				WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 			} else {
 				char wDayStr[3];
@@ -509,7 +511,7 @@ logyear:	char wYearStr[5];
 
 				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 					INPUT_RECORD inRec;
-					WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 					}
 				}
@@ -523,7 +525,7 @@ logyear:	char wYearStr[5];
     strcat_s(logpath, 512, log_filename);
 
     if (fopen_s(&g_fplog, logpath, "a+")) {
-		WriteConsoleA_INFO(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
+		write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
 		WSACleanup();
 		return 3;
     }
@@ -538,7 +540,7 @@ logyear:	char wYearStr[5];
 			break;
 
         if (cursorPosition[0].Y >= cursorPosition[1].Y + 6)
-            clearTXRXPane(cursorPosition);
+            clear_txrx_pane(cursorPosition);
     }
 
     WSACleanup();
