@@ -54,7 +54,7 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
 #else
     strcat_s(curDir, 1024, "\\html\\en\\");
 #endif
-    if (!theme)
+    if (theme == 0)
       strcat_s(curDir, 1024, "light\\");
     else
       strcat_s(curDir, 1024, "dark\\");
@@ -62,7 +62,7 @@ create_local_resource(struct http_resource *lres, int ires, int theme) {
     strcat_s(curDir, 1024, http_resources[ires].resource);
   } else if (strcmp(http_resources[ires].type, "image/png") == 0) {
     strcat_s(curDir, 1024, "\\");
-    if (!theme)
+    if (theme == 0)
       strcat_s(curDir, 1024, http_resources[ires].path_theme1);
     else
       strcat_s(curDir, 1024, http_resources[ires].path_theme2);  
@@ -223,6 +223,7 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
         struct user_stats upstats;
 
         clear_txrx_pane(cursorPosition);
+    check_cookie_theme(httpnv, &theme);
 
         ZeroMemory(&upstats, sizeof(struct user_stats));
         err = receiveFile(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
