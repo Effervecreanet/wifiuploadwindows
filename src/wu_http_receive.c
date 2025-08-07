@@ -136,7 +136,7 @@ receive_MIME_header(struct user_stats *upstats, int s, unsigned short *MIMElen)
 }
 
 int
-receiveFile(COORD *cursorPosition,
+receive_file(COORD *cursorPosition,
             struct header_nv *httpnv, int s,
             struct user_stats *upstats, int theme,
 			int *bytesent) {

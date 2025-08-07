@@ -8,6 +8,6 @@ struct user_stats {
   char averagespeed[32];
 };
 
-int receiveFile(COORD *cursorPosition,
+int receive_file(COORD *cursorPosition,
                 struct header_nv *httpnv, int s,
                 struct user_stats *upstats, int theme, int *bytesent);
