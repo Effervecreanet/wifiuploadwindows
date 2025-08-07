@@ -12,7 +12,7 @@
       </p>
     </div>
 
-  <p style="display: block; width: 90%%; margin: 30px 5%%; padding: 11px 0; background: #CECECE; color: #000000; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;">Credits</p>
+  <p style="display: block; width: 90%%; margin: 30px 5%%; padding: 11px 0; background: #CECECE; background-image: url('/images/eloge-merite-IA.png'); background-position: 14px; background-repeat: no-repeat; color: #000000; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;">Credits</p>
 	
 	<div style="display: block; width: 100%%; height: 14px;">&nbsp;</div>
 	
@@ -24,11 +24,11 @@
 		<p style="color: #000000; text-align: center; font-size: 30px; font-weight: 100">Premi&egrave;re version:</p>
 		<p style="color: #000000; text-align: center; font-size: 30px; font-weight: 200">01/01/2017</p>
 		<p style="color: #000000; text-align: center; font-size: 30px; font-weight: 100">Derni&egrave;re version:</p>
-		<p style="color: #000000; text-align: center; font-size: 30px; font-weight: 200">18/07/2025</p>
+		<p style="color: #000000; text-align: center; font-size: 30px; font-weight: 200">04/08/2025</p>
 		<p style="color: #000000; text-align: center; font-size: 30px; font-weight: 100">Derni&egrave;re compilation:</p>
-		<p style="color: #000000; text-align: center; font-size: 30px; font-weight: 200">18/07/2025</p>
+		<p style="color: #000000; text-align: center; font-size: 30px; font-weight: 200">06/08/2025</p>
     <p style="color: #000000; text-align: center; font-size: 30px; font-weight: 100">Version:</p>
-    <p style="color: #000000; text-align: center; font-size: 30px; font-weight: 200">5.22</p>    
+    <p style="color: #000000; text-align: center; font-size: 30px; font-weight: 200">5.31</p>    
 	</div>
 	<img style="display: block;  margin: 70px auto 160px auto; padding: 0;" width="600" height="222" src="/images/logo6_effervecreanet.png" />
 	<div style="display: block; width: 100%%; margin: 0; padding: 80px 0 0 0; height:80px; border-top: 2px solid #F0B116;">

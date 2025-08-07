@@ -4,6 +4,8 @@
 #include <UserEnv.h>
 #include <strsafe.h>
 #include <stdio.h>
+#include <conio.h>
+#include <direct.h>
 #include <locale.h>
 #include <sys\stat.h>
 
@@ -11,6 +13,10 @@
 #include "wu_msg.h"
 #include "wu_main.h"
 #include "wu_socket.h"
+#include "wu_http_nv.h"
+#include "wu_http_receive.h"
+#include "wu_http.h"
+#include "wu_http_loop.h"
 
 
 #pragma comment(lib, "ws2_32.lib")
@@ -19,33 +25,34 @@
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "userenv.lib")
-#pragma comment(lib, "ncrypt.lib")
-
-DWORD WINAPI wu_x509_func(struct paramThread *prThread);
 
 extern struct wu_msg wumsg[];
-FILE *fp_httplog;
-FILE *fp_httpslog;
+FILE *g_fplog;
+int *g_listensocket;
+int *g_usersocket;
+HANDLE g_hConsoleOutput;
+HANDLE g_hNewFile_tmp;
+unsigned char g_sNewFile_tmp[1024];
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
 {
-	SYSTEMTIME systime;
-
     switch (dwCtrlType) {
     case CTRL_CLOSE_EVENT:
     case CTRL_LOGOFF_EVENT:
     case CTRL_SHUTDOWN_EVENT:
-		GetLocalTime(&systime);
-
-		fprintf(fp_httplog, "Close log at %i:%i:%i and quit the app.",
-						    systime.wHour, systime.wMinute, systime.wDay);
-		fclose(fp_httplog);
-
-		fprintf(fp_httpslog, "Close log at %i:%i:%i and quit the app.",
-						    systime.wHour, systime.wMinute, systime.wDay);
-		fclose(fp_httpslog);
-
+		if (g_fplog != NULL)
+			fclose(g_fplog);
+		if (g_usersocket != NULL && *g_usersocket != 0)
+			closesocket(*g_usersocket);
+		if (g_listensocket != NULL)
+			closesocket(*g_listensocket);
+		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
+			CloseHandle(g_hConsoleOutput);
+		if (g_hNewFile_tmp != INVALID_HANDLE_VALUE){
+			CloseHandle(g_hNewFile_tmp);
+			DeleteFileA((LPCSTR)g_sNewFile_tmp);
+		}
         WSACleanup();
         ExitProcess(TRUE);
     default:
@@ -55,19 +62,19 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
     return FALSE;
 }
 
-int
-create_download_directory(unsigned char dd[1024]) {
+void
+create_download_directory(char dd[1024]) {
     DWORD szdd = 1024;
 
     ZeroMemory(dd, 1024);
     GetUserProfileDirectoryA(GetCurrentProcessToken(), dd, &szdd);
     strcat_s(dd, 1024, "\\Downloads\\");
 
-    return 1;
+    return;
 }
 
 void
-WriteConsoleA_INFO(HANDLE conScreenBuffer, enum idmsg id, void *p) {
+write_info_in_console(enum idmsg id, void *p) {
     DWORD written;
     unsigned char i;
     char outConBuf[1024];
@@ -76,98 +83,98 @@ WriteConsoleA_INFO(HANDLE conScreenBuffer, enum idmsg id, void *p) {
         if (wumsg[i].id == id)
             break;
     
-    SetConsoleTextAttribute(conScreenBuffer, wumsg[i].wAtributes[0]);
+    SetConsoleTextAttribute(g_hConsoleOutput, wumsg[i].wAtributes[0]);
 
     if (p != NULL) {
         ZeroMemory(outConBuf, 1024);
         StringCchPrintf(outConBuf, 1024, wumsg[i].Msg, p);
-        WriteConsoleA(conScreenBuffer, outConBuf, (DWORD)strlen(outConBuf), &written, NULL);
+        WriteConsoleA(g_hConsoleOutput, outConBuf, (DWORD)strlen(outConBuf), &written, NULL);
     }
     else {
-        WriteConsoleA(conScreenBuffer, wumsg[i].Msg, wumsg[i].szMsg, &written, NULL);
+        WriteConsoleA(g_hConsoleOutput, wumsg[i].Msg, wumsg[i].szMsg, &written, NULL);
     }
 
     return;
 };
 
 void
-clearTXRXPane(HANDLE conScreenBuffer, COORD* cursorPosition) {
+clear_txrx_pane(COORD* cursorPosition) {
     DWORD written;
     COORD coordCR;
 
     for (coordCR.Y = cursorPosition[1].Y, coordCR.X = cursorPosition[1].X; coordCR.Y <= cursorPosition[1].Y + 6; coordCR.Y++) {
-        SetConsoleCursorPosition(conScreenBuffer, coordCR);
-        WriteConsoleA(conScreenBuffer, "                                                                                     ",
+        SetConsoleCursorPosition(g_hConsoleOutput, coordCR);
+        WriteConsoleA(g_hConsoleOutput, "                                                                                     ",
             sizeof("                                                                               ") - 1, &written, NULL);
     }
 
     cursorPosition->Y = (cursorPosition + 1)->Y;
     cursorPosition->X = (cursorPosition + 1)->X;
-    SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
+    SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 
     return;
 }
 
 static void
-consDrawRect(HANDLE hConScreenBuf, COORD cursPosStart) {
+draw_rectangle_in_console(COORD cursPosStart) {
     COORD cursPosEnd;
     DWORD written;
 
     cursPosStart.X = 1;
 
-    SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     
     cursPosStart.X++;
     
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
     for (cursPosEnd.X = cursPosStart.X + 115, cursPosEnd.Y = cursPosStart.Y;
         cursPosStart.X <= cursPosEnd.X;
         cursPosStart.X++) {
-        SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-        WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     }
 
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
     for (cursPosEnd.Y = cursPosStart.Y + 9, cursPosStart.Y++;
         cursPosStart.Y < cursPosEnd.Y;
         cursPosStart.Y++) {
-        SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-        WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     }
 
-    SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
     for (cursPosEnd.X = cursPosStart.X - 117, cursPosEnd.Y = cursPosStart.Y;
         cursPosStart.X >= cursPosEnd.X;
         cursPosStart.X--) {
-        SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-        WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     }
 
     cursPosStart.X++;
     cursPosStart.Y--;
-    SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    SetConsoleTextAttribute(hConScreenBuf, COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
     for (;
         cursPosStart.Y > cursPosEnd.Y - 9;
         cursPosStart.Y--) {
-        SetConsoleCursorPosition(hConScreenBuf, cursPosStart);
-        WriteConsoleA(hConScreenBuf, " ", 1, &written, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
     }
 
     return;
@@ -175,7 +182,6 @@ consDrawRect(HANDLE hConScreenBuf, COORD cursPosStart) {
 
 int main(void)
 {
-    HANDLE conScreenBuffer;
     DWORD written, read, ret;
     WSADATA wsaData;
     MIB_IPADDRTABLE ipAddrTable[4];
@@ -190,14 +196,14 @@ int main(void)
     struct _stat statbuff;
     char logentry[256];
     SYSTEMTIME systime;
-    char errMsgFormatStr[127];
-    char httplogpath[512];
-    char httpslogpath[512];
-    char httplog_filename[sizeof("httplog_19700101.txt")];
-    char httpslog_filename[sizeof("httpslog_19700101.txt")];
-	struct paramThread prThread;
-	DWORD trd_id;
-		
+    char logpath[512];
+    char log_filename[sizeof("log_19700101.txt")];
+	char userprofile[255 + sizeof(LOG_DIRECTORY)];
+
+	g_listensocket = g_usersocket = NULL;
+	g_fplog = NULL;
+	g_hNewFile_tmp = g_hConsoleOutput = INVALID_HANDLE_VALUE;
+	inaddr.s_addr = 0;
 
     SetConsoleCtrlHandler(HandlerRoutine, TRUE);
     SetConsoleTitleA(CONSOLE_TITLE);
@@ -213,47 +219,44 @@ int main(void)
     consoleWindow = GetConsoleWindow();
     SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
 
-    conScreenBuffer = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE,
+    g_hConsoleOutput = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE,
         0,
         NULL,
         CONSOLE_TEXTMODE_BUFFER,
         NULL);
 
-    if (conScreenBuffer == INVALID_HANDLE_VALUE) {
+    if (g_hConsoleOutput == INVALID_HANDLE_VALUE) {
         printf(ERR_FMT_MSG_INIT_CONSOLE, GetLastError());
-        while (1)
-            Sleep(1000);
-
-        ExitProcess(1);
+		g_hConsoleOutput = INVALID_HANDLE_VALUE;
+		_getch();
+		ExitProcess(FALSE);
     }
 
-    SetConsoleMode(conScreenBuffer, ENABLE_LVB_GRID_WORLDWIDE);
+    SetConsoleMode(g_hConsoleOutput, ENABLE_LVB_GRID_WORLDWIDE);
 
     ZeroMemory(&wsaData, sizeof(WSADATA));
     if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
         printf(ERR_FMT_MSG_INIT_WINSOCK, GetLastError());
-        while (1)
-            Sleep(1000);
-
-        ExitProcess(2);
+		_getch();
+		ExitProcess(FALSE);
     }
 
-    SetConsoleActiveScreenBuffer(conScreenBuffer);
+    SetConsoleActiveScreenBuffer(g_hConsoleOutput);
 
     cursorPosition[0].X = 2;
     cursorPosition[0].Y = 2;
 
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_PROMOTE_WIFIUPLOAD, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    write_info_in_console(INF_PROMOTE_WIFIUPLOAD, NULL);
 
     cursorPosition[0].Y++;
 
-    GetConsoleCursorInfo(conScreenBuffer, &cursorInfo);
+    GetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
     cursorInfo.bVisible = FALSE;
-    SetConsoleCursorInfo(conScreenBuffer, &cursorInfo);
+    SetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
 
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_SERVICE, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    write_info_in_console(INF_WIFIUPLOAD_SERVICE, NULL);
 
     cursorPosition[0].Y++;
 
@@ -261,14 +264,14 @@ int main(void)
     ret = GetIpAddrTable((PMIB_IPADDRTABLE)&ipAddrTable, &sizeIpAddrTable, TRUE);
 
     if (ret != NO_ERROR || ipAddrTable[0].dwNumEntries < 2) {
+        INPUT_RECORD inRec;
+
         cursorPosition[0].Y += 2;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CONNECTIVITY, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(ERR_MSG_CONNECTIVITY, NULL);
 
-        while (1)
-            Sleep(1000);
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
-        ExitProcess(3);
     } 
     else if (ipAddrTable[0].dwNumEntries == 2) {
         PCHAR pStringIpAddr;
@@ -279,26 +282,26 @@ int main(void)
         pStringIpAddr = inet_ntoa(inaddr);
 
         cursorPosition[0].Y += 2;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
         cursorPosition[0].X -= 5;
 
         cursorPosition[0].Y += 2;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
         
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
 
-        SetConsoleTextAttribute(conScreenBuffer, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
         cursorPosition[0].X -= 5;
     } 
     else if (ipAddrTable[0].dwNumEntries == 3) {
@@ -323,22 +326,22 @@ int main(void)
 
         cursorPosition[0].Y += 2;
 
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_MSG_TWO_AVAILABLE_ADDR, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(INF_MSG_TWO_AVAILABLE_ADDR, NULL);
 
         cursorPosition[0].X += 4;
         cursorPosition[0].Y += 2;
 
         pStringIpAddr1 = inet_ntoa(inaddr1);
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
         cursorPosition[0].Y++;
         pStringIpAddr2 = inet_ntoa(inaddr2);
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
         cursorPosition[0].Y++;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_MSG_CHOICE_QUESTION, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(INF_MSG_CHOICE_QUESTION, NULL);
         
         do {
             ZeroMemory(&inRec, sizeof(INPUT_RECORD));
@@ -351,16 +354,15 @@ int main(void)
             dwUsrChoice = atoi((const char*)&inRec.Event.KeyEvent.uChar.AsciiChar);
         } while (dwUsrChoice >= ipAddrTable->dwNumEntries || dwUsrChoice == 0);
 
-        cursorPosition[0].X += sizeof(INF_MSG_CHOICE_QUESTION) + 4;
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA(conScreenBuffer, &inRec.Event.KeyEvent.uChar.AsciiChar, 1, &written, NULL);
-
+        cursorPosition[0].X += sizeof(INF_MSG_CHOICE_QUESTION) + 5;
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        WriteConsoleA(g_hConsoleOutput, &inRec.Event.KeyEvent.uChar.AsciiChar, 1, &written, NULL);
 
         cursorPosition[0].Y += 2;
-        cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 4;
+        cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 5;
 
-        SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+        write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
 
         cursorPosition[0].Y++;
 
@@ -370,9 +372,9 @@ int main(void)
 
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
-            SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-            WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
-            SetConsoleTextAttribute(conScreenBuffer, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+            SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+            write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
+            SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
             cursorPosition[0].X -= 5;
         }
         else {
@@ -381,217 +383,164 @@ int main(void)
 
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
-            SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-            WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
+            SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+            write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
             cursorPosition[0].X -= 5;
         }
     }
     else {
-    cursorPosition[0].Y++;
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_TOO_MANY_ADDR, NULL);
+        INPUT_RECORD inRec;
+		cursorPosition[0].Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+		write_info_in_console(ERR_MSG_TOO_MANY_ADDR, NULL);
 
-    while (1)
-        Sleep(1000);
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
-    ExitProcess(4);
+		ExitProcess(4);
     }
 
     cursorPosition[0].Y += 2;;
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    write_info_in_console(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
 
     ZeroMemory(dd, 1024);
     create_download_directory(dd);
 
     cursorPosition[0].X += 5;
     cursorPosition[0].Y += 2;
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    write_info_in_console(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
     cursorPosition[0].X -= 5;
 
-    s = create_socket(conScreenBuffer, &cursorPosition[0]);
-    bind_socket(conScreenBuffer, &cursorPosition[0], s, inaddr);
+    s = create_socket(&cursorPosition[0]);
+    bind_socket(&cursorPosition[0], s, inaddr);
 
     cursorPosition[0].Y += ((ipAddrTable->dwNumEntries < 3) ? 3 : 2);
 
     cursorPosition[1].Y = cursorPosition[0].Y;
     cursorPosition[1].X = cursorPosition[0].X;
-    consDrawRect(conScreenBuffer, cursorPosition[0]);
+
+    draw_rectangle_in_console(cursorPosition[0]);
+
     cursorPosition[0].Y = cursorPosition[1].Y;
     cursorPosition[0].X = cursorPosition[1].X;
 
     cursorPosition[0].Y++;
 
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
-    WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_UI_TX_RX, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+    write_info_in_console(INF_WIFIUPLOAD_UI_TX_RX, NULL);
  
     for (i = 0; wumsg[i].id != INF_WIFIUPLOAD_UI_TX_RX; i++)
         ;
     cursorPosition[0].X += (USHORT)wumsg[i].szMsg;
     
-    SetConsoleCursorPosition(conScreenBuffer, cursorPosition[0]);
+    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
 
-	ZeroMemory(httplogpath, 512);
-	sprintf(httplogpath, "%s\\%s", getenv("USERPROFILE"), LOG_DIRECTORY);
-    ret = _stat(httplogpath, &statbuff);
+	ZeroMemory(logpath, 512);
+	ZeroMemory(userprofile, 255 + sizeof(LOG_DIRECTORY));
+	getenv_s((size_t*)&ret, userprofile, (size_t)(255 + sizeof(LOG_DIRECTORY)), "USERPROFILE");
+	sprintf_s(logpath, 255 + 1 + sizeof(LOG_DIRECTORY), "%s\\%s", userprofile, LOG_DIRECTORY);
+    ret = _stat(logpath, &statbuff);
     if (ret) {
-	    if (_mkdir(httplogpath)) {
-		INPUT_RECORD inRec;
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
-			if (inRec.Event.KeyEvent.bKeyDown != TRUE)
-			    continue;
-		        WSACleanup();
-		        return 2;
-		    }
-	    } else {
-logyear:	INPUT_RECORD inRec;
-			char wYearStr[5];
-
-		GetLocalTime(&systime);
-		ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
-		ZeroMemory(httpslog_filename, sizeof("httpslog_19700101.txt"));
-			ZeroMemory(wYearStr, 5);
-			sprintf(wYearStr, "%i", systime.wYear);
-			strcat(httplogpath, "\\");
-			strcat(httplogpath, wYearStr);
-		
-		if (_stat(httplogpath, &statbuff) && _mkdir(httplogpath)) {
+	    if (_mkdir(logpath)) {
 			INPUT_RECORD inRec;
-			WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, httplogpath);
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
-				if (inRec.Event.KeyEvent.bKeyDown != TRUE)
-				    continue;
-				WSACleanup();
-				return 2;
-		    }
+			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	    } else {
+logyear:	char wYearStr[5];
+	
+			GetSystemTime(&systime);
+			ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+			ZeroMemory(wYearStr, 5);
+			sprintf_s(wYearStr, 5, "%i", systime.wYear);
+			strcat_s(logpath, 512, "\\");
+			strcat_s(logpath, 512, wYearStr);
+		
+		if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
+			INPUT_RECORD inRec;
+			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		} else {
 			char wMonthStr[3];
 			
 			if (systime.wMonth < 10) {
 				ZeroMemory(wMonthStr, 3);
-				sprintf(wMonthStr, "0%i", systime.wMonth);
-				strcat(httplogpath, "\\");
-				strcat(httplogpath, wMonthStr);
+				sprintf_s(wMonthStr, 3, "0%i", systime.wMonth);
+				strcat_s(logpath, 512, "\\");
+				strcat_s(logpath, 512, wMonthStr);
 			} else {
 				ZeroMemory(wMonthStr, 3);
-				sprintf(wMonthStr, "%i", systime.wMonth);
-				strcat(httplogpath, "\\");
-				strcat(httplogpath, wMonthStr);
+				sprintf_s(wMonthStr, 3, "%i", systime.wMonth);
+				strcat_s(logpath, 512, "\\");
+				strcat_s(logpath, 512, wMonthStr);
 			}
-			if (_stat(httplogpath, &statbuff) && _mkdir(httplogpath)) {
+			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 				INPUT_RECORD inRec;
-				WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, httplogpath);
-				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
-					if (inRec.Event.KeyEvent.bKeyDown != TRUE)
-					    continue;
-				WSACleanup();
-				return 2;
-			        }
+				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 			} else {
 				char wDayStr[3];
 
 				if (systime.wMonth < 10) {
 					if (systime.wDay < 10) {
-						sprintf(wDayStr, "0%i", systime.wDay);
-						strcat(httplogpath, "\\");
-						strcat(httplogpath, wDayStr);
-						ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
-						sprintf(httplog_filename, "httplog_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
-						ZeroMemory(httpslog_filename, sizeof("httpslog_19700101.txt"));
-						sprintf(httpslog_filename, "httpslog_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf_s(wDayStr, 3, "0%i", systime.wDay);
+						strcat_s(logpath, 512, "\\");
+						strcat_s(logpath, 512, wDayStr);
+						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					} else {
-						sprintf(wDayStr, "%i", systime.wDay);
-						strcat(httplogpath, "\\");
-						strcat(httplogpath, wDayStr);
-						ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
-						sprintf(httplog_filename, "httplog_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
-						ZeroMemory(httpslog_filename, sizeof("httplogs_19700101.txt"));
-						sprintf(httpslog_filename, "httpslog_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf_s(wDayStr, 3, "%i", systime.wDay);
+						strcat_s(logpath, 512, "\\");
+						strcat_s(logpath, 512, wDayStr);
+						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					}
 				} else if (systime.wDay < 10) {
-						sprintf(wDayStr, "0%i", systime.wDay);
-						strcat(httplogpath, "\\");
-						strcat(httplogpath, wDayStr);
-						ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
-						sprintf(httplog_filename, "httplog_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
-						ZeroMemory(httpslog_filename, sizeof("httpslog_19700101.txt"));
-						sprintf(httpslog_filename, "httpslog_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf_s(wDayStr, 3, "0%i", systime.wDay);
+						strcat_s(logpath, 512, "\\");
+						strcat_s(logpath, 512, wDayStr);
+						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				} else {
-						sprintf(wDayStr, "%i", systime.wDay);
-						strcat(httplogpath, "\\");
-						strcat(httplogpath, wDayStr);
-						ZeroMemory(httplog_filename, sizeof("httplog_19700101.txt"));
-						sprintf(httplog_filename, "httplog_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
-						ZeroMemory(httpslog_filename, sizeof("httpslog_19700101.txt"));
-						sprintf(httpslog_filename, "httpslog_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						sprintf_s(wDayStr, 3, "%i", systime.wDay);
+						strcat_s(logpath, 512, "\\");
+						strcat_s(logpath, 512, wDayStr);
+						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
+						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				}
 
-				if (_stat(httplogpath, &statbuff) && _mkdir(httplogpath)) {
+				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 					INPUT_RECORD inRec;
-					WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, httplogpath);
-					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read)) {
-						if (inRec.Event.KeyEvent.bKeyDown != TRUE)
-						    continue;
-					WSACleanup();
-					return 2;
+					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 					}
 				}
 			}
 		}		
-	}
     } else {
 	    goto logyear;
     }
 
-    strcpy(httpslogpath, httplogpath);
-    strcat(httpslogpath, "\\");
-    strcat(httpslogpath, httpslog_filename);
+    strcat_s(logpath, 512, "\\");
+    strcat_s(logpath, 512, log_filename);
 
-    strcat(httplogpath, "\\");
-    strcat(httplogpath, httplog_filename);
-
-    fp_httplog = fopen(httplogpath, "a+");
-    if (!fp_httplog) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_FILE, httplogpath);
+    if (fopen_s(&g_fplog, logpath, "a+")) {
+		write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
 		WSACleanup();
 		return 3;
     }
-
-	fprintf(fp_httplog, "Wifiupload started at %i:%i:%i on %s with port 80 (http)\n",
-						systime.wHour, systime.wMinute, systime.wSecond,
-						inet_ntoa(inaddr));
-						
-
-    fp_httpslog = fopen(httpslogpath, "a+");
-    if (!fp_httpslog) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_LOG_FILE, httpslogpath);
-		WSACleanup();
-		return 3;
-    }
-
-	fprintf(fp_httpslog, "Wifiupload started at %i:%i:%i on %s with port 443 (https)\n",
-						systime.wHour, systime.wMinute, systime.wSecond,
-						inet_ntoa(inaddr));
-	
-	memcpy(&prThread.inaddr, &inaddr, sizeof(struct in_addr));
-	prThread.conScreenBuffer = conScreenBuffer;
-	memcpy(&prThread.cursorPosition, &cursorPosition, sizeof(COORD));
-
-	CreateThread(NULL, 0, wu_x509_func, (void*)&prThread, 0, &trd_id);
 
     for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
-        ret = http_loop(conScreenBuffer, cursorPosition, &inaddr, s, logentry);
+        ret = http_loop(cursorPosition, &inaddr, s, logentry);
 
-		fprintf(fp_httplog, logentry);
-		fflush(fp_httplog);
+		fprintf(g_fplog, logentry);
+		fflush(g_fplog);
 
 		if (ret == 1)
 			break;
 
         if (cursorPosition[0].Y >= cursorPosition[1].Y + 6)
-            clearTXRXPane(conScreenBuffer, cursorPosition);
+            clear_txrx_pane(cursorPosition);
     }
 
     WSACleanup();

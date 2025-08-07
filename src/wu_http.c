@@ -28,14 +28,15 @@ time_to_httpdate(char* http_date)
   struct tm intmv;
   time_t now;
 
-  time(&now);
-  ZeroMemory(&intmv, sizeof(struct tm));
-  gmtime_s(&intmv, &now);
+	time(&now);
 
-  ZeroMemory(http_date, HEADER_VALUE_MAX_SIZE);
-  if (strftime((char*)http_date, HEADER_VALUE_MAX_SIZE,
-               "%a, %d %b %Y %H:%M:%S GMT", &intmv) == 0)
-    return -1;
+	ZeroMemory(&intmv, sizeof(struct tm));
+	gmtime_s(&intmv, &now);
+
+	ZeroMemory(http_date, HEADER_VALUE_MAX_SIZE);
+	if (strftime((char*)http_date, HEADER_VALUE_MAX_SIZE,
+					"%a, %d %b %Y %H:%M:%S GMT", &intmv) == 0)
+		return -1;
 
   return 1;
 }
@@ -181,7 +182,7 @@ create_http_header_nv(struct http_resource *res, struct header_nv *nv, size_t fs
 static int
 send_http_header_nv(struct header_nv* nv, int s, int *bytesent) {
   int i;
-  int ret;
+  int ret = 0;
 
   for (i = 0; i < HEADER_NV_MAX_SIZE && (nv + i)->name.wsite != NULL; i++) {
     ret = send(s, (nv + i)->name.wsite, (int)strlen((nv + i)->name.wsite), 0);

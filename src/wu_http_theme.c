@@ -12,7 +12,7 @@ wu_http_post_theme_hdr_nv(struct header_nv hdrnv[32], char *cookie)
 {
 	int cnt = 0;
 	time_t now = time(NULL);
-	struct tm *tmv;
+	struct tm tmv;
 	char expires[HTTP_STRING_DATE_SIZE];
 
 	hdrnv[cnt].name.wsite = HTTP_HEADER_CACHE_CONTROL;
@@ -31,9 +31,11 @@ wu_http_post_theme_hdr_nv(struct header_nv hdrnv[32], char *cookie)
 	hdrnv[cnt++].value.pv = HTTP_HEADER_CONTENT_LANGUAGE_VALUE;
 
 	hdrnv[cnt].name.wsite = HTTP_HEADER_SET_COOKIE;
-	tmv = gmtime(&now);
-	tmv->tm_year++;
-	strftime(expires, HTTP_STRING_DATE_SIZE, "%a, %d %b %Y %H:%M:%S GMT", tmv);
+		
+	ZeroMemory(&tmv, sizeof(struct tm));
+	gmtime_s(&tmv, &now);
+	tmv.tm_year++;
+	strftime(expires, HTTP_STRING_DATE_SIZE, "%a, %d %b %Y %H:%M:%S GMT", &tmv);
 
 	strcpy_s(hdrnv[cnt].value.v, HEADER_VALUE_MAX_SIZE, cookie);
 	strcat_s(hdrnv[cnt].value.v, HEADER_VALUE_MAX_SIZE,"; Expires=");
@@ -51,9 +53,6 @@ wu_http_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int 
       int clen;
       int idxclen, i;
       char buffer[sizeof("theme=light")];
-      int ires;
-      char cookie[64];
-      char expires[33];
 
       idxclen = nv_find_name_client(httpnv, "Content-Length");
       if (idxclen < 0)
@@ -83,12 +82,12 @@ wu_http_send_hdr(int susr, struct header_nv hdrnv[32])
 	int cnt = 0;
 
 	for (cnt = 0; hdrnv[cnt].name.wsite != NULL; cnt++) {
-		send(susr, hdrnv[cnt].name.wsite, strlen(hdrnv[cnt].name.wsite), 0);
+		send(susr, hdrnv[cnt].name.wsite, (int) strlen(hdrnv[cnt].name.wsite), 0);
 		send(susr, ": ", 2, 0);
 		if (hdrnv[cnt].value.pv && *hdrnv[cnt].value.pv)
-			send(susr, hdrnv[cnt].value.pv, strlen(hdrnv[cnt].value.pv), 0);
+			send(susr, hdrnv[cnt].value.pv, (int) strlen(hdrnv[cnt].value.pv), 0);
 		else
-			send(susr, hdrnv[cnt].value.v, strlen(hdrnv[cnt].value.v), 0);
+			send(susr, hdrnv[cnt].value.v, (int) strlen(hdrnv[cnt].value.v), 0);
 		send(susr, "\r\n", 2, 0);
 	}
 

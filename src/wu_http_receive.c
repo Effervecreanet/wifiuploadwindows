@@ -14,13 +14,15 @@
 
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
+extern HANDLE g_hConsoleOutput;
+extern HANDLE g_hNewFile_tmp;
+extern char g_sNewFile_tmp[1024];
 
 
 static HANDLE
-create_userfile_tmp(HANDLE conScreenBuffer,
-                    COORD* cursorPosition,
-                    unsigned char *filename,
-                    unsigned char *userfile_tmp);
+create_userfile_tmp(COORD* cursorPosition,
+                    char *filename,
+                    char *userfile_tmp);
 static errno_t
 receive_MIME_header(struct user_stats *upstats,
                     int s, unsigned short *MIMELen);
@@ -28,19 +30,18 @@ receive_MIME_header(struct user_stats *upstats,
 
 
 static HANDLE
-create_userfile_tmp(HANDLE conScreenBuffer,
-                    COORD* cursorPosition,
-                    unsigned char *filename,
-                    unsigned char *userfile_tmp)
+create_userfile_tmp(COORD* cursorPosition,
+                    char *filename,
+                    char *userfile_tmp)
 {
-  unsigned char download_dir[1024];
+  char download_dir[1024];
   HANDLE hFile;
 
   ZeroMemory(userfile_tmp, FILENAME_MAX_SIZE + 6 + 1024);
 
   create_download_directory(download_dir);
 
-  strcpy_s(userfile_tmp, 1024, download_dir);
+  strcpy_s(userfile_tmp, 1024, &download_dir[0]);
   strcat_s(userfile_tmp, 1024, filename);
   strcat_s(userfile_tmp, 1024, ".tmp");
   
@@ -50,23 +51,27 @@ create_userfile_tmp(HANDLE conScreenBuffer,
                          FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH,
                          NULL);
   if (hFile == INVALID_HANDLE_VALUE) {
+	INPUT_RECORD inRec;
     DWORD err;
+    DWORD read;
 
     cursorPosition->Y += 3;
-    SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
+    SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 
     err = GetLastError();
-    WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_CREATE_FILE, (void*)&err);
+    write_info_in_console(ERR_MSG_CANNOT_CREATE_FILE, (void*)&err);
     
     cursorPosition->Y++;
-    SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
+    SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
     
-    while (1)
-      Sleep(1000);
+	while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
-    WSACleanup();
-    ExitProcess(5);
   }
+
+	g_hNewFile_tmp = hFile;
+
+	ZeroMemory(g_sNewFile_tmp, 1024);
+	strcpy_s(g_sNewFile_tmp, 1024, userfile_tmp);
 
   return hFile;
 }
@@ -131,7 +136,7 @@ receive_MIME_header(struct user_stats *upstats, int s, unsigned short *MIMElen)
 }
 
 int
-receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
+receiveFile(COORD *cursorPosition,
             struct header_nv *httpnv, int s,
             struct user_stats *upstats, int theme,
 			int *bytesent) {
@@ -147,8 +152,8 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
   COORD coordAverageTX;
   struct http_resource httpres;
   struct success_info successinfo;
-  unsigned char userfile_tmp[FILENAME_MAX_SIZE + 6 + 1024];
-  unsigned char *newFile;
+  char userfile_tmp[FILENAME_MAX_SIZE + 6 + 1024];
+  char *newFile;
   LARGE_INTEGER len_li;
   u_int64 sizeNewFile = 0;
   u_int64 sizeNewFileDup = 0;
@@ -189,24 +194,19 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
   if (receive_MIME_header(upstats, s, &MIMElen) != 0)
     return -1;
 
-  if (strlen(upstats->filename) == 0) {
-    recv(s, buffer, boundarylen + 8, 0);
-    ZeroMemory(&httpres, sizeof(struct http_resource));
-    create_local_resource(&httpres, 12);
-    http_serv_resource(&httpres, s, NULL, bytesent);
+  if (strlen(upstats->filename) == 0)
     return -1;
-  }
 
-  clearTXRXPane(conScreenBuffer, cursorPosition);
+  clear_txrx_pane(cursorPosition);
+
   coordAverageTX.X = cursorPosition->X;
   coordAverageTX.Y = cursorPosition->Y + 1;
-  SetConsoleTextAttribute(conScreenBuffer, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
-  WriteConsoleA(conScreenBuffer, " ", 1, &written, NULL);
-  SetConsoleTextAttribute(conScreenBuffer, 0);
+  SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
+  WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+  SetConsoleTextAttribute(g_hConsoleOutput, 0);
   cursorPosition->X++;
 
-  hFile = create_userfile_tmp(conScreenBuffer, cursorPosition,
-                                  upstats->filename, userfile_tmp);
+  hFile = create_userfile_tmp(cursorPosition, upstats->filename, userfile_tmp);
 
   ZeroMemory(&txstats, sizeof(struct tx_stats));
   GetSystemTime(&txstats.start);
@@ -214,9 +214,9 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
   
   cursorPosition->Y += 2;
   cursorPosition->X--;
-  SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-  WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL);
-  WriteConsoleA(conScreenBuffer, upstats->filename, (DWORD)strlen(upstats->filename), &written, NULL);
+  SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+  write_info_in_console(INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL);
+  WriteConsoleA(g_hConsoleOutput, upstats->filename, (DWORD)strlen(upstats->filename), &written, NULL);
   cursorPosition->Y -= 2;
   cursorPosition->X++;
 
@@ -229,8 +229,8 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
   coordPerCent.X = cursorPosition->X + 52;
   coordPerCent.Y = cursorPosition->Y;
 
-  SetConsoleCursorPosition(conScreenBuffer, coordPerCent);
-  WriteConsoleA_INFO(conScreenBuffer, INF_ZERO_PERCENT, NULL);
+  SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
+  write_info_in_console(INF_ZERO_PERCENT, NULL);
 
   while(content_length > 0) {
     if (content_length < (1024 + boundarylen + 8) && content_length > 1024) {
@@ -271,7 +271,7 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
 
       averageRateTX = (txstats.received_size - txstats.received_size_bak) / 1000.000;
 
-      SetConsoleCursorPosition(conScreenBuffer, coordAverageTX);
+      SetConsoleCursorPosition(g_hConsoleOutput, coordAverageTX);
 
       ZeroMemory(strAverageRateTX, 42);
 
@@ -280,28 +280,28 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
         if (averageRateTX > 1000) {
           averageRateTX /= 1000.000;
           sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-          WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_TX_SPEED_UI_GO, strAverageRateTX);
+          write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_GO, strAverageRateTX);
         } else {
           sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-          WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_TX_SPEED_UI_MO, strAverageRateTX);
+          write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_MO, strAverageRateTX);
         }
       } else {
         sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-        WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_TX_SPEED_UI_KO, strAverageRateTX);
+        write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_KO, strAverageRateTX);
       }
 
       txstats.received_size_bak = txstats.received_size;
 
-      SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
+      SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
     }
 
     txstats.curr_percent = (u_char)(((float)txstats.received_size / (float)txstats.total_size) * 100);
     if (txstats.curr_percent > txstats.curr_percent_bak + 2) {
-      SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-      WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_ONE_PBAR, NULL);
+      SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+      write_info_in_console(INF_WIFIUPLOAD_ONE_PBAR, NULL);
       cursorPosition->X++;
-      SetConsoleCursorPosition(conScreenBuffer, coordPerCent);
-      WriteConsoleA_INFO(conScreenBuffer, INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent);
+      SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
+      write_info_in_console(INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent);
       txstats.curr_percent_bak += 2;
     }
 
@@ -313,21 +313,21 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
     DeleteFileA(userfile_tmp);
     cursorPosition->Y += 3;
     cursorPosition->X = (cursorPosition + 1)->X;
-    SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-    WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_FAIL_TX, NULL);
+    SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+    write_info_in_console(ERR_MSG_FAIL_TX, NULL);
     cursorPosition->Y++;
     return -1;
   }
 
-  SetConsoleCursorPosition(conScreenBuffer, coordPerCent);
-  WriteConsoleA_INFO(conScreenBuffer, INF_CENT_PERCENT, NULL);
+  SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
+  write_info_in_console(INF_CENT_PERCENT, NULL);
 
   GetSystemTime(&txstats.end);
 
-  SetConsoleCursorPosition(conScreenBuffer, *cursorPosition);
-  SetConsoleTextAttribute(conScreenBuffer, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_RVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
-  WriteConsoleA(conScreenBuffer, " ", 1, &written, NULL);
-  SetConsoleTextAttribute(conScreenBuffer, FOREGROUND_INTENSITY);
+  SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+  SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_RVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
+  WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+  SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_INTENSITY);
   GetFileSizeEx(hFile, &len_li);
 
   if (len_li.HighPart != 0)
@@ -383,7 +383,7 @@ receiveFile(HANDLE conScreenBuffer, COORD *cursorPosition,
     sprintf_s(successinfo.averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_KO, average_speed / 100.00);
   
   ZeroMemory(&httpres, sizeof(struct http_resource));
-  for (ires = 0; http_resources[ires].resource != ""; ires++) {
+  for (ires = 0; http_resources[ires].resource != NULL; ires++) {
       if (strcmp(http_resources[ires].resource, "success") == 0)
         break;
   }

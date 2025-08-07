@@ -4,14 +4,14 @@
 #define HTTP_STRING_DATE_SIZE sizeof("Mon, 01 Jan 1970 00:00:00 GMT")
 
 struct http_reqline {
-  unsigned char method[sizeof("POST")];
-  unsigned char resource[HTTP_RESSOURCE_MAX_LENGTH + 1];
-  unsigned char  version[sizeof("HTTTP/1.1")];
+  char method[sizeof("POST")];
+  char resource[HTTP_RESSOURCE_MAX_LENGTH + 1];
+  char  version[sizeof("HTTTP/1.1")];
 };
 
 struct http_resource {
-  unsigned char resource[HTTP_RESSOURCE_MAX_LENGTH];
-  unsigned char type[HTTP_TYPE_MAX_LENGTH];
+  char resource[HTTP_RESSOURCE_MAX_LENGTH];
+  char type[HTTP_TYPE_MAX_LENGTH];
 };
 
 struct success_info {

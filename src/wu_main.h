@@ -1,11 +1,5 @@
 #define LOG_DIRECTORY ".wulogs"
 
-void WriteConsoleA_INF(HANDLE conScreenBuffer, enum idmsg id, void *p);
-void clearTXRXPane(HANDLE conScreenBuffer, COORD* cursorPosition);
-int CreateDownloadDirectory(unsigned char dd[1024]);
-
-struct paramThread {
-	HANDLE conScreenBuffer;
-	COORD cursorPosition;
-	struct in_addr inaddr;
-};
+void write_info_in_console(enum idmsg id, void *p);
+void clear_txrx_pane(COORD* cursorPosition);
+void create_download_directory(char dd[1024]);
