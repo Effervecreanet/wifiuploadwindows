@@ -158,7 +158,7 @@ createcert:
 		*(p + secBufferIn[i].cbBuffer) = '\0';
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		if (get_reqline(&reqline, secBufferIn[i].pvBuffer) < 0)
+		if (get_request_line(&reqline, secBufferIn[i].pvBuffer) < 0)
 			continue;
 		fprintf(fp_httpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\n", secBufferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version);
 		fprintf(fp_httpslog, secBufferIn[i].pvBuffer);

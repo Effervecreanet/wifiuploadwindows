@@ -8,7 +8,7 @@
 #define HTTP_METHOD_POST "POST"
 #define HTTP_VERSION 	 "HTTP/1.1"
 
-int get_reqline(struct http_reqline *reqline, char *BufferIn)
+int get_request_line(struct http_reqline *reqline, char *BufferIn)
 {
 	char *p, *psav, *sp;
 	int i;

@@ -1,1 +1,1 @@
-int get_reqline(struct http_reqline *reqline, char BufferIn[2048]);
+int get_request_line(struct http_reqline *reqline, char BufferIn[2048]);
