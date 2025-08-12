@@ -59,7 +59,7 @@
 
   <a href="/quit" style="display: block; width: 90%%; margin: 140px 5%% 170px 5%%; padding: 11px 0;   background: #CECECE; background-image: url('images/ewu_quit.png'); background-position: 14px; background-repeat: no-repeat; color: #000000;  color: #000000; text-align: center; border-radius: 9px; height: 64px; font-size: 48px; text-decoration: none;">Quit the app</a>
 	
-  <div style="display: block; width: 100%%; margin: 0; padding: 80px 0 0 0; height:80px; border-top: 2px solid #F0B116;">
+  <div style="display: block; width: 100%%; margin: 0; padding: 60px 0 60px 0; height:80px; border-top: 2px solid #F0B116;">
   <a href="/credits" style="text-decoration: none; display: inline-block; width: 33%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Credits</a>
   <a href="/settings" style="text-decoration: none; display: inline-block; width: 33%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">Setttings</a>
   <p style="display: inline-block; width: 33%%; height:50px; font-size: 50px; color: #C19C00; padding:  7px 0; margin: 0;text-align: center;">%s</p>

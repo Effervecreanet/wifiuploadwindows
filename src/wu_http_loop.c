@@ -198,7 +198,7 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
       clear_txrx_pane(cursorPosition);
 
       ZeroMemory(&upstats, sizeof(struct user_stats));
-      err = receiveFile(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
+      err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
       cursorPosition->Y++;
     }
   } else if (strcmp(reqline.method, "POST") == 0) {
@@ -226,7 +226,7 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
     check_cookie_theme(httpnv, &theme);
 
         ZeroMemory(&upstats, sizeof(struct user_stats));
-        err = receiveFile(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
+        err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
         cursorPosition->Y++;      
     }
   }
