@@ -145,7 +145,7 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
 
         cursorPosition->Y++;
         SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-        write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
+        write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
       }
@@ -178,7 +178,7 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
     if (create_local_resource(&httplocalres, ires, theme) != 0) {
       cursorPosition->Y++;
       SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-      write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
+      write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
       Sleep(1000);
     }
 
@@ -186,11 +186,11 @@ http_loop(COORD *cursorPosition, struct in_addr *inaddr, int s, char logentry[25
     if (err > 1) {
       cursorPosition->Y++;
       SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-      write_info_in_console(ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err);
+      write_info_in_console(ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err, 0);
       Sleep(1000);
     } else if (err == 0) {
       SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-      write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL);
+      write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);
       cursorPosition->Y++;
     } else if (strcmp(reqline.method, "POST") == 0 && strcmp(reqline.resource, "/") == 0) {
       struct user_stats upstats;

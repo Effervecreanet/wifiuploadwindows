@@ -234,6 +234,60 @@ struct wu_msg wumsg[] = {
         sizeof("  %hu %% ") - 1,
         {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY, 0}
     },
+	{
+		ERR_MSG_CERTSTRTONAMEA,
+		"Erreur lors de l'appel " "\xE0" "CertStrToNameA (erreur: %i)", 	
+		sizeof("Erreur lors de l'appel " "\xE0" "CertStrToNameA (erreur: %i)") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_NCRYPTOPENSTORAGEPROVIDER,
+		"Erreur lors de l'appel " "\xE0" "NCryptOpenStorageProvider (erreur: %i)", 	
+		sizeof("Erreur lors de l'appel " "\xE0" "NCryptOpenStorageProvider (erreur: %i)") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_NCRYPTCREATEPERSISTEDKEY,
+		"Erreur lors de l'appel " "\xE0" "NCryptCreatePersistedKey (erreur: %i)", 	
+		sizeof("Erreur lors de l'appel " "\xE0" "NCryptCreatePersistedKey (erreur: %i)") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_NCRYPTFINALIZEKEY,
+		"Erreur lors de l'appel " "\xE0" "NCryptFinalizeKey (erreur: %i)", 	
+		sizeof("Erreur lors de l'appel " "\xE0" "NCryptFinalizeKey (erreur: %i)") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_ADDCERT,
+		"Erreur lors de l'appel " "\xE0" "CertAddCertificateContextToStore (erreur: %i)", 	
+		sizeof("Erreur lors de l'appel " "\xE0" "CertAddCertificateContextToStore (erreur: %i)") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_ACQUIRECREDANTIALSHANDLE,
+		"Erreur lors de l'appel " "\xE0" "AcquireCredantialsHandle (erreur: %i)", 	
+		sizeof("Erreur lors de l'appel " "\xE0" "AcquireCredantialsHandle (erreur: %i)") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_CRYPTENCODEOBJECTEX,
+		"Erreur lors de l'appel " "\xE0" "CryptEncodeObjectEx (erreur: %i)", 	
+		sizeof("Erreur lors de l'appel " "\xE0" "CryptEncodeObjectEx (erreur: %i)") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_CREATECERT,
+		"Erreur lors de l'appel " "\xE0" "CertCreateSelfSignCertificate (erreur: %i)", 	
+		sizeof("Erreur lors de l'appel " "\xE0" "CertCreateSelfSignCertificate (erreur: %i)") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_CANNOTOPENCERTSTORE,
+		"Impossible d'ouvrir le magasin de certificats. (erreur: %i)", 	
+		sizeof("Impossible d'ouvrir le magasin de certificats. (erreur: %i)") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
     {
         INF_ERR_END,
         "",
@@ -469,6 +523,59 @@ struct wu_msg wumsg[] = {
         sizeof("  %hu %% ") - 1,
         {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY, 0}
     },
+	{
+		ERR_MSG_CERTSTRTONAMEA,
+		"CertStrToNameA failed (error: %i", 	
+		sizeof("CertStrToNameA failed (error: %i") - 1, 	
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_NCRYPTOPENSTORAGEPROVIDER,
+		"NCryptOpenStorageProvider failed (error: %i)",
+		sizeof("NCryptOpenStorageProvider failed (error: %i)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_NCRYPTCREATEPERSISTEDKEY,
+		"NCryptCreatePersistedKey failed (error: %i)",
+		sizeof("NCryptCreatePersistedKey failed (error: %i)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_NCRYPTFINALIZEKEY,
+		"NCryptFinalizeKey failed (error: %i)",
+		sizeof("NCryptFinalizeKey failed (error: %i)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_ADDCERT,
+		"CertAddCertificateToStore failed (error: %i)",
+		sizeof("CertAddCertificateToStore failed (error: %i)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+		ERR_MSG_ACQUIRECREDANTIALSHANDLE,
+		"AcquireCredantialsHandle failed (error: %i)",
+		sizeof("AcquireCredantialsHandle failed (error: %i)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_CRYPTENCODEOBJECTEX,
+		"CryptEncodeObjectEx failed (error: %i)",
+		sizeof("CryptEncodeObjectEx failed (error: %i)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_CREATECERT,
+		"CertCreateSelfSignCertificate failed (error: %i)",
+		sizeof("CertCreateSelfSignCertificate failed (error: %i)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_CANNOTOPENCERTSTORE,
+		"Cannot open certificates store. (error: %i)",
+		sizeof("Cannot open certificates store. (error: %i)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
     {
         INF_ERR_END,
         "",

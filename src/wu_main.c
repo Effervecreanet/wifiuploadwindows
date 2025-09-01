@@ -10,6 +10,7 @@
 #include <sys\stat.h>
 
 
+#include "wu_x509_main.h"
 #include "wu_msg.h"
 #include "wu_main.h"
 #include "wu_socket.h"
@@ -25,10 +26,15 @@
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "userenv.lib")
+#pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "secur32.lib")
+#pragma comment(lib, "Ncrypt.lib")
 
 extern struct wu_msg wumsg[];
 FILE *g_fplog;
+FILE *g_fphttpslog;
 int *g_listensocket;
+int *g_listenhttpssocket;
 int *g_usersocket;
 HANDLE g_hConsoleOutput;
 HANDLE g_hNewFile_tmp;
@@ -43,6 +49,8 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
     case CTRL_SHUTDOWN_EVENT:
 		if (g_fplog != NULL)
 			fclose(g_fplog);
+		if (g_fphttpslog != NULL)
+			fclose(g_fphttpslog);
 		if (g_usersocket != NULL && *g_usersocket != 0)
 			closesocket(*g_usersocket);
 		if (g_listensocket != NULL)
@@ -74,7 +82,7 @@ create_download_directory(char dd[1024]) {
 }
 
 void
-write_info_in_console(enum idmsg id, void *p) {
+write_info_in_console(enum idmsg id, void *p, DWORD err) {
     DWORD written;
     unsigned char i;
     char outConBuf[1024];
@@ -89,8 +97,11 @@ write_info_in_console(enum idmsg id, void *p) {
         ZeroMemory(outConBuf, 1024);
         StringCchPrintf(outConBuf, 1024, wumsg[i].Msg, p);
         WriteConsoleA(g_hConsoleOutput, outConBuf, (DWORD)strlen(outConBuf), &written, NULL);
-    }
-    else {
+    } else if (err != 0) {
+        ZeroMemory(outConBuf, 1024);
+        StringCchPrintf(outConBuf, 1024, wumsg[i].Msg, err);
+        WriteConsoleA(g_hConsoleOutput, outConBuf, (DWORD)strlen(outConBuf), &written, NULL);
+	} else {
         WriteConsoleA(g_hConsoleOutput, wumsg[i].Msg, wumsg[i].szMsg, &written, NULL);
     }
 
@@ -190,6 +201,8 @@ int main(void)
     CHAR dd[1024];
     COORD cursorPosition[2];
     HWND consoleWindow;
+	HANDLE hThread1;
+	struct paramThread prThread;
     struct in_addr inaddr;
     unsigned char i;
     int s;
@@ -197,11 +210,13 @@ int main(void)
     char logentry[256];
     SYSTEMTIME systime;
     char logpath[512];
+    char loghttps_path[512];
     char log_filename[sizeof("log_19700101.txt")];
+    char httpslog_filename[sizeof("loghttps_19700101.txt")];
 	char userprofile[255 + sizeof(LOG_DIRECTORY)];
 
 	g_listensocket = g_usersocket = NULL;
-	g_fplog = NULL;
+	g_fphttpslog = g_fplog = NULL;
 	g_hNewFile_tmp = g_hConsoleOutput = INVALID_HANDLE_VALUE;
 	inaddr.s_addr = 0;
 
@@ -247,7 +262,7 @@ int main(void)
     cursorPosition[0].Y = 2;
 
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_PROMOTE_WIFIUPLOAD, NULL);
+    write_info_in_console(INF_PROMOTE_WIFIUPLOAD, NULL, 0);
 
     cursorPosition[0].Y++;
 
@@ -256,7 +271,7 @@ int main(void)
     SetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
 
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_WIFIUPLOAD_SERVICE, NULL);
+    write_info_in_console(INF_WIFIUPLOAD_SERVICE, NULL, 0);
 
     cursorPosition[0].Y++;
 
@@ -268,7 +283,7 @@ int main(void)
 
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(ERR_MSG_CONNECTIVITY, NULL);
+        write_info_in_console(ERR_MSG_CONNECTIVITY, NULL, 0);
 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
@@ -283,23 +298,23 @@ int main(void)
 
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
+        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL, 0);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
+        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr, 0);
         cursorPosition[0].X -= 5;
 
         cursorPosition[0].Y += 2;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL, 0);
 
         cursorPosition[0].Y += 2;
         cursorPosition[0].X += 5;
         
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
+        write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr), 0);
 
         SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
         cursorPosition[0].X -= 5;
@@ -327,21 +342,21 @@ int main(void)
         cursorPosition[0].Y += 2;
 
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_MSG_TWO_AVAILABLE_ADDR, NULL);
+        write_info_in_console(INF_MSG_TWO_AVAILABLE_ADDR, NULL, 0);
 
         cursorPosition[0].X += 4;
         cursorPosition[0].Y += 2;
 
         pStringIpAddr1 = inet_ntoa(inaddr1);
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
+        write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1, 0);
         cursorPosition[0].Y++;
         pStringIpAddr2 = inet_ntoa(inaddr2);
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
+        write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2, 0);
         cursorPosition[0].Y++;
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_MSG_CHOICE_QUESTION, NULL);
+        write_info_in_console(INF_MSG_CHOICE_QUESTION, NULL, 0);
         
         do {
             ZeroMemory(&inRec, sizeof(INPUT_RECORD));
@@ -362,7 +377,7 @@ int main(void)
         cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 5;
 
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+        write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL, 0);
 
         cursorPosition[0].Y++;
 
@@ -373,7 +388,7 @@ int main(void)
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
             SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-            write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
+            write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1), 0);
             SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
             cursorPosition[0].X -= 5;
         }
@@ -384,7 +399,7 @@ int main(void)
             cursorPosition[0].X += 5;
             cursorPosition[0].Y++;
             SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-            write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
+            write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2), 0);
             cursorPosition[0].X -= 5;
         }
     }
@@ -392,7 +407,7 @@ int main(void)
         INPUT_RECORD inRec;
 		cursorPosition[0].Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-		write_info_in_console(ERR_MSG_TOO_MANY_ADDR, NULL);
+		write_info_in_console(ERR_MSG_TOO_MANY_ADDR, NULL, 0);
 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
@@ -401,7 +416,7 @@ int main(void)
 
     cursorPosition[0].Y += 2;;
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
+    write_info_in_console(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL, 0);
 
     ZeroMemory(dd, 1024);
     create_download_directory(dd);
@@ -409,7 +424,7 @@ int main(void)
     cursorPosition[0].X += 5;
     cursorPosition[0].Y += 2;
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
+    write_info_in_console(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL, 0);
     cursorPosition[0].X -= 5;
 
     s = create_socket(&cursorPosition[0]);
@@ -428,7 +443,7 @@ int main(void)
     cursorPosition[0].Y++;
 
     SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_WIFIUPLOAD_UI_TX_RX, NULL);
+    write_info_in_console(INF_WIFIUPLOAD_UI_TX_RX, NULL, 0);
  
     for (i = 0; wumsg[i].id != INF_WIFIUPLOAD_UI_TX_RX; i++)
         ;
@@ -441,13 +456,12 @@ int main(void)
 	getenv_s((size_t*)&ret, userprofile, (size_t)(255 + sizeof(LOG_DIRECTORY)), "USERPROFILE");
 	sprintf_s(logpath, 255 + 1 + sizeof(LOG_DIRECTORY), "%s\\%s", userprofile, LOG_DIRECTORY);
     ret = _stat(logpath, &statbuff);
-    if (ret) {
-	    if (_mkdir(logpath)) {
+    if (ret && _mkdir(logpath)) {
 			INPUT_RECORD inRec;
-			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
+			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs", 0);
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-	    } else {
-logyear:	char wYearStr[5];
+	} else {
+        	char wYearStr[5];
 	
 			GetSystemTime(&systime);
 			ZeroMemory(log_filename, sizeof("log_19700101.txt"));
@@ -458,7 +472,7 @@ logyear:	char wYearStr[5];
 		
 		if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 			INPUT_RECORD inRec;
-			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath, 0);
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		} else {
 			char wMonthStr[3];
@@ -476,8 +490,8 @@ logyear:	char wYearStr[5];
 			}
 			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 				INPUT_RECORD inRec;
-				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath, 0);
+				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 			} else {
 				char wDayStr[3];
 
@@ -488,12 +502,16 @@ logyear:	char wYearStr[5];
 						strcat_s(logpath, 512, wDayStr);
 						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
 						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						ZeroMemory(httpslog_filename, sizeof("loghttps_19700101.txt"));
+						sprintf_s(httpslog_filename, sizeof("loghttps_19700101.txt"), "loghttps_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					} else {
 						sprintf_s(wDayStr, 3, "%i", systime.wDay);
 						strcat_s(logpath, 512, "\\");
 						strcat_s(logpath, 512, wDayStr);
 						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
 						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						ZeroMemory(httpslog_filename, sizeof("loghttps_19700101.txt"));
+						sprintf_s(httpslog_filename, sizeof("loghttps_19700101.txt"), "loghttps_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 					}
 				} else if (systime.wDay < 10) {
 						sprintf_s(wDayStr, 3, "0%i", systime.wDay);
@@ -501,34 +519,46 @@ logyear:	char wYearStr[5];
 						strcat_s(logpath, 512, wDayStr);
 						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
 						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						ZeroMemory(httpslog_filename, sizeof("loghttps_19700101.txt"));
+						sprintf_s(httpslog_filename, sizeof("loghttps_19700101.txt"), "loghttps_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				} else {
 						sprintf_s(wDayStr, 3, "%i", systime.wDay);
 						strcat_s(logpath, 512, "\\");
 						strcat_s(logpath, 512, wDayStr);
 						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
 						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
+						ZeroMemory(httpslog_filename, sizeof("loghttps_19700101.txt"));
+						sprintf_s(httpslog_filename, sizeof("loghttps_19700101.txt"), "loghttps_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
 				}
 
 				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 					INPUT_RECORD inRec;
-					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath, 0);
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 					}
 				}
 			}
-		}		
-    } else {
-	    goto logyear;
-    }
+	}		
 
     strcat_s(logpath, 512, "\\");
+	strcpy(loghttps_path, logpath);
     strcat_s(logpath, 512, log_filename);
+	strcat_s(loghttps_path, 512, httpslog_filename);
 
     if (fopen_s(&g_fplog, logpath, "a+")) {
-		write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
+		write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath, 0);
 		WSACleanup();
 		return 3;
-    }
+    } else if (fopen_s(&g_fphttpslog, loghttps_path, "a+")) {
+		write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_FILE, loghttps_path, 0);
+		WSACleanup();
+		return 3;
+	}
+
+	ZeroMemory(&prThread, sizeof(struct paramThread));
+	memcpy_s(&prThread.inaddr, sizeof(struct in_addr), &inaddr, sizeof(struct in_addr));
+	prThread.cursorPosition = cursorPosition[0];
+	hThread1 = CreateThread(NULL, 0, wu_x509_func, &prThread, 0, NULL);
 
     for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
         ret = http_loop(cursorPosition, &inaddr, s, logentry);

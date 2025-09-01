@@ -14,42 +14,48 @@
 #include <sspi.h>
 
 #include "wu_msg.h"
+#include "wu_main.h"
 
 #define CERT_SUBJECT "CN=wifiupload_localhost"
 #define CERT_STR	 "wifiupload_localhost"
 
 extern FILE *fp_log;
 
-void genKey(HANDLE conScreenBuffer, NCRYPT_PROV_HANDLE *phProvider, NCRYPT_KEY_HANDLE *hKey) {
+void generate_key(NCRYPT_PROV_HANDLE *phProvider, NCRYPT_KEY_HANDLE *hKey) {
 	LPCWSTR strkeyname = L"wifiupload_key";
+	DWORD err;
+	INPUT_RECORD inRec;
+	DWORD read;
 
 	if (NCryptOpenStorageProvider(phProvider, MS_KEY_STORAGE_PROVIDER, 0) != ERROR_SUCCESS) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_NCRYPTOPENSTORAGEPROVIDER, GetLastError());
-		while(1)
-			Sleep(1000);
+		err = GetLastError();
+		write_info_in_console(ERR_MSG_NCRYPTOPENSTORAGEPROVIDER, NULL, err);
 
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 	/*
 	NCryptOpenKey(*phProvider, hKey, L"wifiupload_key", 0,0);
 	NCryptDeleteKey(*hKey,0);
 */
 	if (NCryptCreatePersistedKey(*phProvider, hKey, BCRYPT_RSA_ALGORITHM, strkeyname, AT_KEYEXCHANGE, NCRYPT_OVERWRITE_KEY_FLAG) != ERROR_SUCCESS) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_NCRYPTCREATEPERSISTEDKEY, GetLastError());
-		while (1)
-			Sleep(1000);
+		err = GetLastError();
+		write_info_in_console(ERR_MSG_NCRYPTCREATEPERSISTEDKEY, NULL, err);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
 	if (NCryptFinalizeKey(*hKey, 0) != ERROR_SUCCESS) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_NCRYPTFINALIZEKEY, GetLastError());
-		while (1)
-			Sleep(1000);
+		err = GetLastError();
+		write_info_in_console(ERR_MSG_NCRYPTFINALIZEKEY, NULL, err);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 	
 
 	return;
 }
 
-int getCertName(CERT_NAME_BLOB *SubjectBlob, BYTE pbEncodedName[128], DWORD *cbEncodedName) {
+int get_cert_name(CERT_NAME_BLOB *SubjectBlob, BYTE pbEncodedName[128], DWORD *cbEncodedName) {
 
 	if (!CertStrToNameA(X509_ASN_ENCODING, CERT_SUBJECT, CERT_X500_NAME_STR, NULL, pbEncodedName, cbEncodedName, NULL))
 		return -1;
@@ -61,16 +67,19 @@ int getCertName(CERT_NAME_BLOB *SubjectBlob, BYTE pbEncodedName[128], DWORD *cbE
 }
 
 PCCERT_CONTEXT
-findCertInStore(HANDLE conScreenBuffer, HCERTSTORE *hCertStore) {
+find_mycert_in_store(HCERTSTORE *hCertStore) {
 	PCCERT_CONTEXT pCertContext = NULL;
 	char namestr[128];
+	INPUT_RECORD inRec;
+	DWORD read;
+	ULONG err;
 
 	*hCertStore = CertOpenSystemStore(0, "MY");
 	if (hCertStore == NULL) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CANNOT_OPEN_CERT_STORE, GetLastError());
-		while(1)
-			Sleep(1000);
-		ExitThread(1);
+		err = GetLastError();
+		write_info_in_console(ERR_MSG_CANNOTOPENCERTSTORE, NULL, err);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
 	while(pCertContext = CertEnumCertificatesInStore(*hCertStore, pCertContext)) {
@@ -82,7 +91,7 @@ findCertInStore(HANDLE conScreenBuffer, HCERTSTORE *hCertStore) {
 	return NULL;
 }
 
-PCCERT_CONTEXT createCertSelfSign(HANDLE conScreenBuffer, COORD *cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB *SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey) {
+PCCERT_CONTEXT create_cert_self_sign(COORD *cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB *SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey) {
 	CERT_EXTENSION Extensions[1];
 	CERT_EXTENSIONS CertExtensions;
 	PCCERT_CONTEXT pCertContext;
@@ -91,6 +100,9 @@ PCCERT_CONTEXT createCertSelfSign(HANDLE conScreenBuffer, COORD *cursorPosition,
 	DWORD cbEncodedAltName;
 	CERT_ALT_NAME_INFO AltNameInfo = {0};
 	CERT_ALT_NAME_ENTRY AltNameEntries[1];
+	DWORD err;
+	INPUT_RECORD inRec;
+	DWORD read;
 
 	AltNameEntries[0].dwAltNameChoice = CERT_ALT_NAME_IP_ADDRESS;
 	AltNameEntries[0].IPAddress.cbData = 4;
@@ -102,13 +114,13 @@ PCCERT_CONTEXT createCertSelfSign(HANDLE conScreenBuffer, COORD *cursorPosition,
 	if (!CryptEncodeObjectEx(X509_ASN_ENCODING, szOID_SUBJECT_ALT_NAME2, &AltNameInfo, CRYPT_ENCODE_ALLOC_FLAG, NULL,
 				&pbEncodedAltName,
 				&cbEncodedAltName)) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CRYPTENCODEOBJECTEX_FAILED, GetLastError());
+		err = GetLastError();
+		write_info_in_console(ERR_MSG_CRYPTENCODEOBJECTEX, NULL, err);
 
 		CryptDestroyKey(hKey);
 		CryptReleaseContext(hProv, 0);
 
-		while(1)
-			Sleep(1000);
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
 	Extensions[0].pszObjId = szOID_SUBJECT_ALT_NAME2;
@@ -128,14 +140,13 @@ PCCERT_CONTEXT createCertSelfSign(HANDLE conScreenBuffer, COORD *cursorPosition,
 
 	pCertContext = CertCreateSelfSignCertificate(hKey, SubjectBlob, 0, NULL, NULL, &startTime,&endTime, &CertExtensions);
 	if (pCertContext == NULL) {
-		WriteConsoleA_INFO(conScreenBuffer, ERR_MSG_CREATE_CERT, GetLastError());
+		err = GetLastError();
+		write_info_in_console(ERR_MSG_CREATECERT, NULL, err);
 
 		CryptDestroyKey(hKey);
 		CryptReleaseContext(hProv, 0);
 
-		while (1)
-			Sleep(1000);
-		ExitThread(1);
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
 	LocalFree(pbEncodedAltName);
@@ -143,7 +154,7 @@ PCCERT_CONTEXT createCertSelfSign(HANDLE conScreenBuffer, COORD *cursorPosition,
 	return pCertContext;
 }
 
-int getCredHandle(CredHandle *credHandle, PCCERT_CONTEXT pCertContext) {
+int get_credantials_handle(CredHandle *credHandle, PCCERT_CONTEXT pCertContext) {
 	SCH_CREDENTIALS schCredentials;
 
 	ZeroMemory(&schCredentials, sizeof(SCH_CREDENTIALS));

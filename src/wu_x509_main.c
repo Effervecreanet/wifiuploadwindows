@@ -24,13 +24,8 @@
 #include "wu_x509_conn.h"
 #include "wu_x509_http.h"
 
-#pragma comment (lib, "secur32.lib")
-#pragma comment (lib, "crypt32.lib")
-#pragma comment (lib, "advapi32.lib")
-#pragma comment (lib, "ws2_32.lib")
 
-
-extern FILE *fp_httpslog;
+extern FILE *g_fphttpslog;
 
 DWORD WINAPI wu_x509_func(struct paramThread *prThread)
 {
@@ -56,6 +51,8 @@ DWORD WINAPI wu_x509_func(struct paramThread *prThread)
 	char *p;
 	int i;
 	struct http_reqline reqline;
+	INPUT_RECORD inRec;
+	DWORD read;
 
 	ZeroMemory(ipAddr, 4);
 	ZeroMemory(&inaddr2oct, sizeof(struct in_addr));
@@ -68,7 +65,7 @@ DWORD WINAPI wu_x509_func(struct paramThread *prThread)
 	inaddr2oct.s_addr >>= 8;
 	ipAddr[3] = inaddr2oct.s_addr & 0x000000FF;
 
-	pCertContext = findCertInStore(prThread->conScreenBuffer, &hCertStore);
+	pCertContext = find_mycert_in_store(&hCertStore);
 	if (pCertContext == NULL) {
 createcert:
 		time_t wutime;
@@ -78,27 +75,27 @@ createcert:
 		time(&wutime);
 		tmval = localtime(&wutime);
 		strftime(log_timestr, 64, "%d/%b/%Y:%T -0600", tmval);
-		fprintf(fp_httpslog, "%s -- Create certificate or replace existing one\n", log_timestr);
-		fflush(fp_httpslog);
-		genKey(prThread->conScreenBuffer, &phProvider, &hKey);
-		if (getCertName(&SubjectBlob, pbEncodedName, &cbEncodedName) < 0) {
-			WriteConsoleA_INFO(prThread->conScreenBuffer, ERR_MSG_CERTSTRTONAMEA, GetLastError());
+		fprintf(g_fphttpslog, "%s -- Create certificate or replace existing one\n", log_timestr);
+		fflush(g_fphttpslog);
+		generate_key(&phProvider, &hKey);
+		if (get_cert_name(&SubjectBlob, pbEncodedName, &cbEncodedName) < 0) {
+			err = GetLastError();
+			write_info_in_console(ERR_MSG_CERTSTRTONAMEA, NULL, err);
 			NCryptFreeObject(phProvider);
 			NCryptFreeObject(hKey);
-
-			while (1)
-				Sleep(1000);
+ 
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 
-		pCertContext =  (PCCERT_CONTEXT)createCertSelfSign(prThread->conScreenBuffer, &prThread->cursorPosition, ipAddr, &SubjectBlob, phProvider, hKey);
+		pCertContext =  (PCCERT_CONTEXT)create_cert_self_sign(&prThread->cursorPosition, ipAddr, &SubjectBlob, phProvider, hKey);
 
 		if (FALSE == CertAddCertificateContextToStore(hCertStore, pCertContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL)) {
 			NCryptFreeObject(phProvider);
 			NCryptFreeObject(hKey);
-			WriteConsoleA_INFO(prThread->conScreenBuffer, ERR_MSG_ADD_CERT, GetLastError());
+			err = GetLastError();
+			write_info_in_console(ERR_MSG_ADDCERT, NULL, err);
 		
-			while(1)
-					Sleep(1000);
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 			}
 	} else {
 		SYSTEMTIME sysTimeNow;
@@ -113,19 +110,20 @@ createcert:
 
 	CertCloseStore(hCertStore, 0);
 
-	s = create_socket(prThread->conScreenBuffer, &prThread->cursorPosition);
-	bind_socket2(prThread->conScreenBuffer, &prThread->cursorPosition, s,
+	s = create_socket(&prThread->cursorPosition);
+	bind_socket2(&prThread->cursorPosition, s,
 				 prThread->inaddr);
 
 	ZeroMemory(&credHandle, sizeof(CredHandle));
-	if (getCredHandle(&credHandle, pCertContext) < 0) {
+	if (get_credantials_handle(&credHandle, pCertContext) < 0) {
 		CertFreeCertificateContext(pCertContext);
 		LocalFree(pbEncodedAltName);
 		NCryptFreeObject(phProvider);
 		NCryptFreeObject(hKey);
-		WriteConsoleA_INFO(prThread->conScreenBuffer, ERR_MSG_ACQUIRECREDENTIALSHANDLE, GetLastError());
-		while (1)
-			Sleep(1000);	
+		err = GetLastError();
+		write_info_in_console(ERR_MSG_ACQUIRECREDANTIALSHANDLE, NULL, err);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
 	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
@@ -160,9 +158,9 @@ createcert:
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
 		if (get_request_line(&reqline, secBufferIn[i].pvBuffer) < 0)
 			continue;
-		fprintf(fp_httpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\n", secBufferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version);
-		fprintf(fp_httpslog, secBufferIn[i].pvBuffer);
-		fflush(fp_httpslog);
+		fprintf(g_fphttpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\n", secBufferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version);
+		fprintf(g_fphttpslog, secBufferIn[i].pvBuffer);
+		fflush(g_fphttpslog);
 	}
 
 	CertFreeCertificateContext(pCertContext);
