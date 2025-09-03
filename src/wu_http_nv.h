@@ -47,6 +47,8 @@
 #define HEADER_NAME_MAX_SIZE  256
 #define HEADER_VALUE_MAX_SIZE 512
 
+#define MAX_SP 32
+
 union header_name {
     char            client[HEADER_NAME_MAX_SIZE];
     const char* wsite;

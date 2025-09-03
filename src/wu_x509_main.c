@@ -19,10 +19,11 @@
 #include "wu_msg.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"
+#include "wu_http_nv.h"
 #include "wu_x509_main.h"
 #include "wu_x509_cert.h"
 #include "wu_x509_conn.h"
-#include "wu_x509_http.h"
+#include "wu_x509_https.h"
 
 
 extern FILE *g_fphttpslog;
@@ -35,7 +36,7 @@ DWORD WINAPI wu_x509_func(struct paramThread *prThread)
 	BYTE pbEncodedName[128];
 	DWORD cbEncodedName = 128;
 	WSADATA wsaData;
-	DWORD err;
+	DWORD err, ret;
 	int s, s_clt;
 	BYTE ipAddr[4];
 	BYTE *pbEncodedAltName = NULL;
@@ -53,6 +54,7 @@ DWORD WINAPI wu_x509_func(struct paramThread *prThread)
 	struct http_reqline reqline;
 	INPUT_RECORD inRec;
 	DWORD read;
+	struct header_nv headernv[HEADER_NV_MAX_SIZE];
 
 	ZeroMemory(ipAddr, 4);
 	ZeroMemory(&inaddr2oct, sizeof(struct in_addr));
@@ -132,12 +134,13 @@ createcert:
 	secBufferDescInput.pBuffers = secBufferIn;
 
 	ZeroMemory(&secBufferIn, sizeof(SecBuffer) * 4);
-
+	ZeroMemory(headernv, HEADER_NV_MAX_SIZE * (HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE));
+		int test;
 	for (;;) {
 		s_clt = acceptSecure(s, &credHandle, &ctxtHandle);
 
 		ZeroMemory(BufferIn, 2048);
-		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn, 2048, 0);
+		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn, 2047, 0);
 		if (secBufferIn[0].cbBuffer <= 0)
 			continue;
 		secBufferIn[0].BufferType = SECBUFFER_DATA;
@@ -156,9 +159,31 @@ createcert:
 		*(p + secBufferIn[i].cbBuffer) = '\0';
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		if (get_request_line(&reqline, secBufferIn[i].pvBuffer) < 0)
+		ret = get_request_line(&reqline, secBufferIn[i].pvBuffer);
+		if (ret < 0)
 			continue;
-		fprintf(g_fphttpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\n", secBufferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version);
+
+		if (strcmp(reqline.version, HTTP_VERSION) != 0) {
+			write_info_in_console(ERR_MSG_BADVERSION, NULL, 0);
+
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		}
+
+		ret = get_headernv(headernv, (char*)secBufferIn[i].pvBuffer + ret);
+		if (ret < 0)
+			continue;
+
+		for (test = 0; test < HEADER_NV_MAX_SIZE; test++)
+			fprintf(g_fphttpslog, "name_%i: %s value_%i: %s\n", test, headernv[test].name.client, test, headernv[test].value.v);
+		fflush(g_fphttpslog);
+		if (strcmp(reqline.method, "GET") == 0) {
+
+
+
+
+
+		}
+		fprintf(g_fphttpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\nheadernv: %s\n", secBufferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version, (char*)secBufferIn[i].pvBuffer + ret);
 		fprintf(g_fphttpslog, secBufferIn[i].pvBuffer);
 		fflush(g_fphttpslog);
 	}

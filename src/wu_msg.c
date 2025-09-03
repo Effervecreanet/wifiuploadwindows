@@ -288,6 +288,12 @@ struct wu_msg wumsg[] = {
 		sizeof("Impossible d'ouvrir le magasin de certificats. (erreur: %i)") - 1, 	
 	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
+	{
+		ERR_MSG_BADVERSION,
+		"Mauvaise version du protocole HTTP.",
+		sizeof("Mauvaise version du protocole HTTP.") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
     {
         INF_ERR_END,
         "",
@@ -574,6 +580,12 @@ struct wu_msg wumsg[] = {
 		ERR_MSG_CANNOTOPENCERTSTORE,
 		"Cannot open certificates store. (error: %i)",
 		sizeof("Cannot open certificates store. (error: %i)") - 1,
+	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_BADVERSION,
+		"Bad version of HTTP protocol.",
+		sizeof("Bad version of HTTP protocol.")
 	    {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
     {
