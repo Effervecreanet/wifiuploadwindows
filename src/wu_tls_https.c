@@ -3,7 +3,7 @@
 
 #include "wu_http_receive.h"
 #include "wu_http.h"
-#include "wu_x509_https.h"
+#include "wu_tls_https.h"
 #include "wu_http_nv.h"
 
 #define SCHANNEL_USE_BLACKLIST

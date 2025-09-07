@@ -10,7 +10,7 @@
 #include <sys\stat.h>
 
 
-#include "wu_x509_main.h"
+#include "wu_tls_main.h"
 #include "wu_msg.h"
 #include "wu_main.h"
 #include "wu_socket.h"
@@ -558,7 +558,7 @@ int main(void)
 	ZeroMemory(&prThread, sizeof(struct paramThread));
 	memcpy_s(&prThread.inaddr, sizeof(struct in_addr), &inaddr, sizeof(struct in_addr));
 	prThread.cursorPosition = cursorPosition[0];
-	hThread1 = CreateThread(NULL, 0, wu_x509_func, &prThread, 0, NULL);
+	hThread1 = CreateThread(NULL, 0, wu_tls_loop, &prThread, 0, NULL);
 
     for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
         ret = http_loop(cursorPosition, &inaddr, s, logentry);

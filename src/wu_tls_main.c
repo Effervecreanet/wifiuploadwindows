@@ -21,16 +21,16 @@
 #include "wu_http.h"
 #include "wu_http_nv.h"
 #include "wu_content.h"
-#include "wu_x509_main.h"
-#include "wu_x509_cert.h"
-#include "wu_x509_conn.h"
-#include "wu_x509_https.h"
+#include "wu_tls_main.h"
+#include "wu_tls_x509.h"
+#include "wu_tls_conn.h"
+#include "wu_tls_https.h"
 
 extern FILE *g_fphttpslog;
 extern const struct _http_resources http_resources[];
 extern HANDLE g_hConsoleOutput;
 
-DWORD WINAPI wu_x509_func(struct paramThread *prThread)
+DWORD WINAPI wu_tls_loop(struct paramThread *prThread)
 {
 	NCRYPT_PROV_HANDLE phProvider;
 	NCRYPT_KEY_HANDLE hKey;
@@ -48,9 +48,7 @@ DWORD WINAPI wu_x509_func(struct paramThread *prThread)
 	CtxtHandle ctxtHandle;
 	HCERTSTORE hCertStore;
 	struct in_addr inaddr2oct;
-	SecBuffer secBufferIn[4];
 	char BufferIn[2048];
-	SecBufferDesc secBufferDescInput;
 	char *p;
 	int i;
 	struct http_reqline reqline;
@@ -59,6 +57,7 @@ DWORD WINAPI wu_x509_func(struct paramThread *prThread)
 	struct header_nv headernv[HEADER_NV_MAX_SIZE];
 	int bytesent = 0;
 	int theme = 0;
+	int bytereceived = 0;
 
 	ZeroMemory(ipAddr, 4);
 	ZeroMemory(&inaddr2oct, sizeof(struct in_addr));
@@ -132,39 +131,16 @@ createcert:
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
-	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
-	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
-	secBufferDescInput.cBuffers = 4;
-	secBufferDescInput.pBuffers = secBufferIn;
-
-	ZeroMemory(&secBufferIn, sizeof(SecBuffer) * 4);
 	ZeroMemory(headernv, HEADER_NV_MAX_SIZE * (HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE));
 
 	for (;;) {
 		s_clt = acceptSecure(s, &credHandle, &ctxtHandle);
-		ZeroMemory(BufferIn, 2048);
-		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn, 2047, 0);
-		if (secBufferIn[0].cbBuffer <= 0)
+
+		if (tls_recv(s_clt, &ctxtHandle, BufferIn, &bytereceived))
 			continue;
-		secBufferIn[0].BufferType = SECBUFFER_DATA;
-		secBufferIn[0].pvBuffer = BufferIn;
-		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
-		
-		ret = DecryptMessage(&ctxtHandle, &secBufferDescInput, 0 , 0);
-		fprintf(g_fphttpslog, "DecryptMessage: %i\n", ret);
-		fflush(g_fphttpslog);
-
-		for (i = 0; i < 4; i++)
-			if (secBufferIn[i].BufferType == SECBUFFER_DATA)
-				break;
-
-		p = secBufferIn[i].pvBuffer;
-		*(p + secBufferIn[i].cbBuffer) = '\0';
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		ret = get_request_line(&reqline, secBufferIn[i].pvBuffer);
+		ret = get_request_line(&reqline, BufferIn);
 		if (ret < 0)
 			continue;
 
@@ -174,7 +150,7 @@ createcert:
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 
-		ret = get_headernv(headernv, (char*)secBufferIn[i].pvBuffer + ret);
+		ret = get_headernv(headernv, BufferIn + ret);
 		if (ret < 0)
 			continue;
 

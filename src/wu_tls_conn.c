@@ -15,6 +15,48 @@
 
 extern FILE *fp_httpslog;
 
+
+int tls_recv(int s_clt, CtxtHandle *ctxtHandle, char BufferIn[2048], int *bytereceived) {
+	SecBufferDesc secBufferDescInput;	
+	int i;
+	SecBuffer secBufferIn[4];
+	char *p;
+
+	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
+	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
+	secBufferDescInput.cBuffers = 4;
+	secBufferDescInput.pBuffers = secBufferIn;
+
+	ZeroMemory(&secBufferIn, sizeof(SecBuffer) * 4);
+
+	ZeroMemory(BufferIn, 2048);
+	secBufferIn[0].cbBuffer = recv(s_clt, BufferIn, 2047, 0);
+	if (secBufferIn[0].cbBuffer <= 0)
+		return 1;
+
+	secBufferIn[0].BufferType = SECBUFFER_DATA;
+	secBufferIn[0].pvBuffer = BufferIn;
+	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
+	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
+	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
+
+	ret = DecryptMessage(&ctxtHandle, &secBufferDescInput, 0 , 0);
+	fprintf(g_fphttpslog, "DecryptMessage: %i\n", ret);
+	fflush(g_fphttpslog);
+
+	for (i = 0; i < 4; i++)
+		if (secBufferIn[i].BufferType == SECBUFFER_DATA)
+			break;
+
+	p = secBufferIn[i].pvBuffer;
+	*(p + secBufferIn[i].cbBuffer) = '\0';
+
+	*bytereceived = strlen(p);
+
+	return 0;
+}
+
+
 int acceptSecure(int s, CredHandle *credHandle, CtxtHandle *ctxtHandle) {
 	int s_clt;
 	int received;
