@@ -13,13 +13,12 @@
 
 #include <sspi.h>
 
-extern FILE *fp_httpslog;
+extern FILE *g_fphttpslog;
 
 
-int tls_recv(int s_clt, CtxtHandle *ctxtHandle, char BufferIn[2048], int *bytereceived) {
+int tls_recv(int s_clt, CtxtHandle *ctxtHandle, SecBuffer secBufferIn[4], int *bytereceived) {
 	SecBufferDesc secBufferDescInput;	
-	int i;
-	SecBuffer secBufferIn[4];
+	int i, j, ret;
 	char *p;
 
 	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
@@ -27,22 +26,27 @@ int tls_recv(int s_clt, CtxtHandle *ctxtHandle, char BufferIn[2048], int *bytere
 	secBufferDescInput.cBuffers = 4;
 	secBufferDescInput.pBuffers = secBufferIn;
 
-	ZeroMemory(&secBufferIn, sizeof(SecBuffer) * 4);
 
-	ZeroMemory(BufferIn, 2048);
-	secBufferIn[0].cbBuffer = recv(s_clt, BufferIn, 2047, 0);
+	ZeroMemory(secBufferIn[0].pvBuffer, 2048);
+	secBufferIn[0].cbBuffer = recv(s_clt, secBufferIn[0].pvBuffer, 2047, 0);
 	if (secBufferIn[0].cbBuffer <= 0)
 		return 1;
 
+/*
+	fprintf(g_fphttpslog, "nbbytes: %i\n", secBufferIn[0].cbBuffer);
+	fflush(g_fphttpslog);
+*/
+
 	secBufferIn[0].BufferType = SECBUFFER_DATA;
-	secBufferIn[0].pvBuffer = BufferIn;
 	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-	ret = DecryptMessage(&ctxtHandle, &secBufferDescInput, 0 , 0);
-	fprintf(g_fphttpslog, "DecryptMessage: %i\n", ret);
+	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0 , 0);
+	/*
+	fprintf(g_fphttpslog, "DecryptMessage: %x\n", ret);
 	fflush(g_fphttpslog);
+	*/
 
 	for (i = 0; i < 4; i++)
 		if (secBufferIn[i].BufferType == SECBUFFER_DATA)
@@ -51,6 +55,10 @@ int tls_recv(int s_clt, CtxtHandle *ctxtHandle, char BufferIn[2048], int *bytere
 	p = secBufferIn[i].pvBuffer;
 	*(p + secBufferIn[i].cbBuffer) = '\0';
 
+/*
+	fprintf(g_fphttpslog, "FFF: %s\n", (char*)secBufferIn[i].pvBuffer); 
+	fflush(g_fphttpslog);
+*/
 	*bytereceived = strlen(p);
 
 	return 0;

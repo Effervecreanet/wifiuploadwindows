@@ -58,6 +58,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread *prThread)
 	int bytesent = 0;
 	int theme = 0;
 	int bytereceived = 0;
+	SecBuffer secBufferIn[4];
 
 	ZeroMemory(ipAddr, 4);
 	ZeroMemory(&inaddr2oct, sizeof(struct in_addr));
@@ -135,12 +136,22 @@ createcert:
 
 	for (;;) {
 		s_clt = acceptSecure(s, &credHandle, &ctxtHandle);
+		
+		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
+		secBufferIn[0].pvBuffer = BufferIn;
 
-		if (tls_recv(s_clt, &ctxtHandle, BufferIn, &bytereceived))
+		if (tls_recv(s_clt, &ctxtHandle, secBufferIn, &bytereceived))
 			continue;
 
+		for (i = 0; i < 4; i++) 
+			if (secBufferIn[i].BufferType == SECBUFFER_DATA)
+				break;
+
+		if (i == 4)
+			return -1;	
+
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		ret = get_request_line(&reqline, BufferIn);
+		ret = get_request_line(&reqline, secBufferIn[i].pvBuffer);
 		if (ret < 0)
 			continue;
 
@@ -150,7 +161,7 @@ createcert:
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 
-		ret = get_headernv(headernv, BufferIn + ret);
+		ret = get_headernv(headernv, (char*)secBufferIn[i].pvBuffer + ret);
 		if (ret < 0)
 			continue;
 
@@ -197,9 +208,11 @@ createcert:
 
 
 		}
-		fprintf(g_fphttpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\nheadernv: %s\n", secBufferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version, (char*)secBufferIn[i].pvBuffer + ret);
+/*
+		fprintf(g_fphttpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\nheadernv: %s\n", BufferferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version, (char*)secBufferIn[i].pvBuffer + ret);
 		fprintf(g_fphttpslog, secBufferIn[i].pvBuffer);
 		fflush(g_fphttpslog);
+*/
 	}
 
 	CertFreeCertificateContext(pCertContext);

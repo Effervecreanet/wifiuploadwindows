@@ -4,4 +4,4 @@ struct paramThread {
 };
 
 
-DWORD WINAPI wu_x509_func(struct paramThread *prThread);
+DWORD WINAPI wu_tls_loop(struct paramThread *prThread);

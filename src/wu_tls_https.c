@@ -162,6 +162,7 @@ https_serv_resource(struct http_resource *res, int s,
 	bufferDesc.pBuffers = secBufferOut;
 
 	encryptBufferLen = Sizes.cbHeader + Sizes.cbMaximumMessage + Sizes.cbTrailer;
+fprintf(g_fphttpslog, "cbMaximumMessage: %i\n", Sizes.cbMaximumMessage);
 	encryptBuffer = malloc(encryptBufferLen);
 	ZeroMemory(encryptBuffer, encryptBufferLen);
 	message = encryptBuffer + Sizes.cbHeader;
@@ -190,7 +191,7 @@ https_serv_resource(struct http_resource *res, int s,
 	if (send(s, secBufferOut[i].pvBuffer, secBufferOut[i].cbBuffer, 0) < 0)
 		return -1;
 
-	*bytesent += strlen(messageLen);
+	*bytesent += secBufferOut[i].cbBuffer;
 /*
   hFile = CreateFile(res->resource, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   if (hFile == INVALID_HANDLE_VALUE)
