@@ -19,9 +19,9 @@
 #define CERT_SUBJECT "CN=wifiupload_localhost"
 #define CERT_STR	 "wifiupload_localhost"
 
-extern FILE *fp_log;
+extern FILE* fp_log;
 
-void generate_key(NCRYPT_PROV_HANDLE *phProvider, NCRYPT_KEY_HANDLE *hKey) {
+void generate_key(NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey) {
 	LPCWSTR strkeyname = L"wifiupload_key";
 	DWORD err;
 	INPUT_RECORD inRec;
@@ -50,12 +50,12 @@ void generate_key(NCRYPT_PROV_HANDLE *phProvider, NCRYPT_KEY_HANDLE *hKey) {
 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
-	
+
 
 	return;
 }
 
-int get_cert_name(CERT_NAME_BLOB *SubjectBlob, BYTE pbEncodedName[128], DWORD *cbEncodedName) {
+int get_cert_name(CERT_NAME_BLOB* SubjectBlob, BYTE pbEncodedName[128], DWORD* cbEncodedName) {
 
 	if (!CertStrToNameA(X509_ASN_ENCODING, CERT_SUBJECT, CERT_X500_NAME_STR, NULL, pbEncodedName, cbEncodedName, NULL))
 		return -1;
@@ -67,7 +67,7 @@ int get_cert_name(CERT_NAME_BLOB *SubjectBlob, BYTE pbEncodedName[128], DWORD *c
 }
 
 PCCERT_CONTEXT
-find_mycert_in_store(HCERTSTORE *hCertStore) {
+find_mycert_in_store(HCERTSTORE* hCertStore) {
 	PCCERT_CONTEXT pCertContext = NULL;
 	char namestr[128];
 	INPUT_RECORD inRec;
@@ -82,7 +82,7 @@ find_mycert_in_store(HCERTSTORE *hCertStore) {
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
-	while(pCertContext = CertEnumCertificatesInStore(*hCertStore, pCertContext)) {
+	while (pCertContext = CertEnumCertificatesInStore(*hCertStore, pCertContext)) {
 		CertGetNameString(pCertContext, CERT_NAME_RDN_TYPE, 0, NULL, namestr, 128);
 		if (strcmp(namestr, CERT_STR) == 0)
 			return pCertContext;
@@ -91,14 +91,14 @@ find_mycert_in_store(HCERTSTORE *hCertStore) {
 	return NULL;
 }
 
-PCCERT_CONTEXT create_cert_self_sign(COORD *cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB *SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey) {
+PCCERT_CONTEXT create_cert_self_sign(COORD* cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey) {
 	CERT_EXTENSION Extensions[1];
 	CERT_EXTENSIONS CertExtensions;
 	PCCERT_CONTEXT pCertContext;
 	SYSTEMTIME startTime, endTime;
-	BYTE *pbEncodedAltName;
+	BYTE* pbEncodedAltName;
 	DWORD cbEncodedAltName;
-	CERT_ALT_NAME_INFO AltNameInfo = {0};
+	CERT_ALT_NAME_INFO AltNameInfo = { 0 };
 	CERT_ALT_NAME_ENTRY AltNameEntries[1];
 	DWORD err;
 	INPUT_RECORD inRec;
@@ -106,14 +106,14 @@ PCCERT_CONTEXT create_cert_self_sign(COORD *cursorPosition, BYTE ipAddr[4], CERT
 
 	AltNameEntries[0].dwAltNameChoice = CERT_ALT_NAME_IP_ADDRESS;
 	AltNameEntries[0].IPAddress.cbData = 4;
-	AltNameEntries[0].IPAddress.pbData = ipAddr; 
+	AltNameEntries[0].IPAddress.pbData = ipAddr;
 
 	AltNameInfo.cAltEntry = 1;
 	AltNameInfo.rgAltEntry = AltNameEntries;
 
 	if (!CryptEncodeObjectEx(X509_ASN_ENCODING, szOID_SUBJECT_ALT_NAME2, &AltNameInfo, CRYPT_ENCODE_ALLOC_FLAG, NULL,
-				&pbEncodedAltName,
-				&cbEncodedAltName)) {
+		&pbEncodedAltName,
+		&cbEncodedAltName)) {
 		err = GetLastError();
 		write_info_in_console(ERR_MSG_CRYPTENCODEOBJECTEX, NULL, err);
 
@@ -138,7 +138,7 @@ PCCERT_CONTEXT create_cert_self_sign(COORD *cursorPosition, BYTE ipAddr[4], CERT
 	memcpy(&endTime, &startTime, sizeof(SYSTEMTIME));
 	endTime.wYear++;
 
-	pCertContext = CertCreateSelfSignCertificate(hKey, SubjectBlob, 0, NULL, NULL, &startTime,&endTime, &CertExtensions);
+	pCertContext = CertCreateSelfSignCertificate(hKey, SubjectBlob, 0, NULL, NULL, &startTime, &endTime, &CertExtensions);
 	if (pCertContext == NULL) {
 		err = GetLastError();
 		write_info_in_console(ERR_MSG_CREATECERT, NULL, err);
@@ -154,7 +154,7 @@ PCCERT_CONTEXT create_cert_self_sign(COORD *cursorPosition, BYTE ipAddr[4], CERT
 	return pCertContext;
 }
 
-int get_credantials_handle(CredHandle *credHandle, PCCERT_CONTEXT pCertContext) {
+int get_credantials_handle(CredHandle* credHandle, PCCERT_CONTEXT pCertContext) {
 	SCH_CREDENTIALS schCredentials;
 
 	ZeroMemory(&schCredentials, sizeof(SCH_CREDENTIALS));

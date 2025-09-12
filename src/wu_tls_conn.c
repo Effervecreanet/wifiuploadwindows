@@ -13,13 +13,13 @@
 
 #include <sspi.h>
 
-extern FILE *g_fphttpslog;
+extern FILE* g_fphttpslog;
 
 
-int tls_recv(int s_clt, CtxtHandle *ctxtHandle, SecBuffer secBufferIn[4], int *bytereceived) {
-	SecBufferDesc secBufferDescInput;	
+int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* bytereceived) {
+	SecBufferDesc secBufferDescInput;
 	int i, j, ret;
-	char *p;
+	char* p;
 
 	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
@@ -32,21 +32,12 @@ int tls_recv(int s_clt, CtxtHandle *ctxtHandle, SecBuffer secBufferIn[4], int *b
 	if (secBufferIn[0].cbBuffer <= 0)
 		return 1;
 
-/*
-	fprintf(g_fphttpslog, "nbbytes: %i\n", secBufferIn[0].cbBuffer);
-	fflush(g_fphttpslog);
-*/
-
 	secBufferIn[0].BufferType = SECBUFFER_DATA;
 	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0 , 0);
-	/*
-	fprintf(g_fphttpslog, "DecryptMessage: %x\n", ret);
-	fflush(g_fphttpslog);
-	*/
+	DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
 
 	for (i = 0; i < 4; i++)
 		if (secBufferIn[i].BufferType == SECBUFFER_DATA)
@@ -55,17 +46,14 @@ int tls_recv(int s_clt, CtxtHandle *ctxtHandle, SecBuffer secBufferIn[4], int *b
 	p = secBufferIn[i].pvBuffer;
 	*(p + secBufferIn[i].cbBuffer) = '\0';
 
-/*
-	fprintf(g_fphttpslog, "FFF: %s\n", (char*)secBufferIn[i].pvBuffer); 
-	fflush(g_fphttpslog);
-*/
+
 	*bytereceived = strlen(p);
 
 	return 0;
 }
 
 
-int acceptSecure(int s, CredHandle *credHandle, CtxtHandle *ctxtHandle) {
+int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle) {
 	int s_clt;
 	int received;
 	ULONG err;
@@ -79,7 +67,7 @@ int acceptSecure(int s, CredHandle *credHandle, CtxtHandle *ctxtHandle) {
 	char BufferIn1[2048];
 	char BufferIn2[2048];
 	char BufferOut1[2048];
-	char *p;
+	char* p;
 	SecBufferDesc secBufferDescInput;
 	SecBufferDesc secBufferDescInput2;
 	SecBufferDesc secBufferDescOutput;
@@ -132,10 +120,10 @@ int acceptSecure(int s, CredHandle *credHandle, CtxtHandle *ctxtHandle) {
 
 		err = AcceptSecurityContext(credHandle, NULL, &secBufferDescInput, fContextAttr, 0,
 			&ctxNewHandle, &secBufferDescOutput, &contextAttr, NULL);
-	
+
 		if (err != SEC_E_OK && err != SEC_I_CONTINUE_NEEDED)
 			continue;
-			// printf("AcceptSecurityContext failed: %x\n", err);
+		// printf("AcceptSecurityContext failed: %x\n", err);
 
 
 		send(s_clt, (char*)secBufferDescOutput.pBuffers[0].pvBuffer, secBufferDescOutput.pBuffers[0].cbBuffer, 0);
@@ -150,7 +138,8 @@ int acceptSecure(int s, CredHandle *credHandle, CtxtHandle *ctxtHandle) {
 			send(s_clt, (char*)secBufferDescOutput.pBuffers[0].pvBuffer, secBufferDescOutput.pBuffers[0].cbBuffer, 0);
 			FreeContextBuffer(secBufferDescOutput.pBuffers[0].pvBuffer);
 			break;
-		} else {
+		}
+		else {
 			continue;
 		}
 

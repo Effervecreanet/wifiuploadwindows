@@ -5,9 +5,9 @@
   <meta http-equiv="refresh" content="2; url='/'" />
 <title>Wifiupload 404</title>
 </head>
-  <body style="display: block; width: 100%%; height: 900px; background: black; padding: 0; margin: 0; background: url('images/ewu_bg.png') top left; background-size: 100%% auto; background-repeat: no-repeat;">
+  <body style="display: block; width: 100%%; height: 900px; background: black; padding: 0; margin: 0;">
 
-    <div style="display: block; width: 100%%; margin: 0px 0 140px 0; padding: 70px 0 0 0; height: 220px; border-bottom: 2px solid #C19C00; background: url('/images/ewu_top_bg.png') top left; background-repeat: no-repeat; background-size: 100%% 100%%;">
+    <div style="display: block; width: 100%%; margin: 0px 0 140px 0; padding: 70px 0 0 0; height: 220px; border-bottom: 2px solid #C19C00;;">
       <p style="text-align: center; margin: 0; padding: 7px 0; color:#C19C00; font-size: 50px;">
         <a href="/" style="text-align: center; margin: 0; padding: 0; color:#C19C00; font-size: 50px; text-decoration: none;">&nbsp;</a>
       </p>
@@ -18,8 +18,7 @@
   <div style="display: block; width:100%%; height: 777px; margin: 0 auto; padding: 0;">
     <a href="/"style="display: block; width: 90%%; margin: 200px 5%% 280px 5%%; padding: 11px 0 0 0; background: #767676; color: #F2F2F2; text-align: center; border-radius: 9px; height: 500px; font-size: 48px; text-decoration: none;">
       <p></p>
-      <img style="margin: auto auto; padding: auto auto;" src="images/ewu_welcome.png" width="256" height="256" />
-      </p>
+     </p>
       De retour &agrave; l'accueil
     </a>
 

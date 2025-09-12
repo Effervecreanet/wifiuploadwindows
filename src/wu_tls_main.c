@@ -26,11 +26,12 @@
 #include "wu_tls_conn.h"
 #include "wu_tls_https.h"
 
-extern FILE *g_fphttpslog;
+extern FILE* g_fphttpslog;
 extern const struct _http_resources http_resources[];
 extern HANDLE g_hConsoleOutput;
+extern int g_tls_firstsend;
 
-DWORD WINAPI wu_tls_loop(struct paramThread *prThread)
+DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {
 	NCRYPT_PROV_HANDLE phProvider;
 	NCRYPT_KEY_HANDLE hKey;
@@ -41,7 +42,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread *prThread)
 	DWORD err, ret;
 	int s, s_clt;
 	BYTE ipAddr[4];
-	BYTE *pbEncodedAltName = NULL;
+	BYTE* pbEncodedAltName = NULL;
 	DWORD cbEncodedAltName = 0;
 	PCCERT_CONTEXT pCertContext;
 	CredHandle credHandle;
@@ -49,7 +50,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread *prThread)
 	HCERTSTORE hCertStore;
 	struct in_addr inaddr2oct;
 	char BufferIn[2048];
-	char *p;
+	char* p;
 	int i;
 	struct http_reqline reqline;
 	INPUT_RECORD inRec;
@@ -59,6 +60,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread *prThread)
 	int theme = 0;
 	int bytereceived = 0;
 	SecBuffer secBufferIn[4];
+	SecPkgContext_StreamSizes streamsizes;
 
 	ZeroMemory(ipAddr, 4);
 	ZeroMemory(&inaddr2oct, sizeof(struct in_addr));
@@ -73,9 +75,9 @@ DWORD WINAPI wu_tls_loop(struct paramThread *prThread)
 
 	pCertContext = find_mycert_in_store(&hCertStore);
 	if (pCertContext == NULL) {
-createcert:
+	createcert:
 		time_t wutime;
-		struct tm *tmval;
+		struct tm* tmval;
 		char log_timestr[64];
 		ZeroMemory(log_timestr, 64);
 		time(&wutime);
@@ -89,21 +91,22 @@ createcert:
 			write_info_in_console(ERR_MSG_CERTSTRTONAMEA, NULL, err);
 			NCryptFreeObject(phProvider);
 			NCryptFreeObject(hKey);
- 
+
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 
-		pCertContext =  (PCCERT_CONTEXT)create_cert_self_sign(&prThread->cursorPosition, ipAddr, &SubjectBlob, phProvider, hKey);
+		pCertContext = (PCCERT_CONTEXT)create_cert_self_sign(&prThread->cursorPosition, ipAddr, &SubjectBlob, phProvider, hKey);
 
 		if (FALSE == CertAddCertificateContextToStore(hCertStore, pCertContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL)) {
 			NCryptFreeObject(phProvider);
 			NCryptFreeObject(hKey);
 			err = GetLastError();
 			write_info_in_console(ERR_MSG_ADDCERT, NULL, err);
-		
+
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-			}
-	} else {
+		}
+	}
+	else {
 		SYSTEMTIME sysTimeNow;
 		FILETIME ftSysTimeNow;
 
@@ -118,7 +121,7 @@ createcert:
 
 	s = create_socket(&prThread->cursorPosition);
 	bind_socket2(&prThread->cursorPosition, s,
-				 prThread->inaddr);
+		prThread->inaddr);
 
 	ZeroMemory(&credHandle, sizeof(CredHandle));
 	if (get_credantials_handle(&credHandle, pCertContext) < 0) {
@@ -136,30 +139,36 @@ createcert:
 
 	for (;;) {
 		s_clt = acceptSecure(s, &credHandle, &ctxtHandle);
-		
+
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 		secBufferIn[0].pvBuffer = BufferIn;
+
+		ZeroMemory(BufferIn, 2048);
 
 		if (tls_recv(s_clt, &ctxtHandle, secBufferIn, &bytereceived))
 			continue;
 
-		for (i = 0; i < 4; i++) 
+		for (i = 0; i < 4; i++)
 			if (secBufferIn[i].BufferType == SECBUFFER_DATA)
 				break;
 
 		if (i == 4)
-			return -1;	
+			return -1;
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
 		ret = get_request_line(&reqline, secBufferIn[i].pvBuffer);
-		if (ret < 0)
+		if (ret < 0) {
+			fprintf(g_fphttpslog, "get_request_line: %i\n", ret);
+			fflush(g_fphttpslog);
 			continue;
+		}
 
 		if (strcmp(reqline.version, HTTP_VERSION) != 0) {
 			write_info_in_console(ERR_MSG_BADVERSION, NULL, 0);
-
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
+
+		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 
 		ret = get_headernv(headernv, (char*)secBufferIn[i].pvBuffer + ret);
 		if (ret < 0)
@@ -169,50 +178,64 @@ createcert:
 		if (i < 0 || strcmp(headernv[i].value.v, inet_ntoa(prThread->inaddr)) != 0)
 			return -1;
 
-		int test;
-		for (test = 0; test < HEADER_NV_MAX_SIZE; test++)
-			fprintf(g_fphttpslog, "name_%i: %s value_%i: %s\n", test, headernv[test].name.client, test, headernv[test].value.v);
-		fflush(g_fphttpslog);
 		if (strcmp(reqline.method, "GET") == 0) {
 			int ires;
-			struct http_resource httplocalres;    
+			struct http_resource httplocalres;
 
 			ires = http_match_resource(reqline.resource);
 			if (ires < 0) {
-			  check_cookie_theme(headernv, &theme);
+				check_cookie_theme(headernv, &theme);
 
-			  for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
+				for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
 
-			  ZeroMemory(&httplocalres, sizeof(struct http_resource));
-			  if (create_local_resource(&httplocalres, ires, theme) != 0) {
-				INPUT_RECORD inRec;
-				DWORD read;
+				ZeroMemory(&httplocalres, sizeof(struct http_resource));
+				if (create_local_resource(&httplocalres, ires, theme) != 0) {
+					INPUT_RECORD inRec;
+					DWORD read;
 
-				prThread->cursorPosition.Y++;
-				SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition);
-				write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+					prThread->cursorPosition.Y++;
+					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition);
+					write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
-				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-			  }
+					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+				}
 
-			  https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle); 
+				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
 
-			  // goto err;
-		  }
+				// goto err;
+			}
+			else {
+				check_cookie_theme(headernv, &theme);
+
+				ZeroMemory(&httplocalres, sizeof(struct http_resource));
+				if (create_local_resource(&httplocalres, ires, theme) != 0) {
+					INPUT_RECORD inRec;
+					DWORD read;
+
+					prThread->cursorPosition.Y++;
+					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition);
+					write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+
+					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+				}
+
+				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
+			}
 
 
 
-
-
-		} else if (strcmp(reqline.method, "POST") == 0) {
 
 
 		}
-/*
-		fprintf(g_fphttpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\nheadernv: %s\n", BufferferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version, (char*)secBufferIn[i].pvBuffer + ret);
-		fprintf(g_fphttpslog, secBufferIn[i].pvBuffer);
-		fflush(g_fphttpslog);
-*/
+		else if (strcmp(reqline.method, "POST") == 0) {
+
+
+		}
+		/*
+				fprintf(g_fphttpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\nheadernv: %s\n", BufferferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version, (char*)secBufferIn[i].pvBuffer + ret);
+				fprintf(g_fphttpslog, secBufferIn[i].pvBuffer);
+				fflush(g_fphttpslog);
+		*/
 	}
 
 	CertFreeCertificateContext(pCertContext);

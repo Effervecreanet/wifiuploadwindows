@@ -28,3 +28,4 @@ int http_match_resource(char* resource);
 int http_serv_resource(struct http_resource *res, int s,
                        struct success_info *successinfo,
 					   int *bytesent);
+void create_http_header_nv(struct http_resource *res, struct header_nv *nv, size_t fsize);
