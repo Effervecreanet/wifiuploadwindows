@@ -156,7 +156,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 			return -1;
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		ret = get_request_line(&reqline, secBufferIn[i].pvBuffer);
+		ret = get_request_line(&reqline, secBufferIn[i].pvBuffer, secBufferIn[i].cbBuffer);
 		if (ret < 0) {
 			fprintf(g_fphttpslog, "get_request_line: %i\n", ret);
 			fflush(g_fphttpslog);

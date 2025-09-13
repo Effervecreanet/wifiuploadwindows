@@ -18,16 +18,16 @@
 extern FILE* g_fphttpslog;
 extern int g_tls_firstsend;
 
-int get_request_line(struct http_reqline* reqline, char* BufferIn)
+int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 {
 	char* p, * psav, * sp;
 	int i;
 
-	for (i = 0, psav = p = BufferIn; i < 254; p++, i++)
+	for (i = 0, psav = p = BufferIn; i < length - 2; p++, i++)
 		if (*p == '\r' && *(p + 1) == '\n')
 			break;
 
-	if (i >= 252)
+	if (i >= length - 2)
 		return -1;
 
 	*p = '\0';
