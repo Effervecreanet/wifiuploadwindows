@@ -9,6 +9,13 @@
 #include <locale.h>
 #include <sys\stat.h>
 
+#define SCHANNEL_USE_BLACKLIST
+
+#include <schannel.h>
+
+#define SECURITY_WIN32
+
+#include <sspi.h>
 
 #include "wu_tls_main.h"
 #include "wu_msg.h"
@@ -40,6 +47,9 @@ HANDLE g_hConsoleOutput;
 HANDLE g_hNewFile_tmp;
 unsigned char g_sNewFile_tmp[1024];
 int g_tls_firstsend = 0;
+CtxtHandle *g_ctxtHandle = NULL;
+CredHandle *g_credHandle = NULL;
+int *g_tls_sclt = NULL;
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
@@ -62,6 +72,9 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 			CloseHandle(g_hNewFile_tmp);
 			DeleteFileA((LPCSTR)g_sNewFile_tmp);
 		}
+		if (g_credHandle != NULL && g_ctxtHandle != NULL &&
+			g_tls_sclt != NULL)
+			tls_shutdown(g_credHandle, g_ctxtHandle, g_tls_sclt);
 		WSACleanup();
 		ExitProcess(TRUE);
 	default:

@@ -49,7 +49,7 @@ int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 	return i + 2;
 }
 
-int get_headernv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer)
+int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer)
 {
 	int count;
 	int count2 = 0;
@@ -336,6 +336,10 @@ https_serv_resource(struct http_resource* res, int s,
 			secBufferOut[3].BufferType = SECBUFFER_EMPTY;
 
 			ret = EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
+			if (ret == SEC_I_CONTEXT_EXPIRED) {
+				fprintf(g_fphttpslog, "SEC_I_CONTEXT_EXPIRED\n");
+				fflush(g_fphttpslog);
+			}
 
 			send(s, encryptBuffer, secBufferOut[0].cbBuffer + secBufferOut[1].cbBuffer + secBufferOut[2].cbBuffer, 0);
 

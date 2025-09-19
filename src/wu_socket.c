@@ -2,7 +2,6 @@
 #include <strsafe.h>
 
 #include "wu_msg.h"
-
 #define LISTEN_PORT 80
 #define LISTEN_HTTPS_PORT 443
 
@@ -63,8 +62,6 @@ bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
-	setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char*)&tval, sizeof(char));
-
 	listen(s, 10);
 
 	g_listensocket = &s;
@@ -75,7 +72,7 @@ bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
 void
 bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 	struct sockaddr_in sainServer;
-	char tval = 1;
+	unsigned char tval = 1;
 
 	ZeroMemory(&sainServer, sizeof(struct sockaddr_in));
 	sainServer.sin_addr = inaddr;
@@ -98,10 +95,10 @@ bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
+	
+	setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (unsigned char*)&tval, sizeof(unsigned char));
 
-	setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char*)&tval, sizeof(char));
-
-	listen(s, 10);
+	listen(s, 20);
 
 	g_listenhttpssocket = &s;
 

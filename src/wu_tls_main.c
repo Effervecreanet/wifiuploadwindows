@@ -30,6 +30,9 @@ extern FILE* g_fphttpslog;
 extern const struct _http_resources http_resources[];
 extern HANDLE g_hConsoleOutput;
 extern int g_tls_firstsend;
+extern CredHandle *g_credHandle;
+extern CtxtHandle *g_ctxtHandle;
+extern int *g_tls_sclt;
 
 DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {
@@ -59,6 +62,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	int bytesent = 0;
 	int theme = 0;
 	int bytereceived = 0;
+	int data_idx;
 	SecBuffer secBufferIn[4];
 	SecPkgContext_StreamSizes streamsizes;
 
@@ -135,49 +139,62 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
+	g_credHandle = &credHandle;
+
 	ZeroMemory(headernv, HEADER_NV_MAX_SIZE * (HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE));
 
 	for (;;) {
 		s_clt = acceptSecure(s, &credHandle, &ctxtHandle);
-
+next_req:
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 		secBufferIn[0].pvBuffer = BufferIn;
 
 		ZeroMemory(BufferIn, 2048);
 
-		if (tls_recv(s_clt, &ctxtHandle, secBufferIn, &bytereceived))
+		fprintf(g_fphttpslog, "aaa\n");
+		fflush(g_fphttpslog);
+
+		ret = tls_recv(s_clt, &ctxtHandle, secBufferIn, &bytereceived, &data_idx);
+		if (ret < 0) {
+			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
-
-		for (i = 0; i < 4; i++)
-			if (secBufferIn[i].BufferType == SECBUFFER_DATA)
-				break;
-
-		if (i == 4)
-			return -1;
+		}
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		ret = get_request_line(&reqline, secBufferIn[i].pvBuffer, secBufferIn[i].cbBuffer);
+		fprintf(g_fphttpslog, "bbb\n");
+		fflush(g_fphttpslog);
+		ret = get_request_line(&reqline, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer);
 		if (ret < 0) {
-			fprintf(g_fphttpslog, "get_request_line: %i\n", ret);
-			fflush(g_fphttpslog);
+			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
 		}
 
 		if (strcmp(reqline.version, HTTP_VERSION) != 0) {
-			write_info_in_console(ERR_MSG_BADVERSION, NULL, 0);
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			continue;
+			// write_info_in_console(ERR_MSG_BADVERSION, NULL, 0);
+			// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 
-		ret = get_headernv(headernv, (char*)secBufferIn[i].pvBuffer + ret);
-		if (ret < 0)
+		fprintf(g_fphttpslog, "CCC\n");
+		fflush(g_fphttpslog);
+
+		ret = get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret);
+		if (ret < 0) {
+			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
+		}
 
 		i = nv_find_name_client(headernv, "Host");
-		if (i < 0 || strcmp(headernv[i].value.v, inet_ntoa(prThread->inaddr)) != 0)
-			return -1;
+		if (i < 0 || strcmp(headernv[i].value.v, inet_ntoa(prThread->inaddr)) != 0) {
+			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			continue;
+		}
 
+		fprintf(g_fphttpslog, "ddd\n");
+		fflush(g_fphttpslog);
 		if (strcmp(reqline.method, "GET") == 0) {
 			int ires;
 			struct http_resource httplocalres;
@@ -219,7 +236,11 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 				}
 
+		fprintf(g_fphttpslog, "eee\n");
+		fflush(g_fphttpslog);
 				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
+		fprintf(g_fphttpslog, "fff\n");
+		fflush(g_fphttpslog);
 			}
 
 
@@ -236,6 +257,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				fprintf(g_fphttpslog, secBufferIn[i].pvBuffer);
 				fflush(g_fphttpslog);
 		*/
+		 // tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+		goto next_req;
 	}
 
 	CertFreeCertificateContext(pCertContext);

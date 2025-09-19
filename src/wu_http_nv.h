@@ -36,7 +36,7 @@
 #define HTTP_HEADER_CACHE_CONTROL_VALUE "no-cache, no-store, must-revalidate"
 #define HTTP_HEADER_SERVER_VALUE        "wifiupload/5.22"
 #define HTTP_HEADER_CONNECTION_VALUE    "Keep-Alive"
-#define HTTP_HEADER_KEEP_ALIVE_VALUE    "timeout=10, max=42"
+#define HTTP_HEADER_KEEP_ALIVE_VALUE    "timeout=120, max=224"
 #define HTTP_HEADER_VARY_VALUE          "User-Agent"
 #define HTTP_HEADER_ACCEPT_RANGES_VALUE "bytes"
 #define HTTP_HEADER_CONTENT_LANGUAGE_VALUE "fr_FR"

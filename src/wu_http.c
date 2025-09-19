@@ -154,7 +154,7 @@ create_http_header_nv(struct http_resource* res, struct header_nv* nv, size_t fs
 	(nv + i++)->value.pv = HTTP_HEADER_CACHE_CONTROL_VALUE;
 
 	(nv + i)->name.wsite = "Connection";
-	(nv + i++)->value.pv = "Close";
+	(nv + i++)->value.pv = "Keep-alive";
 
 
 	(nv + i)->name.wsite = HTTP_HEADER_CONTENT_LANGUAGE;
@@ -169,10 +169,11 @@ create_http_header_nv(struct http_resource* res, struct header_nv* nv, size_t fs
 	(nv + i)->name.wsite = HTTP_HEADER_DATE;
 	time_to_httpdate((nv + i++)->value.v);
 
-	/*
-	  (nv + i)->name.wsite = HTTP_HEADER_KEEP_ALIVE;
-	  (nv + i++)->value.pv = HTTP_HEADER_KEEP_ALIVE_VALUE;
-	*/
+	
+	(nv + i)->name.wsite = HTTP_HEADER_KEEP_ALIVE;
+	(nv + i++)->value.pv = HTTP_HEADER_KEEP_ALIVE_VALUE;
+
+	
 
 
 	(nv + i)->name.wsite = HTTP_HEADER_SERVER;
