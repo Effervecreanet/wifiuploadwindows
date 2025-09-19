@@ -18,8 +18,6 @@ extern FILE* g_fphttpslog;
 
 int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* bytereceived, int *data_idx) {
 	SecBufferDesc secBufferDescInput;
-	int i = 0;
-	char* p;
 
 	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
@@ -37,24 +35,8 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* b
 	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-	int ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
-	fprintf(g_fphttpslog, "DecryptMessage ret: %x\n", ret);
-	fflush(g_fphttpslog);
+	DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
 
-	for (i = 0; i < 4; i++) {
-		fprintf(g_fphttpslog, "pvBuffer[%i]: %s\n", i, secBufferIn[i].pvBuffer);
-		fflush(g_fphttpslog);
-	}
-
-/*
-	for (i = 0; i < 4; i++)
-		if (secBufferIn[i].BufferType == SECBUFFER_DATA)
-			break;
-
-
-	if (i == 4)
-		return -1;
-*/
 	*data_idx = 1;
 
 

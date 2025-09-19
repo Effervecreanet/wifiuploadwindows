@@ -151,9 +151,6 @@ next_req:
 
 		ZeroMemory(BufferIn, 2048);
 
-		fprintf(g_fphttpslog, "aaa\n");
-		fflush(g_fphttpslog);
-
 		ret = tls_recv(s_clt, &ctxtHandle, secBufferIn, &bytereceived, &data_idx);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
@@ -161,8 +158,6 @@ next_req:
 		}
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		fprintf(g_fphttpslog, "bbb\n");
-		fflush(g_fphttpslog);
 		ret = get_request_line(&reqline, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
@@ -172,14 +167,9 @@ next_req:
 		if (strcmp(reqline.version, HTTP_VERSION) != 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
-			// write_info_in_console(ERR_MSG_BADVERSION, NULL, 0);
-			// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
-
-		fprintf(g_fphttpslog, "CCC\n");
-		fflush(g_fphttpslog);
 
 		ret = get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret);
 		if (ret < 0) {
@@ -193,8 +183,6 @@ next_req:
 			continue;
 		}
 
-		fprintf(g_fphttpslog, "ddd\n");
-		fflush(g_fphttpslog);
 		if (strcmp(reqline.method, "GET") == 0) {
 			int ires;
 			struct http_resource httplocalres;
@@ -236,11 +224,7 @@ next_req:
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 				}
 
-		fprintf(g_fphttpslog, "eee\n");
-		fflush(g_fphttpslog);
 				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
-		fprintf(g_fphttpslog, "fff\n");
-		fflush(g_fphttpslog);
 			}
 
 
