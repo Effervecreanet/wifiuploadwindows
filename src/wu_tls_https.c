@@ -277,7 +277,6 @@ https_serv_resource(struct http_resource* res, int s,
 			return -1;
 
 		*bytesent += messageLen;
-		// *bytesent += ret;
 
 		ret = 0;
 		free(pbufferout);

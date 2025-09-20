@@ -251,35 +251,23 @@ http_serv_resource(struct http_resource* res, int s,
 	if (ret != sizeof(HTTP_VERSION) - 1)
 		return -1;
 
-	*bytesent += ret;
-
 	if (send(s, " ", 1, 0) != 1)
 		return -1;
-
-	*bytesent += ret;
 
 	ret = send(s, HTTP_CODE_STATUS_OK_STR, sizeof(HTTP_CODE_STATUS_OK_STR) - 1, 0);
 	if (ret != sizeof(HTTP_CODE_STATUS_OK_STR) - 1)
 		return -1;
 
-	*bytesent += ret;
-
 	if (send(s, " ", 1, 0) != 1)
 		return -1;
-
-	*bytesent += ret;
 
 	ret = send(s, HTTP_STRING_STATUS_OK, sizeof(HTTP_STRING_STATUS_OK) - 1, 0);
 	if (ret != sizeof(HTTP_STRING_STATUS_OK) - 1)
 		return -1;
 
-	*bytesent += ret;
-
 	ret = send(s, "\r\n", 2, 0);
 	if (ret != 2)
 		return -1;
-
-	*bytesent += ret;
 
 	hFile = CreateFile(res->resource, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	if (hFile == INVALID_HANDLE_VALUE)

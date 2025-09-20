@@ -65,6 +65,11 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	int data_idx;
 	SecBuffer secBufferIn[4];
 	SecPkgContext_StreamSizes streamsizes;
+	char https_logentry[256];
+	char ipaddr_httpsclt[16];
+	char log_timestr[42];
+	time_t wutime;
+	struct tm tmval;
 
 	ZeroMemory(ipAddr, 4);
 	ZeroMemory(&inaddr2oct, sizeof(struct in_addr));
@@ -139,13 +144,25 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
-	g_credHandle = &credHandle;
 
 	ZeroMemory(headernv, HEADER_NV_MAX_SIZE * (HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE));
 
 	for (;;) {
-		s_clt = acceptSecure(s, &credHandle, &ctxtHandle);
+		
+		g_credHandle = g_ctxtHandle = NULL;
+		g_tls_sclt = NULL;
+
+		ZeroMemory(ipaddr_httpsclt, 16);
+
+		s_clt = acceptSecure(s, &credHandle, &ctxtHandle, ipaddr_httpsclt);
+
+		g_credHandle = &credHandle;
+		g_ctxtHandle = &ctxtHandle;
+		g_tls_sclt = &s_clt;
+
 next_req:
+		bytesent = 0;
+
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 		secBufferIn[0].pvBuffer = BufferIn;
 
@@ -236,12 +253,19 @@ next_req:
 
 
 		}
-		/*
-				fprintf(g_fphttpslog, "cbBuffer: %i\nmethod: %s\nresource: %s\nversion: %s\nheadernv: %s\n", BufferferIn[i].cbBuffer, reqline.method, reqline.resource, reqline.version, (char*)secBufferIn[i].pvBuffer + ret);
-				fprintf(g_fphttpslog, secBufferIn[i].pvBuffer);
-				fflush(g_fphttpslog);
-		*/
-		 // tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+		ZeroMemory(https_logentry, 256);
+		ZeroMemory(log_timestr, 42);
+
+		time(&wutime);
+		
+		ZeroMemory(&tmval, sizeof(struct tm));
+		localtime_s(&tmval, &wutime);
+
+		strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval); 
+		sprintf_s(https_logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddr_httpsclt, log_timestr, reqline.method, reqline.resource, reqline.version, bytesent);
+		fprintf(g_fphttpslog, https_logentry);
+		fflush(g_fphttpslog);
+
 		goto next_req;
 	}
 

@@ -110,7 +110,7 @@ void tls_shutdown(CtxtHandle *ctxtHandle, CredHandle *credHandle, int s_clt) {
 }
 
 
-int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle) {
+int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipaddr_httpsclt[16]) {
 	int s_clt;
 	ULONG err;
 	struct sockaddr_in sin_clt;
@@ -162,6 +162,8 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle) {
 
 		sinclt_len = sizeof(struct sockaddr_in);
 		s_clt = accept(s, (struct sockaddr*)&sin_clt, &sinclt_len);
+
+		strcpy_s(ipaddr_httpsclt, 16, inet_ntoa(sin_clt.sin_addr));
 
 		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn1, 2048, 0);
 
