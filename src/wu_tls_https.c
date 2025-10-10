@@ -129,7 +129,7 @@ crlfcrlf:
 	if (nvnb == HEADER_NV_MAX_SIZE)
 		return -1;
 
-	return 1;
+	return count2; 
 }
 
 int

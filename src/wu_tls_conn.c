@@ -127,6 +127,7 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 	SecBuffer secBufferIn[2];
 	SecBuffer secBufferIn2[4];
 	SecBuffer secBufferOut[3];
+	int timeout = 1000;
 
 	ZeroMemory(&ctxNewHandle, sizeof(CtxtHandle));
 	ZeroMemory(&ctxNewHandle2, sizeof(CtxtHandle));
@@ -162,6 +163,8 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 
 		sinclt_len = sizeof(struct sockaddr_in);
 		s_clt = accept(s, (struct sockaddr*)&sin_clt, &sinclt_len);
+
+		setsockopt(s_clt, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 
 		strcpy_s(ipaddr_httpsclt, 16, inet_ntoa(sin_clt.sin_addr));
 

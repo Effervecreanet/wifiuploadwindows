@@ -188,7 +188,7 @@ next_req:
 
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 
-		ret = get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret);
+		ret += get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
@@ -250,6 +250,23 @@ next_req:
 
 		}
 		else if (strcmp(reqline.method, "POST") == 0) {
+			if (strcmp(reqline.resource, "/theme") == 0) {
+				char cookie[48];
+
+				ret = get_theme_param(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret + 2, &theme);
+				if (ret != 0) {
+					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+					continue;	
+				}
+
+				ZeroMemory(cookie, 48);
+				if (theme == 0)
+					strcpy_s(cookie, 48, "theme=dark");
+				else
+					strcpy_s(cookie, 48, "theme=light");
+
+				https_apply_theme(s_clt, &ctxtHandle, cookie);
+			}
 
 
 		}
