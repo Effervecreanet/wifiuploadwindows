@@ -104,30 +104,7 @@ https_apply_theme(int s_clt, CtxtHandle *ctxtHandle, char* cookie)
 	strcpy_s(message, Sizes.cbMaximumMessage, buffer);
 	message_len = strlen(message);
 
-	ZeroMemory(&bufferDesc, sizeof(SecBufferDesc));
-	ZeroMemory(&secBufferOut, sizeof(SecBuffer) * 4);
-	bufferDesc.ulVersion = SECBUFFER_VERSION;
-	bufferDesc.cBuffers = 4;
-	bufferDesc.pBuffers = secBufferOut;
-
-	secBufferOut[0].BufferType = SECBUFFER_STREAM_HEADER;
-	secBufferOut[0].pvBuffer = encryptbuffer;
-	secBufferOut[0].cbBuffer = Sizes.cbHeader;
-	secBufferOut[1].BufferType = SECBUFFER_DATA;
-	secBufferOut[1].pvBuffer = message;
-	secBufferOut[1].cbBuffer = message_len;
-	secBufferOut[2].BufferType = SECBUFFER_STREAM_TRAILER;
-	secBufferOut[2].pvBuffer = message + message_len;
-	secBufferOut[2].cbBuffer = Sizes.cbTrailer;
-	secBufferOut[3].BufferType = SECBUFFER_EMPTY;
-	
-	EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
-
-	for (i = 0; i < 4; i++)
-		if (secBufferOut[i].BufferType == SECBUFFER_DATA)
-			break;
-
-	if (send(s_clt, encryptbuffer, Sizes.cbHeader + message_len + Sizes.cbTrailer, 0) < 0)
+	if (tls_send(s_clt, ctxtHandle, message, message_len) <= 0)
 		return -1;
 
 	return 1;

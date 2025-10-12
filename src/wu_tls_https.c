@@ -152,26 +152,12 @@ https_serv_resource(struct http_resource* res, int s,
 	SecBuffer secBufferOut[4];
 	int i;
 	char* encryptBuffer;
-	char* message;
+	char message[8192];
 	int encryptBufferLen;
 	int messageLen;
 
-	QueryContextAttributes(ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &Sizes);
-	encryptBufferLen = Sizes.cbHeader + Sizes.cbMaximumMessage + Sizes.cbTrailer;
-	encryptBuffer = malloc(encryptBufferLen);
-
-	ZeroMemory(&bufferDesc, sizeof(SecBufferDesc));
-	bufferDesc.ulVersion = SECBUFFER_VERSION;
-	bufferDesc.cBuffers = 4;
-	bufferDesc.pBuffers = secBufferOut;
-
-	encryptBufferLen = Sizes.cbHeader + Sizes.cbMaximumMessage + Sizes.cbTrailer;
-
-	ZeroMemory(encryptBuffer, encryptBufferLen);
-
-	message = encryptBuffer + Sizes.cbHeader;
-	sprintf_s(message, encryptBufferLen - Sizes.cbHeader, "%s %s %s\r\n", HTTP_VERSION, HTTP_CODE_STATUS_OK_STR, HTTP_STRING_STATUS_OK);
-	messageLen = strlen(message);
+	ZeroMemory(message, 8192);
+	sprintf_s(message, 8192, "%s %s %s\r\n", HTTP_VERSION, HTTP_CODE_STATUS_OK_STR, HTTP_STRING_STATUS_OK);
 
 	hFile = CreateFile(res->resource, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	if (hFile == INVALID_HANDLE_VALUE)
@@ -255,26 +241,7 @@ https_serv_resource(struct http_resource* res, int s,
 		strcat_s(message, Sizes.cbMaximumMessage - messageLen, pbufferout);
 
 		messageLen = strlen(message);
-		ZeroMemory(secBufferOut, sizeof(SecBuffer) * 4);
-		secBufferOut[0].BufferType = SECBUFFER_STREAM_HEADER;
-		secBufferOut[0].pvBuffer = encryptBuffer;
-		secBufferOut[0].cbBuffer = Sizes.cbHeader;
-		secBufferOut[1].BufferType = SECBUFFER_DATA;
-		secBufferOut[1].pvBuffer = message;
-		secBufferOut[1].cbBuffer = messageLen;
-		secBufferOut[2].BufferType = SECBUFFER_STREAM_TRAILER;
-		secBufferOut[2].pvBuffer = message + messageLen;
-		secBufferOut[2].cbBuffer = Sizes.cbTrailer;
-		secBufferOut[3].BufferType = SECBUFFER_EMPTY;
-
-		EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
-
-		for (i = 0; i < 4; i++)
-			if (secBufferOut[i].BufferType == SECBUFFER_DATA)
-				break;
-
-		if (send(s, encryptBuffer, Sizes.cbHeader + messageLen + Sizes.cbTrailer, 0) < 0)
-			return -1;
+		tls_send(s, ctxtHandle, message, strlen(message));
 
 		*bytesent += messageLen;
 
@@ -289,7 +256,6 @@ https_serv_resource(struct http_resource* res, int s,
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 		create_http_header_nv(res, httpnv, fsize);
 
-
 		for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
 			messageLen = strlen(message);
 			sprintf_s(message + messageLen, Sizes.cbMaximumMessage - messageLen, "%s: %s\r\n", httpnv[i].name.wsite,
@@ -303,44 +269,10 @@ https_serv_resource(struct http_resource* res, int s,
 
 		*bytesent += strlen(message);
 
-		ZeroMemory(secBufferOut, sizeof(SecBuffer) * 4);
-		secBufferOut[0].BufferType = SECBUFFER_STREAM_HEADER;
-		secBufferOut[0].pvBuffer = encryptBuffer;
-		secBufferOut[0].cbBuffer = Sizes.cbHeader;
-		secBufferOut[1].BufferType = SECBUFFER_DATA;
-		secBufferOut[1].pvBuffer = message;
-		secBufferOut[1].cbBuffer = messageLen;
-		secBufferOut[2].BufferType = SECBUFFER_STREAM_TRAILER;
-		secBufferOut[2].pvBuffer = message + messageLen;
-		secBufferOut[2].cbBuffer = Sizes.cbTrailer;
-		secBufferOut[3].BufferType = SECBUFFER_EMPTY;
+		tls_send(s, ctxtHandle, message, strlen(message));
 
-		EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
-
-		send(s, encryptBuffer, secBufferOut[0].cbBuffer + secBufferOut[1].cbBuffer + secBufferOut[2].cbBuffer, 0);
-
-		message = encryptBuffer + Sizes.cbHeader;
-		ZeroMemory(encryptBuffer, encryptBufferLen);
 		while (ReadFile(hFile, message, 2048, &read, NULL) != 0 && read) {
-			ZeroMemory(secBufferOut, sizeof(SecBuffer) * 4);
-			secBufferOut[0].BufferType = SECBUFFER_STREAM_HEADER;
-			secBufferOut[0].pvBuffer = encryptBuffer;
-			secBufferOut[0].cbBuffer = Sizes.cbHeader;
-			secBufferOut[1].BufferType = SECBUFFER_DATA;
-			secBufferOut[1].pvBuffer = message;
-			secBufferOut[1].cbBuffer = read;
-			secBufferOut[2].BufferType = SECBUFFER_STREAM_TRAILER;
-			secBufferOut[2].pvBuffer = message + read;
-			secBufferOut[2].cbBuffer = Sizes.cbTrailer;
-			secBufferOut[3].BufferType = SECBUFFER_EMPTY;
-
-			ret = EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
-			if (ret == SEC_I_CONTEXT_EXPIRED) {
-				fprintf(g_fphttpslog, "SEC_I_CONTEXT_EXPIRED\n");
-				fflush(g_fphttpslog);
-			}
-
-			send(s, encryptBuffer, secBufferOut[0].cbBuffer + secBufferOut[1].cbBuffer + secBufferOut[2].cbBuffer, 0);
+			tls_send(s, ctxtHandle, message, read);
 
 			*bytesent += read;
 		}
@@ -348,8 +280,6 @@ https_serv_resource(struct http_resource* res, int s,
 		CloseHandle(hFile);
 		ret = 1;
 	}
-
-	free(encryptBuffer);
 
 	return ret;
 }

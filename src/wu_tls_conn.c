@@ -15,32 +15,103 @@
 
 extern FILE* g_fphttpslog;
 
+int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int message_size) {
+	SecPkgContext_StreamSizes Sizes;
+	char *encryptBuffer;
+	unsigned int encryptBufferLen;
+	SecBufferDesc bufferDesc;
+	SecBuffer secBufferOut[4];
+	int i;
+
+	QueryContextAttributes(ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &Sizes);
+	encryptBufferLen = Sizes.cbHeader + Sizes.cbMaximumMessage + Sizes.cbTrailer;
+	encryptBuffer = malloc(encryptBufferLen);
+
+	ZeroMemory(&bufferDesc, sizeof(SecBufferDesc));
+
+	bufferDesc.ulVersion = SECBUFFER_VERSION;
+	bufferDesc.cBuffers = 4;
+	bufferDesc.pBuffers = secBufferOut;
+
+	ZeroMemory(encryptBuffer, encryptBufferLen);
+
+	memcpy(encryptBuffer + Sizes.cbHeader, message, message_size);
+
+	ZeroMemory(secBufferOut, sizeof(SecBuffer) * 4);
+	secBufferOut[0].BufferType = SECBUFFER_STREAM_HEADER;
+	secBufferOut[0].pvBuffer = encryptBuffer;
+	secBufferOut[0].cbBuffer = Sizes.cbHeader;
+	secBufferOut[1].BufferType = SECBUFFER_DATA;
+	secBufferOut[1].pvBuffer = encryptBuffer + Sizes.cbHeader;
+	secBufferOut[1].cbBuffer = message_size;
+	secBufferOut[2].BufferType = SECBUFFER_STREAM_TRAILER;
+	secBufferOut[2].pvBuffer = encryptBuffer + Sizes.cbHeader + message_size;
+	secBufferOut[2].cbBuffer = Sizes.cbTrailer;
+	secBufferOut[3].BufferType = SECBUFFER_EMPTY;
+
+	EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
+
+	if (send(s_clt, encryptBuffer, secBufferOut[0].cbBuffer + secBufferOut[1].cbBuffer + secBufferOut[2].cbBuffer, 0) < 0) {
+		free(encryptBuffer);
+		return -1;
+	}
+
+	free(encryptBuffer);
+
+	return 0;
+}
+
 
 int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* bytereceived, int *data_idx) {
 	SecBufferDesc secBufferDescInput;
+	int ret, i, received;
+	char buffer[2000];
 
 	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 	secBufferDescInput.cBuffers = 4;
 	secBufferDescInput.pBuffers = secBufferIn;
 
-
-	ZeroMemory(secBufferIn[0].pvBuffer, 2048);
-	secBufferIn[0].cbBuffer = recv(s_clt, secBufferIn[0].pvBuffer, 2047, 0);
-	if (secBufferIn[0].cbBuffer <= 0)
-		return -1;
+	ZeroMemory(buffer, 2000);
+	ZeroMemory(secBufferIn[0].pvBuffer, 2000);
+	received = recv(s_clt, buffer, 1999, 0);
+	secBufferIn[0].cbBuffer = received;
+	secBufferIn[0].pvBuffer = buffer;
 
 	secBufferIn[0].BufferType = SECBUFFER_DATA;
 	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-	DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
+	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
 
 	*data_idx = 1;
 
-
 	*bytereceived = secBufferIn[1].cbBuffer;
+
+	if (secBufferIn[0].BufferType == SECBUFFER_MISSING) {
+		char *buffer_missing = malloc(received + secBufferIn[0].cbBuffer);
+
+		fprintf(g_fphttpslog, "MISSING\n");
+		fflush(g_fphttpslog);
+
+		memcpy(buffer_missing, buffer, received);
+		ret = recv(s_clt, buffer_missing + received, secBufferIn[0].cbBuffer, 0);
+		if (ret != secBufferIn[0].cbBuffer)
+			ret = recv(s_clt, buffer_missing + received + ret, secBufferIn[0].cbBuffer - ret, 0);
+
+		secBufferIn[0].BufferType = SECBUFFER_DATA;
+		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
+		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
+		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
+		secBufferIn[0].pvBuffer = buffer_missing;
+		secBufferIn[0].cbBuffer += received;
+
+		ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
+		fprintf(g_fphttpslog, "ret: %x missing: %s\n", ret, secBufferIn[1].pvBuffer);
+		fflush(g_fphttpslog);
+		free(buffer_missing);
+	}
 
 	return 0;
 }
@@ -127,7 +198,7 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 	SecBuffer secBufferIn[2];
 	SecBuffer secBufferIn2[4];
 	SecBuffer secBufferOut[3];
-	int timeout = 1000;
+	int timeout = 2000;
 
 	ZeroMemory(&ctxNewHandle, sizeof(CtxtHandle));
 	ZeroMemory(&ctxNewHandle2, sizeof(CtxtHandle));

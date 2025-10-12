@@ -52,7 +52,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	CtxtHandle ctxtHandle;
 	HCERTSTORE hCertStore;
 	struct in_addr inaddr2oct;
-	char BufferIn[2048];
+	char BufferIn[2000];
 	char* p;
 	int i;
 	struct http_reqline reqline;
@@ -64,7 +64,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	int bytereceived = 0;
 	int data_idx;
 	SecBuffer secBufferIn[4];
-	SecPkgContext_StreamSizes streamsizes;
+	SecPkgContext_StreamSizes Sizes;
 	char https_logentry[256];
 	char ipaddr_httpsclt[16];
 	char log_timestr[42];
@@ -165,8 +165,10 @@ next_req:
 
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 		secBufferIn[0].pvBuffer = BufferIn;
+		secBufferIn[0].BufferType = SECBUFFER_DATA;
+		secBufferIn[0].cbBuffer = 2000;
 
-		ZeroMemory(BufferIn, 2048);
+		ZeroMemory(BufferIn, 2000);
 
 		ret = tls_recv(s_clt, &ctxtHandle, secBufferIn, &bytereceived, &data_idx);
 		if (ret < 0) {
@@ -266,6 +268,18 @@ next_req:
 					strcpy_s(cookie, 48, "theme=light");
 
 				https_apply_theme(s_clt, &ctxtHandle, cookie);
+			} else if (strcmp(reqline.resource, "/upload") == 0) {
+				struct user_stats upstats;
+
+				clear_txrx_pane(&prThread->cursorPosition);
+				check_cookie_theme(headernv, &theme);
+
+				ZeroMemory(&upstats, sizeof(struct user_stats));
+				tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle,
+									(char*)secBufferIn[data_idx].pvBuffer + ret + 2);
+				prThread->cursorPosition.Y++;
+
+
 			}
 
 
