@@ -92,7 +92,7 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* b
 	if (secBufferIn[0].BufferType == SECBUFFER_MISSING) {
 		char *buffer_missing = malloc(received + secBufferIn[0].cbBuffer);
 
-		fprintf(g_fphttpslog, "MISSING\n");
+		fprintf(g_fphttpslog, "MISSING: %i\n", secBufferIn[0].cbBuffer);
 		fflush(g_fphttpslog);
 
 		memcpy(buffer_missing, buffer, received);
