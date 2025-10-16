@@ -28,9 +28,9 @@
 #pragma comment(lib, "userenv.lib")
 
 extern struct wu_msg wumsg[];
-FILE *g_fplog;
-int *g_listensocket;
-int *g_usersocket;
+FILE* g_fplog;
+int* g_listensocket;
+int* g_usersocket;
 HANDLE g_hConsoleOutput;
 HANDLE g_hNewFile_tmp;
 unsigned char g_sNewFile_tmp[1024];
@@ -38,10 +38,10 @@ unsigned char g_sNewFile_tmp[1024];
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
 {
-    switch (dwCtrlType) {
-    case CTRL_CLOSE_EVENT:
-    case CTRL_LOGOFF_EVENT:
-    case CTRL_SHUTDOWN_EVENT:
+	switch (dwCtrlType) {
+	case CTRL_CLOSE_EVENT:
+	case CTRL_LOGOFF_EVENT:
+	case CTRL_SHUTDOWN_EVENT:
 		if (g_fplog != NULL)
 			fclose(g_fplog);
 		if (g_usersocket != NULL && *g_usersocket != 0)
@@ -50,350 +50,265 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 			closesocket(*g_listensocket);
 		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
 			CloseHandle(g_hConsoleOutput);
-		if (g_hNewFile_tmp != INVALID_HANDLE_VALUE){
+		if (g_hNewFile_tmp != INVALID_HANDLE_VALUE) {
 			CloseHandle(g_hNewFile_tmp);
 			DeleteFileA((LPCSTR)g_sNewFile_tmp);
 		}
-        WSACleanup();
-        ExitProcess(TRUE);
-    default:
-        break;
-    }
+		WSACleanup();
+		ExitProcess(TRUE);
+	default:
+		break;
+	}
 
-    return FALSE;
+	return FALSE;
 }
 
 void
 create_download_directory(char dd[1024]) {
-    DWORD szdd = 1024;
+	DWORD szdd = 1024;
 
-    ZeroMemory(dd, 1024);
-    GetUserProfileDirectoryA(GetCurrentProcessToken(), dd, &szdd);
-    strcat_s(dd, 1024, "\\Downloads\\");
+	ZeroMemory(dd, 1024);
+	GetUserProfileDirectoryA(GetCurrentProcessToken(), dd, &szdd);
+	strcat_s(dd, 1024, "\\Downloads\\");
 
-    return;
+	return;
 }
 
 void
-write_info_in_console(enum idmsg id, void *p) {
-    DWORD written;
-    unsigned char i;
-    char outConBuf[1024];
+write_info_in_console(enum idmsg id, void* p) {
+	DWORD written;
+	unsigned char i;
+	char outConBuf[1024];
 
-    for (i = 0; wumsg[i].id != INF_ERR_END; i++)
-        if (wumsg[i].id == id)
-            break;
-    
-    SetConsoleTextAttribute(g_hConsoleOutput, wumsg[i].wAtributes[0]);
+	for (i = 0; wumsg[i].id != INF_ERR_END; i++)
+		if (wumsg[i].id == id)
+			break;
 
-    if (p != NULL) {
-        ZeroMemory(outConBuf, 1024);
-        StringCchPrintf(outConBuf, 1024, wumsg[i].Msg, p);
-        WriteConsoleA(g_hConsoleOutput, outConBuf, (DWORD)strlen(outConBuf), &written, NULL);
-    }
-    else {
-        WriteConsoleA(g_hConsoleOutput, wumsg[i].Msg, wumsg[i].szMsg, &written, NULL);
-    }
+	SetConsoleTextAttribute(g_hConsoleOutput, wumsg[i].wAtributes[0]);
 
-    return;
+	if (p != NULL) {
+		ZeroMemory(outConBuf, 1024);
+		StringCchPrintf(outConBuf, 1024, wumsg[i].Msg, p);
+		WriteConsoleA(g_hConsoleOutput, outConBuf, (DWORD)strlen(outConBuf), &written, NULL);
+	}
+	else {
+		WriteConsoleA(g_hConsoleOutput, wumsg[i].Msg, wumsg[i].szMsg, &written, NULL);
+	}
+
+	return;
 };
 
 void
 clear_txrx_pane(COORD* cursorPosition) {
-    DWORD written;
-    COORD coordCR;
+	DWORD written;
+	COORD coordCR;
 
-    for (coordCR.Y = cursorPosition[1].Y, coordCR.X = cursorPosition[1].X; coordCR.Y <= cursorPosition[1].Y + 6; coordCR.Y++) {
-        SetConsoleCursorPosition(g_hConsoleOutput, coordCR);
-        WriteConsoleA(g_hConsoleOutput, "                                                                                     ",
-            sizeof("                                                                               ") - 1, &written, NULL);
-    }
+	for (coordCR.Y = cursorPosition[1].Y, coordCR.X = cursorPosition[1].X; coordCR.Y <= cursorPosition[1].Y + 6; coordCR.Y++) {
+		SetConsoleCursorPosition(g_hConsoleOutput, coordCR);
+		WriteConsoleA(g_hConsoleOutput, "                                                                                     ",
+			sizeof("                                                                               ") - 1, &written, NULL);
+	}
 
-    cursorPosition->Y = (cursorPosition + 1)->Y;
-    cursorPosition->X = (cursorPosition + 1)->X;
-    SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+	cursorPosition->Y = (cursorPosition + 1)->Y;
+	cursorPosition->X = (cursorPosition + 1)->X;
+	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 
-    return;
+	return;
 }
 
 static void
 draw_rectangle_in_console(COORD cursPosStart) {
-    COORD cursPosEnd;
-    DWORD written;
+	COORD cursPosEnd;
+	DWORD written;
 
-    cursPosStart.X = 1;
+	cursPosStart.X = 1;
 
-    SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
-    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
-    
-    cursPosStart.X++;
-    
-    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+	SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    for (cursPosEnd.X = cursPosStart.X + 115, cursPosEnd.Y = cursPosStart.Y;
-        cursPosStart.X <= cursPosEnd.X;
-        cursPosStart.X++) {
-        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
-        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
-    }
+	cursPosStart.X++;
 
-    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
-    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	for (cursPosEnd.X = cursPosStart.X + 115, cursPosEnd.Y = cursPosStart.Y;
+		cursPosStart.X <= cursPosEnd.X;
+		cursPosStart.X++) {
+		SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+		WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	}
 
-    for (cursPosEnd.Y = cursPosStart.Y + 9, cursPosStart.Y++;
-        cursPosStart.Y < cursPosEnd.Y;
-        cursPosStart.Y++) {
-        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
-        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
-    }
+	SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
-    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
-    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	for (cursPosEnd.Y = cursPosStart.Y + 9, cursPosStart.Y++;
+		cursPosStart.Y < cursPosEnd.Y;
+		cursPosStart.Y++) {
+		SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+		WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	}
 
-    for (cursPosEnd.X = cursPosStart.X - 117, cursPosEnd.Y = cursPosStart.Y;
-        cursPosStart.X >= cursPosEnd.X;
-        cursPosStart.X--) {
-        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
-        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
-    }
+	SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+	SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_RVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    cursPosStart.X++;
-    cursPosStart.Y--;
-    SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
-    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 
-    SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	for (cursPosEnd.X = cursPosStart.X - 117, cursPosEnd.Y = cursPosStart.Y;
+		cursPosStart.X >= cursPosEnd.X;
+		cursPosStart.X--) {
+		SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+		WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	}
 
-    for (;
-        cursPosStart.Y > cursPosEnd.Y - 9;
-        cursPosStart.Y--) {
-        SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
-        WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
-    }
+	cursPosStart.X++;
+	cursPosStart.Y--;
+	SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+	SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
 
-    return;
+	SetConsoleTextAttribute(g_hConsoleOutput, COMMON_LVB_GRID_LVERTICAL | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+
+	for (;
+		cursPosStart.Y > cursPosEnd.Y - 9;
+		cursPosStart.Y--) {
+		SetConsoleCursorPosition(g_hConsoleOutput, cursPosStart);
+		WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	}
+
+	return;
 }
 
 int main(void)
 {
-    DWORD written, read, ret;
-    WSADATA wsaData;
-    CONSOLE_CURSOR_INFO cursorInfo;
-    CHAR dd[1024];
-    COORD cursorPosition[2];
-    HWND consoleWindow;
-    struct in_addr inaddr;
-    unsigned char i;
-    int s;
-    struct _stat statbuff;
-    char logentry[256];
-    SYSTEMTIME systime;
-    char logpath[512];
-    char log_filename[sizeof("log_19700101.txt")];
-	char userprofile[255 + sizeof(LOG_DIRECTORY)];
+	DWORD written, read, ret;
+	WSADATA wsaData;
+	CONSOLE_CURSOR_INFO cursorInfo;
+	CHAR dd[1024];
+	COORD cursorPosition[2];
+	HWND consoleWindow;
+	struct in_addr inaddr;
+	unsigned char i;
+	int s;
+	char logentry[256];
+	SYSTEMTIME systime;
+	char logpath[512];
+	char log_filename[sizeof("log_19700101.txt")];
 
 	g_listensocket = g_usersocket = NULL;
 	g_fplog = NULL;
 	g_hNewFile_tmp = g_hConsoleOutput = INVALID_HANDLE_VALUE;
 	inaddr.s_addr = 0;
 
-    SetConsoleCtrlHandler(HandlerRoutine, TRUE);
-    SetConsoleTitleA(CONSOLE_TITLE);
+	SetConsoleCtrlHandler(HandlerRoutine, TRUE);
+	SetConsoleTitleA(CONSOLE_TITLE);
 
 #ifdef VERSION_FR
-    SetConsoleCP(28591);
-    SetConsoleOutputCP(28591);
-    setlocale(LC_NUMERIC, "fr_FR");
+	SetConsoleCP(28591);
+	SetConsoleOutputCP(28591);
+	setlocale(LC_NUMERIC, "fr_FR");
 #else
-    setlocale(LC_NUMERIC, "en_US");
+	setlocale(LC_NUMERIC, "en_US");
 #endif
 
-    consoleWindow = GetConsoleWindow();
-    SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
+	consoleWindow = GetConsoleWindow();
+	SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
 
-    g_hConsoleOutput = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE,
-        0,
-        NULL,
-        CONSOLE_TEXTMODE_BUFFER,
-        NULL);
+	g_hConsoleOutput = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE,
+		0,
+		NULL,
+		CONSOLE_TEXTMODE_BUFFER,
+		NULL);
 
-    if (g_hConsoleOutput == INVALID_HANDLE_VALUE) {
-        printf(ERR_FMT_MSG_INIT_CONSOLE, GetLastError());
+	if (g_hConsoleOutput == INVALID_HANDLE_VALUE) {
+		printf(ERR_FMT_MSG_INIT_CONSOLE, GetLastError());
 		g_hConsoleOutput = INVALID_HANDLE_VALUE;
 		_getch();
 		ExitProcess(FALSE);
-    }
+	}
 
-    SetConsoleMode(g_hConsoleOutput, ENABLE_LVB_GRID_WORLDWIDE);
+	SetConsoleMode(g_hConsoleOutput, ENABLE_LVB_GRID_WORLDWIDE);
 
-    ZeroMemory(&wsaData, sizeof(WSADATA));
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-        printf(ERR_FMT_MSG_INIT_WINSOCK, GetLastError());
+	ZeroMemory(&wsaData, sizeof(WSADATA));
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData)) {
+		printf(ERR_FMT_MSG_INIT_WINSOCK, GetLastError());
 		_getch();
 		ExitProcess(FALSE);
-    }
+	}
 
-    SetConsoleActiveScreenBuffer(g_hConsoleOutput);
+	SetConsoleActiveScreenBuffer(g_hConsoleOutput);
 
-    cursorPosition[0].X = 2;
-    cursorPosition[0].Y = 2;
+	cursorPosition[0].X = 2;
+	cursorPosition[0].Y = 2;
 
-    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_PROMOTE_WIFIUPLOAD, NULL);
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_PROMOTE_WIFIUPLOAD, NULL);
 
-    cursorPosition[0].Y++;
+	cursorPosition[0].Y++;
 
-    GetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
-    cursorInfo.bVisible = FALSE;
-    SetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
+	GetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
+	cursorInfo.bVisible = FALSE;
+	SetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
 
-    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_WIFIUPLOAD_SERVICE, NULL);
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_WIFIUPLOAD_SERVICE, NULL);
 
-    cursorPosition[0].Y++;
+	cursorPosition[0].Y++;
 
 	available_address_ui(cursorPosition, &inaddr);
 
-    cursorPosition[0].Y += 2;;
-    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
+	cursorPosition[0].Y += 2;;
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
 
-    ZeroMemory(dd, 1024);
-    create_download_directory(dd);
+	ZeroMemory(dd, 1024);
+	create_download_directory(dd);
 
-    cursorPosition[0].X += 5;
-    cursorPosition[0].Y += 2;
-    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
-    cursorPosition[0].X -= 5;
+	cursorPosition[0].X += 5;
+	cursorPosition[0].Y += 2;
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
+	cursorPosition[0].X -= 5;
 
-    s = create_socket(&cursorPosition[0]);
-    bind_socket(&cursorPosition[0], s, inaddr);
+	s = create_socket(&cursorPosition[0]);
+	bind_socket(&cursorPosition[0], s, inaddr);
 
-    cursorPosition[0].Y += ((ipAddrTable->dwNumEntries < 3) ? 3 : 2);
+	cursorPosition[0].Y += ((ipAddrTable->dwNumEntries < 3) ? 3 : 2);
 
-    cursorPosition[1].Y = cursorPosition[0].Y;
-    cursorPosition[1].X = cursorPosition[0].X;
+	cursorPosition[1].Y = cursorPosition[0].Y;
+	cursorPosition[1].X = cursorPosition[0].X;
 
-    draw_rectangle_in_console(cursorPosition[0]);
+	draw_rectangle_in_console(cursorPosition[0]);
 
-    cursorPosition[0].Y = cursorPosition[1].Y;
-    cursorPosition[0].X = cursorPosition[1].X;
+	cursorPosition[0].Y = cursorPosition[1].Y;
+	cursorPosition[0].X = cursorPosition[1].X;
 
-    cursorPosition[0].Y++;
+	cursorPosition[0].Y++;
 
-    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-    write_info_in_console(INF_WIFIUPLOAD_UI_TX_RX, NULL);
- 
-    for (i = 0; wumsg[i].id != INF_WIFIUPLOAD_UI_TX_RX; i++)
-        ;
-    cursorPosition[0].X += (USHORT)wumsg[i].szMsg;
-    
-    SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_WIFIUPLOAD_UI_TX_RX, NULL);
 
-	ZeroMemory(logpath, 512);
-	ZeroMemory(userprofile, 255 + sizeof(LOG_DIRECTORY));
-	getenv_s((size_t*)&ret, userprofile, (size_t)(255 + sizeof(LOG_DIRECTORY)), "USERPROFILE");
-	sprintf_s(logpath, 255 + 1 + sizeof(LOG_DIRECTORY), "%s\\%s", userprofile, LOG_DIRECTORY);
-    ret = _stat(logpath, &statbuff);
-    if (ret) {
-	    if (_mkdir(logpath)) {
-			INPUT_RECORD inRec;
-			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-	    } else {
-logyear:	char wYearStr[5];
-	
-			GetSystemTime(&systime);
-			ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-			ZeroMemory(wYearStr, 5);
-			sprintf_s(wYearStr, 5, "%i", systime.wYear);
-			strcat_s(logpath, 512, "\\");
-			strcat_s(logpath, 512, wYearStr);
-		
-		if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
-			INPUT_RECORD inRec;
-			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-		} else {
-			char wMonthStr[3];
-			
-			if (systime.wMonth < 10) {
-				ZeroMemory(wMonthStr, 3);
-				sprintf_s(wMonthStr, 3, "0%i", systime.wMonth);
-				strcat_s(logpath, 512, "\\");
-				strcat_s(logpath, 512, wMonthStr);
-			} else {
-				ZeroMemory(wMonthStr, 3);
-				sprintf_s(wMonthStr, 3, "%i", systime.wMonth);
-				strcat_s(logpath, 512, "\\");
-				strcat_s(logpath, 512, wMonthStr);
-			}
-			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
-				INPUT_RECORD inRec;
-				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-			} else {
-				char wDayStr[3];
+	for (i = 0; wumsg[i].id != INF_WIFIUPLOAD_UI_TX_RX; i++)
+		;
+	cursorPosition[0].X += (USHORT)wumsg[i].szMsg;
 
-				if (systime.wMonth < 10) {
-					if (systime.wDay < 10) {
-						sprintf_s(wDayStr, 3, "0%i", systime.wDay);
-						strcat_s(logpath, 512, "\\");
-						strcat_s(logpath, 512, wDayStr);
-						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i0%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
-					} else {
-						sprintf_s(wDayStr, 3, "%i", systime.wDay);
-						strcat_s(logpath, 512, "\\");
-						strcat_s(logpath, 512, wDayStr);
-						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i0%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
-					}
-				} else if (systime.wDay < 10) {
-						sprintf_s(wDayStr, 3, "0%i", systime.wDay);
-						strcat_s(logpath, 512, "\\");
-						strcat_s(logpath, 512, wDayStr);
-						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i%i0%i.txt", systime.wYear, systime.wMonth, systime.wDay);
-				} else {
-						sprintf_s(wDayStr, 3, "%i", systime.wDay);
-						strcat_s(logpath, 512, "\\");
-						strcat_s(logpath, 512, wDayStr);
-						ZeroMemory(log_filename, sizeof("log_19700101.txt"));
-						sprintf_s(log_filename, sizeof("log_19700101.txt"), "log_%i%i%i.txt", systime.wYear, systime.wMonth, systime.wDay);
-				}
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
 
-				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
-					INPUT_RECORD inRec;
-					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-					}
-				}
-			}
-		}		
-    } else {
-	    goto logyear;
-    }
+	create_log_directory(log_path, log_filename);
 
-    strcat_s(logpath, 512, "\\");
-    strcat_s(logpath, 512, log_filename);
+	strcat_s(logpath, 512, "\\");
+	strcat_s(logpath, 512, log_filename);
 
-    if (fopen_s(&g_fplog, logpath, "a+")) {
+	if (fopen_s(&g_fplog, logpath, "a+")) {
 		write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath);
 		WSACleanup();
 		return 3;
-    }
+	}
 
-    for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
-        ret = http_loop(cursorPosition, &inaddr, s, logentry);
+	for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {
+		ret = http_loop(cursorPosition, &inaddr, s, logentry);
 
 		fprintf(g_fplog, logentry);
 		fflush(g_fplog);
@@ -401,10 +316,10 @@ logyear:	char wYearStr[5];
 		if (ret == 1)
 			break;
 
-        if (cursorPosition[0].Y >= cursorPosition[1].Y + 6)
-            clear_txrx_pane(cursorPosition);
-    }
+		if (cursorPosition[0].Y >= cursorPosition[1].Y + 6)
+			clear_txrx_pane(cursorPosition);
+	}
 
-    WSACleanup();
-    return 0;
+	WSACleanup();
+	return 0;
 }
