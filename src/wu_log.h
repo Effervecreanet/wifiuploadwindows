@@ -1,1 +1,4 @@
-void create_log_directory(char logpath[512], log_filename[sizeof("log_19700101.txt")]);
+
+#define LOG_DIRECTORY ".wulogs"
+
+void create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.txt")]);

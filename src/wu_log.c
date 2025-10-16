@@ -1,10 +1,17 @@
 #include <Windows.h>
 #include <stdio.h>
+#include <sys\stat.h>
 
+#include "wu_msg.h"
+#include "wu_log.h"
 
 void
-create_log_directory(char logpath[512], log_filename[sizeof("log_19700101.txt")]) {
+create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.txt")]) {
 	char userprofile[255 + sizeof(LOG_DIRECTORY)];
+	struct _stat statbuff;
+	SYSTEMTIME systime;
+	DWORD read;
+	int ret;
 
 	ZeroMemory(logpath, 512);
 	ZeroMemory(userprofile, 255 + sizeof(LOG_DIRECTORY));
@@ -98,3 +105,6 @@ logyear:	char wYearStr[5];
 	else {
 		goto logyear;
 	}
+
+	return;
+}

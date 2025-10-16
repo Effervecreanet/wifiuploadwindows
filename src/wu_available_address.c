@@ -67,7 +67,7 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr *inaddr, MIB_IPADD
         SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
         write_info_in_console(INF_MSG_TWO_AVAILABLE_ADDR, NULL);
 
-        cursorPosition[0].X += 4;
+        // cursorPosition[0].X += 4;
         cursorPosition[0].Y += 2;
 
         pStringIpAddr1 = inet_ntoa(inaddr1);
@@ -130,9 +130,10 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr *inaddr, MIB_IPADD
 }
 
 
-void available_address_ui(COORD cursorPosition[2], struct in_addr *inaddr) {
+DWORD available_address_ui(COORD cursorPosition[2], struct in_addr *inaddr) {
     MIB_IPADDRTABLE ipAddrTable[4];
     ULONG sizeIpAddrTable = sizeof(MIB_IPADDRTABLE) * 4;
+	DWORD read;
 	int ret;
 
     ZeroMemory(&ipAddrTable, sizeIpAddrTable);    
@@ -166,5 +167,6 @@ void available_address_ui(COORD cursorPosition[2], struct in_addr *inaddr) {
 		ExitProcess(4);
     }
 
-	return;
+
+	return ipAddrTable->dwNumEntries;
 }

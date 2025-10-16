@@ -193,9 +193,9 @@ int main(void)
 	unsigned char i;
 	int s;
 	char logentry[256];
-	SYSTEMTIME systime;
 	char logpath[512];
 	char log_filename[sizeof("log_19700101.txt")];
+	DWORD dwNumEntries;
 
 	g_listensocket = g_usersocket = NULL;
 	g_fplog = NULL;
@@ -257,7 +257,7 @@ int main(void)
 
 	cursorPosition[0].Y++;
 
-	available_address_ui(cursorPosition, &inaddr);
+	dwNumEntries = available_address_ui(cursorPosition, &inaddr);
 
 	cursorPosition[0].Y += 2;;
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
@@ -275,7 +275,7 @@ int main(void)
 	s = create_socket(&cursorPosition[0]);
 	bind_socket(&cursorPosition[0], s, inaddr);
 
-	cursorPosition[0].Y += ((ipAddrTable->dwNumEntries < 3) ? 3 : 2);
+	cursorPosition[0].Y += (dwNumEntries < 3) ? 3 : 2;
 
 	cursorPosition[1].Y = cursorPosition[0].Y;
 	cursorPosition[1].X = cursorPosition[0].X;
@@ -296,7 +296,7 @@ int main(void)
 
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
 
-	create_log_directory(log_path, log_filename);
+	create_log_directory(logpath, log_filename);
 
 	strcat_s(logpath, 512, "\\");
 	strcat_s(logpath, 512, log_filename);

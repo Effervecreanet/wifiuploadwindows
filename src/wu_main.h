@@ -1,4 +1,3 @@
-#define LOG_DIRECTORY ".wulogs"
 
 void write_info_in_console(enum idmsg id, void *p);
 void clear_txrx_pane(COORD* cursorPosition);
