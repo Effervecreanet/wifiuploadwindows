@@ -17,6 +17,7 @@
 #include "wu_http_receive.h"
 #include "wu_http.h"
 #include "wu_http_loop.h"
+#include "wu_available_address.h"
 
 
 #pragma comment(lib, "ws2_32.lib")
@@ -274,35 +275,7 @@ int main(void)
 
     } 
     else if (ipAddrTable[0].dwNumEntries == 2) {
-        PCHAR pStringIpAddr;
-
-        ZeroMemory(&inaddr, sizeof(struct in_addr));
-        CopyMemory(&inaddr, &(ipAddrTable->table[1].dwAddr), sizeof(DWORD));
-
-        pStringIpAddr = inet_ntoa(inaddr);
-
-        cursorPosition[0].Y += 2;
-        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
-
-        cursorPosition[0].Y += 2;
-        cursorPosition[0].X += 5;
-        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
-        cursorPosition[0].X -= 5;
-
-        cursorPosition[0].Y += 2;
-        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
-
-        cursorPosition[0].Y += 2;
-        cursorPosition[0].X += 5;
-        
-        SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-        write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr));
-
-        SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-        cursorPosition[0].X -= 5;
+		write_info_one_available_addr(cursorPosition, &inaddr, ipAddrTable);
     } 
     else if (ipAddrTable[0].dwNumEntries == 3) {
         struct in_addr inaddr1;
