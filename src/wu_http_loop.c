@@ -207,6 +207,57 @@ create_send_resource(struct header_nv *httpnv, int s_user, int *bytesent, int th
 	return;
 }
 
+static int
+handle_post_request(struct http_reqline *reqline, struct header_nv *httpnv, int s_user,
+						int *bytesent, int theme, COORD cursorPosition[2]) {
+	int err;
+
+		if (strcmp(reqline->resource + 1, "theme") == 0) {
+			err = handle_theme_change(httpnv, s_user, &theme);
+			if (err < 0)
+				return -1;
+		} else if (strcmp(reqline->resource + 1, "upload") == 0) {
+			struct user_stats upstats;
+
+			clear_txrx_pane(cursorPosition);
+			check_cookie_theme(httpnv, &theme);
+
+			ZeroMemory(&upstats, sizeof(struct user_stats));
+			err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, bytesent);
+
+			cursorPosition->Y++;
+			if (err < 0)
+				return -1;
+				
+		}
+
+	return 0;
+}
+
+static void
+create_log_entry(char *logentry, char *ipaddrstr, struct http_reqline *reqline, int bytesent) {
+	struct tm tmval;
+	time_t wutime;
+	char log_timestr[42];
+
+	ZeroMemory(logentry, 256);
+	ZeroMemory(log_timestr, 42);
+
+	time(&wutime);
+
+	ZeroMemory(&tmval, sizeof(struct tm));
+	localtime_s(&tmval, &wutime);
+
+	strftime(log_timestr, 42, "%d/%b/%Y:%T -0600", &tmval);
+	sprintf_s(logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddrstr, log_timestr,
+		reqline->method, reqline->resource,
+		reqline->version, bytesent);
+
+	return;
+}
+
+
+
 int
 http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[256]) {
 	struct http_reqline reqline;
@@ -215,11 +266,8 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 	DWORD err;
 	int theme = 0;
 	char ipaddrstr[16];
-	struct tm tmval;
-	time_t wutime;
 	int bytesent;
-	int i;
-	char log_timestr[42];
+	int i, resource_index;
 
 	bytesent = 0;
 	memset(ipaddrstr, 0, 16);
@@ -240,11 +288,9 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 		goto err;
 
 	if (strcmp(reqline.method, "GET") == 0) {
-		int ires;
 
-		ires = http_match_resource(reqline.resource);
-		if (ires < 0) {
-			check_cookie_theme(httpnv, &theme);
+		resource_index = http_match_resource(reqline.resource);
+		if (resource_index < 0) {
 			wu_404_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
 			goto err;
 		} else if (strcmp(reqline.resource + 1, "quit") == 0) {
@@ -255,40 +301,17 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 			if (strcpy_s(reqline.resource, HTTP_RESSOURCE_MAX_LENGTH, "/index") != 0)
 				goto err;
 
-			ires = 0;
+			resource_index = 0;
 		}
 
-		create_send_resource(httpnv, s_user, &bytesent, theme, ires, cursorPosition);
-	}
-	else if (strcmp(reqline.method, "POST") == 0) {
-		if (strcmp(reqline.resource + 1, "theme") == 0) {
-			err = handle_theme_change(httpnv, s_user, &theme);
-			if (err < 0)
-				goto err;
-		} else if (strcmp(reqline.resource + 1, "upload") == 0) {
-			struct user_stats upstats;
-
-			clear_txrx_pane(cursorPosition);
-			check_cookie_theme(httpnv, &theme);
-
-			ZeroMemory(&upstats, sizeof(struct user_stats));
-			err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
-			cursorPosition->Y++;
-		}
+		create_send_resource(httpnv, s_user, &bytesent, theme, resource_index, cursorPosition);
+	} else if (strcmp(reqline.method, "POST") == 0) {
+		if (handle_post_request(&reqline, httpnv, s_user, &bytesent,
+							theme, cursorPosition) < 0)
+			goto err;
 	}
 
-	ZeroMemory(logentry, 256);
-	ZeroMemory(log_timestr, 42);
-
-	time(&wutime);
-
-	ZeroMemory(&tmval, sizeof(struct tm));
-	localtime_s(&tmval, &wutime);
-
-	strftime(log_timestr, 42, "%d/%b/%Y:%T -0600", &tmval);
-	sprintf_s(logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddrstr, log_timestr,
-		reqline.method, reqline.resource,
-		reqline.version, bytesent);
+	create_log_entry(logentry, ipaddrstr, &reqline, bytesent);
 
 err:
 	closesocket(s_user);
