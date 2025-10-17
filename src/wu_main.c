@@ -64,7 +64,7 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 }
 
 void
-create_download_directory(char dd[1024]) {
+build_download_directory(char dd[1024]) {
 	DWORD szdd = 1024;
 
 	ZeroMemory(dd, 1024);
@@ -264,7 +264,7 @@ int main(void)
 	write_info_in_console(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
 
 	ZeroMemory(dd, 1024);
-	create_download_directory(dd);
+	build_download_directory(dd);
 
 	cursorPosition[0].X += 5;
 	cursorPosition[0].Y += 2;

@@ -19,6 +19,7 @@ extern FILE* g_fplog;
 extern int* g_usersocket;
 extern HANDLE g_hConsoleOutput;
 extern HANDLE g_hNewFile_tmp;
+extern int *g_listensocket;
 
 
 int
@@ -81,7 +82,7 @@ create_local_resource(struct http_resource* lres, int ires, int theme) {
 	return 0;
 }
 
-void
+static void
 check_cookie_theme(struct header_nv hdrnv[], int* theme) {
 	int res;
 
@@ -100,6 +101,72 @@ check_cookie_theme(struct header_nv hdrnv[], int* theme) {
 	return;
 }
 
+static void
+wu_404_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, int s_user, int *bytesent) {
+	int ires;
+	struct http_resource httplocalres;
+
+	check_cookie_theme(httpnv, theme);
+
+	for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
+
+	ZeroMemory(&httplocalres, sizeof(struct http_resource));
+	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+
+	http_serv_resource(&httplocalres, s_user, NULL, bytesent);
+
+	return;
+}
+
+static void
+quit_wu(int s_user) {
+	closesocket(s_user);
+	closesocket(*g_listensocket);
+	CloseHandle(g_hConsoleOutput);
+	fclose(g_fplog);
+	WSACleanup();
+	ExitProcess(0);
+
+	return;
+}
+
+static void
+show_download_directory(void) {
+	char dd[1024];
+
+	build_download_directory(dd);
+	ShellExecuteA(NULL, "open", dd, NULL, NULL, SW_SHOWNORMAL);
+
+	return;
+}
+
+static int
+handle_theme_change(struct header_nv *httpnv, int s_user, int *theme) {
+	char cookie[48];
+
+	if (wu_http_recv_theme(httpnv, s_user, theme) < 0)
+		return -1;
+
+	ZeroMemory(cookie, 48);
+	if (*theme == 0)
+		strcpy_s(cookie, 48, "theme=dark");
+	else
+		strcpy_s(cookie, 48, "theme=light");
+
+	if (apply_theme(s_user, cookie) < 0)
+		return -1;
+
+	return 0;
+}
 
 int
 http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[256]) {
@@ -139,97 +206,58 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 
 		ires = http_match_resource(reqline.resource);
 		if (ires < 0) {
-			check_cookie_theme(httpnv, &theme);
-
-			for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
-
-			ZeroMemory(&httplocalres, sizeof(struct http_resource));
-			if (create_local_resource(&httplocalres, ires, theme) != 0) {
-				INPUT_RECORD inRec;
-				DWORD read;
-
-				cursorPosition->Y++;
-				SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-				write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
-
-				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-			}
-
-			http_serv_resource(&httplocalres, s_user, NULL, &bytesent);
-
+			wu_404_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
 			goto err;
-		}
+		} else if (strcmp(reqline.resource + 1, "quit") == 0) {
+			quit_wu(s_user);
+		} else if (strcmp(reqline.resource + 1, "openRep") == 0) {
+			show_download_directory();
 
-		if (strcmp(reqline.resource + 1, "quit") == 0) {
-			closesocket(s_user);
-			closesocket(s);
-			WSACleanup();
-			fclose(g_fplog);
-			CloseHandle(g_hConsoleOutput);
-			ExitProcess(0);
-		}
-		else if (strcmp(reqline.resource + 1, "openRep") == 0) {
-			char dd[1024];
-
-			create_download_directory(dd);
-			ShellExecuteA(NULL, "open", dd, NULL, NULL, SW_SHOWNORMAL);
 			if (strcpy_s(reqline.resource, HTTP_RESSOURCE_MAX_LENGTH, "/index") != 0)
 				goto err;
+
 			ires = 0;
 		}
+
+		// send_reply_response(httpnv, &theme, s_user, cursorPosition);
 
 		check_cookie_theme(httpnv, &theme);
 
 		ZeroMemory(&httplocalres, sizeof(struct http_resource));
 		if (create_local_resource(&httplocalres, ires, theme) != 0) {
+			INPUT_RECORD inRec;
+			DWORD read;
+
 			cursorPosition->Y++;
 			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 			write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
-			Sleep(1000);
+
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 
 		err = http_serv_resource(&httplocalres, s_user, NULL, &bytesent);
 		if (err > 1) {
+			INPUT_RECORD inRec;
+			DWORD read;
+
 			cursorPosition->Y++;
 			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 			write_info_in_console(ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err);
-			Sleep(1000);
+
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 		else if (err == 0) {
 			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 			write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL);
 			cursorPosition->Y++;
 		}
-		else if (strcmp(reqline.method, "POST") == 0 && strcmp(reqline.resource, "/") == 0) {
-			struct user_stats upstats;
-
-			clear_txrx_pane(cursorPosition);
-
-			ZeroMemory(&upstats, sizeof(struct user_stats));
-			err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
-			cursorPosition->Y++;
-		}
 	}
 	else if (strcmp(reqline.method, "POST") == 0) {
 		if (strcmp(reqline.resource + 1, "theme") == 0) {
-			char cookie[48];
-
-			if (wu_http_recv_theme(httpnv, s_user, &theme) < 0)
+			err = handle_theme_change(httpnv, s_user, &theme);
+			if (err < 0)
 				goto err;
-
-			ZeroMemory(cookie, 48);
-			if (theme == 0)
-				strcpy_s(cookie, 48, "theme=dark");
-			else
-				strcpy_s(cookie, 48, "theme=light");
-
-			if (apply_theme(s_user, cookie) < 0)
-				return -1;
-
-
-			/* Use ret here if you want */
-		}
-		else if (strcmp(reqline.resource + 1, "upload") == 0) {
+		} else if (strcmp(reqline.resource + 1, "upload") == 0) {
 			struct user_stats upstats;
 
 			clear_txrx_pane(cursorPosition);

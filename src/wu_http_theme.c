@@ -101,8 +101,6 @@ apply_theme(int susr, char *cookie)
 {
 	struct header_nv hdrnv[32];
 
-	printf("Changing theme.\n");
-
 	memset(hdrnv, 0, sizeof(struct header_nv) * 32);
 	wu_http_post_theme_hdr_nv(hdrnv, cookie);
 
