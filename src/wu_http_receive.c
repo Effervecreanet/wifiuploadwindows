@@ -11,6 +11,7 @@
 #include "wu_http_loop.h"
 #include "wu_content.h"
 
+extern FILE *g_fplog;
 
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
@@ -44,6 +45,7 @@ create_userfile_tmp(COORD* cursorPosition,
 	strcpy_s(userfile_tmp, 1024, &download_dir[0]);
 	strcat_s(userfile_tmp, 1024, filename);
 	strcat_s(userfile_tmp, 1024, ".tmp");
+
 
 
 	hFile = CreateFile(userfile_tmp, GENERIC_WRITE, 0, NULL,
@@ -135,6 +137,62 @@ receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen)
 	return 0;
 }
 
+static int
+get_MIMEboundary(int s_user, struct header_nv *httpnv, char boundary[64], unsigned short *boundarylen) {
+	char *pboundary;
+	int ret;
+
+	ret = nv_find_name_client(httpnv, "Content-Type");
+	if (ret < 0)
+		return -1;
+
+	pboundary = strstr((httpnv + ret)->value.v, "boundary=");
+	if (pboundary == NULL)
+		return -1;
+
+	pboundary += (sizeof("boundary=") - 1);
+	*boundarylen = (unsigned short)strlen(pboundary);
+	if (*pboundary == '\0' || *boundarylen < 7 || *boundarylen > 63)
+		return -1;
+
+	ZeroMemory(boundary, 64);
+	if (strcpy_s(boundary, 64, pboundary) != 0)
+		return -1;
+
+	return 0;
+}
+
+static int
+recv_file(HANDLE hFile, int s_user, u_int64 *content_length, unsigned short boundarylen) {
+	int ret = 0;
+	char buffer[1024];
+	DWORD written;
+
+	if (*content_length < (1024 + boundarylen + 8) && *content_length > 1024) {
+		ret = recv(s_user, buffer, 777, MSG_WAITALL);
+		if (ret <= 0)
+			return -1;
+		WriteFile(hFile, buffer, ret, &written, NULL);
+		*content_length -= ret;
+	}
+	else if (*content_length <= 1024) {
+		ret = recv(s_user, buffer, (USHORT)*content_length, MSG_WAITALL);
+		if (ret <= 0)
+			return -1;
+		WriteFile(hFile, buffer, ret - boundarylen - 8, &written, NULL);
+		*content_length -= ret;
+	}
+	else {
+		ret = recv(s_user, buffer, 1024, MSG_WAITALL);
+		if (ret <= 0)
+			return -1;
+		WriteFile(hFile, buffer, ret, &written, NULL);
+		*content_length -= ret;
+	}
+
+	return ret;
+}
+
 int
 receive_file(COORD* cursorPosition,
 	struct header_nv* httpnv, int s,
@@ -168,28 +226,16 @@ receive_file(COORD* cursorPosition,
 	int ires;
 
 	ZeroMemory(&httpres, sizeof(struct http_resource));
-	ret = nv_find_name_client(httpnv, "Content-Type");
-	if (ret < 0)
-		return -1;
 
-	pboundary = strstr((httpnv + ret)->value.v, "boundary=");
-	if (pboundary == NULL)
-		return -1;
-
-	pboundary += (sizeof("boundary=") - 1);
-	boundarylen = (unsigned short)strlen(pboundary);
-	if (*pboundary == '\0' || boundarylen < 7 || boundarylen > 63)
-		return -1;
-
-	ZeroMemory(boundary, 64);
-	if (strcpy_s(boundary, 64, pboundary) != 0)
-		return -1;
 
 	ret = nv_find_name_client(httpnv, "Content-Length");
 	if (ret < 0)
 		return -1;
 
 	content_length = _atoi64((httpnv + ret)->value.v);
+
+	if (get_MIMEboundary(s, httpnv, boundary, &boundarylen) < 0)
+		return -1;
 
 	if (receive_MIME_header(upstats, s, &MIMElen) != 0)
 		return -1;
@@ -233,28 +279,9 @@ receive_file(COORD* cursorPosition,
 	write_info_in_console(INF_ZERO_PERCENT, NULL);
 
 	while (content_length > 0) {
-		if (content_length < (1024 + boundarylen + 8) && content_length > 1024) {
-			ret = recv(s, buffer, 777, MSG_WAITALL);
-			if (ret <= 0)
-				break;
-			WriteFile(hFile, buffer, ret, &written, NULL);
-			content_length -= ret;
-		}
-		else if (content_length <= 1024) {
-			ret = recv(s, buffer, (USHORT)content_length, MSG_WAITALL);
-			if (ret <= 0)
-				break;
-			WriteFile(hFile, buffer, ret - boundarylen - 8, &written, NULL);
-			content_length -= ret;
+		ret = recv_file(hFile, s, &content_length, boundarylen);
+		if (ret < 0)
 			break;
-		}
-		else {
-			ret = recv(s, buffer, 1024, MSG_WAITALL);
-			if (ret <= 0)
-				break;
-			WriteFile(hFile, buffer, ret, &written, NULL);
-			content_length -= ret;
-		}
 
 		txstats.received_size += (unsigned int)ret;
 

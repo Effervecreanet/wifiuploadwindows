@@ -332,6 +332,59 @@ int make_htmlpage(struct success_info *successinfo, char *resource, char *pbuffe
 }
 
 
+static int
+send_http_header_html_content(int s_user, struct header_nv *httpnv, int *bytesent,
+				char *pbufferout, size_t pbufferoutlen, HANDLE hFile) {
+	int ret = 0;
+
+	ret = send_http_header_nv(httpnv, s_user, bytesent);
+	if (ret > 0) {
+		if (pbufferout)
+			free(pbufferout);
+		CloseHandle(hFile);
+		return 8;
+	}
+
+	ret = send(s_user, pbufferout, (int)pbufferoutlen, 0);
+	if (ret <= 0) {
+		free(pbufferout);
+		CloseHandle(hFile);
+		return 10;
+	}
+
+
+	*bytesent += ret;
+
+	return 0;
+}
+
+static int
+send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv *httpnv, int *bytesent) {
+	int ret = 0;
+	char buffer[1024];
+	DWORD read;
+
+	ret = send_http_header_nv(httpnv, s_user, bytesent);
+	if (ret > 0) {
+		CloseHandle(hFile);
+		return 11;
+	}
+
+	*bytesent += ret;
+
+	while (ReadFile(hFile, buffer, 1024, &read, NULL)) {
+		ret = send(s_user, buffer, read, 0);
+
+		*bytesent += ret;
+
+		if (read < 1024)
+			break;
+	}
+
+	return 0;
+}
+
+
 int
 http_serv_resource(struct http_resource* res, int s,
 	struct success_info* successinfo,
@@ -357,7 +410,6 @@ http_serv_resource(struct http_resource* res, int s,
 	fsize = GetFileSize(hFile, NULL);
 
 	if (strcmp(res->type, "text/html") == 0) {
-
 		pbufferin = (char*)malloc(fsize + 1);
 
 		ZeroMemory(pbufferin, fsize + 1);
@@ -379,50 +431,20 @@ http_serv_resource(struct http_resource* res, int s,
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 		create_http_header_nv(res, httpnv, pbufferoutlen);
 
-		ret = send_http_header_nv(httpnv, s, bytesent);
-		if (ret > 0) {
-			if (pbufferout)
-				free(pbufferout);
-			CloseHandle(hFile);
-			return 8;
-		}
+		if (send_http_header_html_content(s, httpnv, bytesent, pbufferout,
+						pbufferoutlen, hFile) != 0)
+			goto err;
 
-		ret = send(s, pbufferout, (int)pbufferoutlen, 0);
-		if (ret <= 0) {
-			free(pbufferout);
-			CloseHandle(hFile);
-			return 10;
-		}
-
-		*bytesent += ret;
-
-		ret = 0;
 		free(pbufferout);
 	err:
 		CloseHandle(hFile);
-	}
-	else if (strcmp(res->type, "image/png") == 0 || strcmp(res->type, "image/x-icon") == 0) {
+	} else if (strcmp(res->type, "image/png") == 0 || strcmp(res->type, "image/x-icon") == 0) {
 		char buffer[1024];
 
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 		create_http_header_nv(res, httpnv, fsize);
 
-		ret = send_http_header_nv(httpnv, s, bytesent);
-		if (ret > 0) {
-			CloseHandle(hFile);
-			return 11;
-		}
-
-		*bytesent += ret;
-
-		while (ReadFile(hFile, buffer, 1024, &read, NULL)) {
-			ret = send(s, buffer, read, 0);
-
-			*bytesent += ret;
-
-			if (read < 1024)
-				break;
-		}
+		send_http_header_image_file(hFile, s, httpnv, bytesent);
 
 		CloseHandle(hFile);
 		ret = 1;
