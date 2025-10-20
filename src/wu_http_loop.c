@@ -288,8 +288,8 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 		goto err;
 
 	if (strcmp(reqline.method, "GET") == 0) {
-
 		resource_index = http_match_resource(reqline.resource);
+
 		if (resource_index < 0) {
 			wu_404_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
 			goto err;

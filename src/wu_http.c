@@ -2,7 +2,6 @@
 #include <strsafe.h>
 #include <time.h>
 
-
 #include "wu_http_nv.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"
@@ -14,6 +13,7 @@
 
 extern struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
+extern FILE *g_fplog;
 
 static void create_http_header_nv(struct http_resource* res,
 	struct header_nv* nv,
@@ -191,38 +191,142 @@ send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
 
 		*bytesent += ret;
 
-		ret = send(s, ": ", 2, 0);
-		if (ret != 2)
-			return 2;
-
-		*bytesent += ret;
-
-		if ((nv + i)->value.pv != NULL) {
-			ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
-			if (ret < 1)
-				return 3;
-
-			*bytesent += ret;
-		}
-		else {
-			ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
-			if (ret < 1)
-				return 3;
-
-			*bytesent += ret;
-		}
-
-		ret = send(s, "\r\n", 2, 0);
-
-		*bytesent += ret;
-
-		if (ret != 2)
-			return 4;
-	}
-
-	send(s, "\r\n", 2, 0);
+	ret = send(s, ": ", 2, 0);
+	if (ret != 2)
+		return 2;
 
 	*bytesent += ret;
+
+	if ((nv + i)->value.pv != NULL) {
+		ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
+		if (ret < 1)
+			return 3;
+
+		*bytesent += ret;
+	}
+	else {
+		ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
+		if (ret < 1)
+			return 3;
+
+		*bytesent += ret;
+	}
+
+	ret = send(s, "\r\n", 2, 0);
+
+	*bytesent += ret;
+
+	if (ret != 2)
+		return 4;
+}
+
+send(s, "\r\n", 2, 0);
+
+*bytesent += ret;
+
+return 0;
+}
+
+static int
+http_send_status(int s_user, int *bytesent) {
+int ret;
+
+ret = send(s_user, HTTP_VERSION, sizeof(HTTP_VERSION) - 1, 0);
+if (ret != sizeof(HTTP_VERSION) - 1)
+	return -1;
+
+*bytesent += ret;
+
+if (send(s_user, " ", 1, 0) != 1)
+	return -1;
+
+*bytesent += ret;
+
+ret = send(s_user, HTTP_CODE_STATUS_OK_STR, sizeof(HTTP_CODE_STATUS_OK_STR) - 1, 0);
+if (ret != sizeof(HTTP_CODE_STATUS_OK_STR) - 1)
+	return -1;
+
+*bytesent += ret;
+
+if (send(s_user, " ", 1, 0) != 1)
+	return -1;
+
+*bytesent += ret;
+
+ret = send(s_user, HTTP_STRING_STATUS_OK, sizeof(HTTP_STRING_STATUS_OK) - 1, 0);
+if (ret != sizeof(HTTP_STRING_STATUS_OK) - 1)
+	return -1;
+
+*bytesent += ret;
+
+ret = send(s_user, "\r\n", 2, 0);
+if (ret != 2)
+	return -1;
+
+*bytesent += ret;
+
+return 0;
+}
+
+static
+int get_hours_minutes(char hrmn[6]) {
+SYSTEMTIME sysTime;
+
+ZeroMemory(&sysTime, sizeof(SYSTEMTIME));
+GetLocalTime(&sysTime);
+ZeroMemory(hrmn, 6);
+if (sysTime.wHour < 10 && sysTime.wMinute < 10)
+	StringCchPrintf(hrmn, 6, "0%hu:0%hu", sysTime.wHour, sysTime.wMinute);
+else if (sysTime.wHour < 10)
+	StringCchPrintf(hrmn, 6, "0%hu:%hu", sysTime.wHour, sysTime.wMinute);
+else if (sysTime.wMinute < 10)
+	StringCchPrintf(hrmn, 6, "%hu:0%hu", sysTime.wHour, sysTime.wMinute);
+else
+	StringCchPrintf(hrmn, 6, "%hu:%hu", sysTime.wHour, sysTime.wMinute);
+
+return 0;
+}
+
+static
+int make_htmlpage(struct success_info *successinfo, char *resource, char *pbufferin,
+			char **pbufferout, size_t *pbufferoutlen, DWORD fsize, char hrmn[6]) {
+	char BufferUserName[254];
+	DWORD BufferUserNameSize = 254;
+
+	ZeroMemory(BufferUserName, 254);
+	GetUserNameA(BufferUserName, &BufferUserNameSize);
+
+	if (strcmp(resource, "index") == 0 || strcmp(resource, "erreur_fichier_nul") == 0) {
+		*pbufferout = (char*)malloc(fsize + BufferUserNameSize + 6);
+		ZeroMemory(*pbufferout, fsize + BufferUserNameSize + 6);
+		StringCchPrintfA(*pbufferout, fsize + BufferUserNameSize + 6 - 1, pbufferin, BufferUserName, hrmn);
+		free(pbufferin);
+		*pbufferoutlen = strlen(*pbufferout);
+	}
+	else if (strcmp(resource, "success") == 0) {
+		*pbufferout = (char*)malloc(fsize + 254 + 6);
+		ZeroMemory(*pbufferout, fsize + 254 + 6);
+		StringCchPrintfA(*pbufferout, fsize + 254 + 6,
+			pbufferin,
+			successinfo->filename,
+			successinfo->filenameSize,
+			successinfo->elapsedTime,
+			successinfo->averagespeed,
+			hrmn);
+		free(pbufferin);
+		*pbufferoutlen = strlen(*pbufferout);
+	}
+	else if (strcmp(resource, "credits") == 0 || strcmp(resource, "erreur_404") == 0 || strcmp(resource, "settings") == 0) {
+		*pbufferout = (char*)malloc(fsize + 6);
+		ZeroMemory(*pbufferout, fsize + 6);
+		StringCchPrintfA(*pbufferout, fsize + 6, pbufferin, hrmn);
+		free(pbufferin);
+		*pbufferoutlen = strlen(*pbufferout);
+	}
+	else {
+		free(pbufferin);
+		return -1;
+	}
 
 	return 0;
 }
@@ -234,49 +338,17 @@ http_serv_resource(struct http_resource* res, int s,
 	int* bytesent) {
 	HANDLE hFile;
 	DWORD fsize, read, err;
-	DWORD BufferUserNameSize = 254;
-	SYSTEMTIME sysTime;
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
-	char* pbufferin = NULL, * pbufferout = NULL;
+	char* pbufferin = NULL, *pbufferout = NULL;
 	char BufferUserName[254];
 	size_t pbufferoutlen = 0;
 	char hrmn[6];
 	char* plastBS;
 	int ret;
 
-	ret = send(s, HTTP_VERSION, sizeof(HTTP_VERSION) - 1, 0);
-	if (ret != sizeof(HTTP_VERSION) - 1)
+
+	if (http_send_status(s, bytesent) < 0)
 		return -1;
-
-	*bytesent += ret;
-
-	if (send(s, " ", 1, 0) != 1)
-		return -1;
-
-	*bytesent += ret;
-
-	ret = send(s, HTTP_CODE_STATUS_OK_STR, sizeof(HTTP_CODE_STATUS_OK_STR) - 1, 0);
-	if (ret != sizeof(HTTP_CODE_STATUS_OK_STR) - 1)
-		return -1;
-
-	*bytesent += ret;
-
-	if (send(s, " ", 1, 0) != 1)
-		return -1;
-
-	*bytesent += ret;
-
-	ret = send(s, HTTP_STRING_STATUS_OK, sizeof(HTTP_STRING_STATUS_OK) - 1, 0);
-	if (ret != sizeof(HTTP_STRING_STATUS_OK) - 1)
-		return -1;
-
-	*bytesent += ret;
-
-	ret = send(s, "\r\n", 2, 0);
-	if (ret != 2)
-		return -1;
-
-	*bytesent += ret;
 
 	hFile = CreateFile(res->resource, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	if (hFile == INVALID_HANDLE_VALUE)
@@ -285,8 +357,6 @@ http_serv_resource(struct http_resource* res, int s,
 	fsize = GetFileSize(hFile, NULL);
 
 	if (strcmp(res->type, "text/html") == 0) {
-		ZeroMemory(BufferUserName, 254);
-		GetUserNameA(BufferUserName, &BufferUserNameSize);
 
 		pbufferin = (char*)malloc(fsize + 1);
 
@@ -299,50 +369,12 @@ http_serv_resource(struct http_resource* res, int s,
 			return err;
 		}
 
-		ZeroMemory(&sysTime, sizeof(SYSTEMTIME));
-		GetLocalTime(&sysTime);
-		ZeroMemory(hrmn, 6);
-		if (sysTime.wHour < 10 && sysTime.wMinute < 10)
-			StringCchPrintf(hrmn, 6, "0%hu:0%hu", sysTime.wHour, sysTime.wMinute);
-		else if (sysTime.wHour < 10)
-			StringCchPrintf(hrmn, 6, "0%hu:%hu", sysTime.wHour, sysTime.wMinute);
-		else if (sysTime.wMinute < 10)
-			StringCchPrintf(hrmn, 6, "%hu:0%hu", sysTime.wHour, sysTime.wMinute);
-		else
-			StringCchPrintf(hrmn, 6, "%hu:%hu", sysTime.wHour, sysTime.wMinute);
+		get_hours_minutes(hrmn);
 
 		plastBS = strrchr(res->resource, '\\') + 1;
-		if (strcmp(plastBS, "index") == 0 || strcmp(plastBS, "erreur_fichier_nul") == 0) {
-			pbufferout = (char*)malloc(fsize + BufferUserNameSize + 6);
-			ZeroMemory(pbufferout, fsize + BufferUserNameSize + 6);
-			StringCchPrintfA(pbufferout, fsize + BufferUserNameSize + 6 - 1, pbufferin, BufferUserName, hrmn);
-			free(pbufferin);
-			pbufferoutlen = strlen(pbufferout);
-		}
-		else if (strcmp(plastBS, "success") == 0) {
-			pbufferout = (char*)malloc(fsize + 254 + 6);
-			ZeroMemory(pbufferout, fsize + 254 + 6);
-			StringCchPrintfA(pbufferout, fsize + 254 + 6,
-				pbufferin,
-				successinfo->filename,
-				successinfo->filenameSize,
-				successinfo->elapsedTime,
-				successinfo->averagespeed,
-				hrmn);
-			free(pbufferin);
-			pbufferoutlen = strlen(pbufferout);
-		}
-		else if (strcmp(plastBS, "credits") == 0 || strcmp(plastBS, "erreur_404") == 0 || strcmp(plastBS, "settings") == 0) {
-			pbufferout = (char*)malloc(fsize + 6);
-			ZeroMemory(pbufferout, fsize + 6);
-			StringCchPrintfA(pbufferout, fsize + 6, pbufferin, hrmn);
-			free(pbufferin);
-			pbufferoutlen = strlen(pbufferout);
-		}
-		else {
-			free(pbufferin);
+		if (make_htmlpage(successinfo, plastBS, pbufferin, &pbufferout,
+					&pbufferoutlen, fsize, hrmn) < 0)
 			goto err;
-		}
 
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 		create_http_header_nv(res, httpnv, pbufferoutlen);
