@@ -27,4 +27,4 @@ errno_t http_recv_headernv(struct header_nv *nv, int s);
 int http_match_resource(char* resource);
 int http_serv_resource(struct http_resource *res, int s,
                        struct success_info *successinfo,
-					   int *bytesent);
+			   int *bytesent, unsigned int status_code);

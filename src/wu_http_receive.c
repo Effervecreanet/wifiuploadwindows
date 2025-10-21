@@ -193,6 +193,100 @@ recv_file(HANDLE hFile, int s_user, u_int64 *content_length, unsigned short boun
 	return ret;
 }
 
+static void
+print_tx_speed(struct tx_stats *txstats, COORD coordAverageTX) {
+	double averageRateTX;
+	CHAR strAverageRateTX[42];
+
+
+	memcpy(&txstats->currentbak, &txstats->current, sizeof(SYSTEMTIME));
+
+	averageRateTX = (txstats->received_size - txstats->received_size_bak) / 1000.000;
+
+	SetConsoleCursorPosition(g_hConsoleOutput, coordAverageTX);
+
+	ZeroMemory(strAverageRateTX, 42);
+
+	if (averageRateTX > 1000) {
+		averageRateTX /= 1000.000;
+		if (averageRateTX > 1000) {
+			averageRateTX /= 1000.000;
+			sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
+			write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_GO, strAverageRateTX);
+		}
+		else {
+			sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
+			write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_MO, strAverageRateTX);
+		}
+	}
+	else {
+		sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
+		write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_KO, strAverageRateTX);
+	}
+
+	txstats->received_size_bak = txstats->received_size;
+
+	return;
+}
+
+static void
+print_upload_info(struct tx_stats *txstats, COORD coordAverageTX, COORD *cursorPosition, COORD coordPerCent) {
+	GetSystemTime(&txstats->current);
+
+	if (txstats->current.wHour > txstats->currentbak.wHour ||
+			txstats->current.wMinute > txstats->currentbak.wMinute ||
+			txstats->current.wSecond > txstats->currentbak.wSecond) {
+		print_tx_speed(txstats, coordAverageTX);
+
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+	}
+
+	txstats->curr_percent = (u_char)(((float)txstats->received_size / (float)txstats->total_size) * 100);
+	if (txstats->curr_percent > txstats->curr_percent_bak + 2) {
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(INF_WIFIUPLOAD_ONE_PBAR, NULL);
+		cursorPosition->X++;
+		SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
+		write_info_in_console(INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats->curr_percent);
+		txstats->curr_percent_bak += 2;
+	}
+
+	return;
+}
+
+static int
+chrono(struct success_info *successinfo, DWORD tick_start, u_int64 sizeNewFile) {
+	float average_speed = 0.0;
+	DWORD tick_end, tick_diff;
+
+	tick_end = GetTickCount();
+	tick_diff = tick_end - tick_start;
+
+	if (tick_diff < 1000)
+		sprintf_s(successinfo->elapsedTime, 24, "%u msecs", tick_diff);
+	else if (tick_diff < 1000 * 60)
+		sprintf_s(successinfo->elapsedTime, 24, "%.2f secs",
+			((float)tick_diff / (1000.0)));
+	else if (tick_diff < 1000 * 60 * 60)
+		sprintf_s(successinfo->elapsedTime, 24, "%.2f min",
+			((float)tick_diff / (1000.0 * 60)));
+	else if (tick_diff < 1000 * 60 * 60 * 60)
+		sprintf_s(successinfo->elapsedTime, 24, "%.2f h",
+			((float)tick_diff / (1000.0 * 60 * 60)));
+
+
+	average_speed = ((float)sizeNewFile / ((tick_diff > 1000 ? tick_diff : 1000) / 1000));
+
+	if (average_speed > 99999999.0)
+		sprintf_s(successinfo->averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_GO, average_speed / 1000000000.00);
+	else if (average_speed > 999999.0)
+		sprintf_s(successinfo->averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_MO, average_speed / 1000000.00);
+	else
+		sprintf_s(successinfo->averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_KO, average_speed / 100.00);
+
+
+	return 0;
+}
 int
 receive_file(COORD* cursorPosition,
 	struct header_nv* httpnv, int s,
@@ -215,7 +309,6 @@ receive_file(COORD* cursorPosition,
 	LARGE_INTEGER len_li;
 	u_int64 sizeNewFile = 0;
 	u_int64 sizeNewFileDup = 0;
-	float average_speed;
 #ifdef VERSION_FR
 	const CCHAR* units[] = { "Octets", "KO", "MO", "GO", "TO", "" };
 #else
@@ -282,57 +375,8 @@ receive_file(COORD* cursorPosition,
 		ret = recv_file(hFile, s, &content_length, boundarylen);
 		if (ret < 0)
 			break;
-
 		txstats.received_size += (unsigned int)ret;
-
-		GetSystemTime(&txstats.current);
-
-		if (txstats.current.wHour > txstats.currentbak.wHour ||
-			txstats.current.wMinute > txstats.currentbak.wMinute ||
-			txstats.current.wSecond > txstats.currentbak.wSecond) {
-			double averageRateTX;
-			CHAR strAverageRateTX[42];
-
-
-			memcpy(&txstats.currentbak, &txstats.current, sizeof(SYSTEMTIME));
-
-			averageRateTX = (txstats.received_size - txstats.received_size_bak) / 1000.000;
-
-			SetConsoleCursorPosition(g_hConsoleOutput, coordAverageTX);
-
-			ZeroMemory(strAverageRateTX, 42);
-
-			if (averageRateTX > 1000) {
-				averageRateTX /= 1000.000;
-				if (averageRateTX > 1000) {
-					averageRateTX /= 1000.000;
-					sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-					write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_GO, strAverageRateTX);
-				}
-				else {
-					sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-					write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_MO, strAverageRateTX);
-				}
-			}
-			else {
-				sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-				write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_KO, strAverageRateTX);
-			}
-
-			txstats.received_size_bak = txstats.received_size;
-
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		}
-
-		txstats.curr_percent = (u_char)(((float)txstats.received_size / (float)txstats.total_size) * 100);
-		if (txstats.curr_percent > txstats.curr_percent_bak + 2) {
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(INF_WIFIUPLOAD_ONE_PBAR, NULL);
-			cursorPosition->X++;
-			SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
-			write_info_in_console(INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent);
-			txstats.curr_percent_bak += 2;
-		}
+		print_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
 
 	}
 
@@ -384,32 +428,8 @@ receive_file(COORD* cursorPosition,
 	StringCchPrintfA(successinfo.filenameSize, 24, "%u %s", sizeNewFile, units[idxunit]);
 
 	sizeNewFile = sizeNewFileDup;
-	average_speed = 0.0;
 
-	tick_end = GetTickCount();
-	tick_diff = tick_end - tick_start;
-
-	if (tick_diff < 1000)
-		sprintf_s(successinfo.elapsedTime, 24, "%u msecs", tick_diff);
-	else if (tick_diff < 1000 * 60)
-		sprintf_s(successinfo.elapsedTime, 24, "%.2f secs",
-			((float)tick_diff / (1000.0)));
-	else if (tick_diff < 1000 * 60 * 60)
-		sprintf_s(successinfo.elapsedTime, 24, "%.2f min",
-			((float)tick_diff / (1000.0 * 60)));
-	else if (tick_diff < 1000 * 60 * 60 * 60)
-		sprintf_s(successinfo.elapsedTime, 24, "%.2f h",
-			((float)tick_diff / (1000.0 * 60 * 60)));
-
-
-	average_speed = ((float)sizeNewFile / ((tick_diff > 1000 ? tick_diff : 1000) / 1000));
-
-	if (average_speed > 99999999.0)
-		sprintf_s(successinfo.averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_GO, average_speed / 1000000000.00);
-	else if (average_speed > 999999.0)
-		sprintf_s(successinfo.averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_MO, average_speed / 1000000.00);
-	else
-		sprintf_s(successinfo.averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_KO, average_speed / 100.00);
+	chrono(&successinfo, tick_start, sizeNewFile);
 
 	ZeroMemory(&httpres, sizeof(struct http_resource));
 	for (ires = 0; http_resources[ires].resource != NULL; ires++) {
@@ -418,7 +438,7 @@ receive_file(COORD* cursorPosition,
 	}
 
 	create_local_resource(&httpres, ires, theme);
-	http_serv_resource(&httpres, s, &successinfo, bytesent);
+	http_serv_resource(&httpres, s, &successinfo, bytesent, 200);
 
 	return 0;
 }

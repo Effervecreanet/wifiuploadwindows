@@ -122,11 +122,36 @@ wu_404_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, i
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
-	http_serv_resource(&httplocalres, s_user, NULL, bytesent);
+	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 404);
 
 	return;
 }
 
+static void
+wu_quit_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, int s_user, int *bytesent) {
+	int ires;
+	struct http_resource httplocalres;
+
+	check_cookie_theme(httpnv, theme);
+
+	for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
+
+	ZeroMemory(&httplocalres, sizeof(struct http_resource));
+	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+
+	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 404);
+
+	return;
+}
 static void
 quit_wu(int s_user) {
 	closesocket(s_user);
@@ -187,7 +212,7 @@ create_send_resource(struct header_nv *httpnv, int s_user, int *bytesent, int th
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 
-		err = http_serv_resource(&httplocalres, s_user, NULL, bytesent);
+		err = http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);
 		if (err > 1) {
 			INPUT_RECORD inRec;
 			DWORD read;
@@ -235,7 +260,7 @@ handle_post_request(struct http_reqline *reqline, struct header_nv *httpnv, int 
 }
 
 static void
-create_log_entry(char *logentry, char *ipaddrstr, struct http_reqline *reqline, int bytesent) {
+create_log_entry(char *logentry, char *ipaddrstr, struct http_reqline *reqline, int bytesent, unsigned int status_code) {
 	struct tm tmval;
 	time_t wutime;
 	char log_timestr[42];
@@ -249,9 +274,9 @@ create_log_entry(char *logentry, char *ipaddrstr, struct http_reqline *reqline, 
 	localtime_s(&tmval, &wutime);
 
 	strftime(log_timestr, 42, "%d/%b/%Y:%T -0600", &tmval);
-	sprintf_s(logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddrstr, log_timestr,
+	sprintf_s(logentry, 256, "%s - - [%s] \"%s %s %s\" %i %i\n", ipaddrstr, log_timestr,
 		reqline->method, reqline->resource,
-		reqline->version, bytesent);
+		reqline->version, status_code, bytesent);
 
 	return;
 }
@@ -292,8 +317,11 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 
 		if (resource_index < 0) {
 			wu_404_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
+			create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 404);
 			goto err;
 		} else if (strcmp(reqline.resource + 1, "quit") == 0) {
+			create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);
+			wu_quit_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
 			quit_wu(s_user);
 		} else if (strcmp(reqline.resource + 1, "openRep") == 0) {
 			show_download_directory();
@@ -305,13 +333,15 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 		}
 
 		create_send_resource(httpnv, s_user, &bytesent, theme, resource_index, cursorPosition);
+		create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);
 	} else if (strcmp(reqline.method, "POST") == 0) {
 		if (handle_post_request(&reqline, httpnv, s_user, &bytesent,
 							theme, cursorPosition) < 0)
 			goto err;
+
+		create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);
 	}
 
-	create_log_entry(logentry, ipaddrstr, &reqline, bytesent);
 
 err:
 	closesocket(s_user);

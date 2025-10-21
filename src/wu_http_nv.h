@@ -6,8 +6,11 @@
 #define HTTP_CODE_STATUS_MOVED_PERMANENTLY_STR          "301"
 #define HTTP_CODE_STATUS_PARTIAL_CONTENT                206
 #define HTTP_CODE_STATUS_PARTIAL_CONTENT_STR            "206"
+#define HTTP_CODE_STATUS_BAD_REQUEST     		404
+#define HTTP_CODE_STATUS_BAD_REQUEST_STR		"404"
 
 #define HTTP_STRING_STATUS_OK                           "Ok"
+#define HTTP_STRING_STATUS_BAD_REQUEST                  "Bad Request"
 #define HTTP_STRING_STATUS_NOT_MODIFIED                 "Not Modified"
 #define HTTP_STRING_STATUS_MOVED_PERMANENTLY            "Moved Permanently"
 #define HTTP_STRING_STATUS_PARTIAL_CONTENT              "Partial Content"

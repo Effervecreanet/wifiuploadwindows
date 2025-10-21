@@ -13,7 +13,7 @@
 
 extern struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
-extern FILE *g_fplog;
+extern FILE* g_fplog;
 
 static void create_http_header_nv(struct http_resource* res,
 	struct header_nv* nv,
@@ -191,105 +191,125 @@ send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
 
 		*bytesent += ret;
 
-	ret = send(s, ": ", 2, 0);
-	if (ret != 2)
-		return 2;
+		ret = send(s, ": ", 2, 0);
+		if (ret != 2)
+			return 2;
+
+		*bytesent += ret;
+
+		if ((nv + i)->value.pv != NULL) {
+			ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
+			if (ret < 1)
+				return 3;
+
+			*bytesent += ret;
+		}
+		else {
+			ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
+			if (ret < 1)
+				return 3;
+
+			*bytesent += ret;
+		}
+
+		ret = send(s, "\r\n", 2, 0);
+
+		*bytesent += ret;
+
+		if (ret != 2)
+			return 4;
+	}
+
+	send(s, "\r\n", 2, 0);
 
 	*bytesent += ret;
 
-	if ((nv + i)->value.pv != NULL) {
-		ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
-		if (ret < 1)
-			return 3;
+	return 0;
+}
+
+static int
+http_send_status(int s_user, int* bytesent, unsigned int status_code) {
+	int ret;
+
+	ret = send(s_user, HTTP_VERSION, sizeof(HTTP_VERSION) - 1, 0);
+	if (ret != sizeof(HTTP_VERSION) - 1)
+		return -1;
+
+	*bytesent += ret;
+
+	if (send(s_user, " ", 1, 0) != 1)
+		return -1;
+
+	*bytesent += ret;
+
+	if (status_code == 404) {
+		ret = send(s_user, HTTP_CODE_STATUS_BAD_REQUEST_STR,
+				sizeof(HTTP_CODE_STATUS_BAD_REQUEST_STR) - 1, 0);
+		if (ret != sizeof(HTTP_CODE_STATUS_BAD_REQUEST_STR) - 1)
+			return -1;
+
+		*bytesent += ret;
+
+		if (send(s_user, " ", 1, 0) != 1)
+			return -1;
+
+		*bytesent += ret;
+
+		ret = send(s_user, HTTP_STRING_STATUS_BAD_REQUEST,
+				sizeof(HTTP_STRING_STATUS_BAD_REQUEST) - 1, 0);
 
 		*bytesent += ret;
 	}
 	else {
-		ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
-		if (ret < 1)
-			return 3;
+		ret = send(s_user, HTTP_CODE_STATUS_OK_STR, sizeof(HTTP_CODE_STATUS_OK_STR) - 1, 0);
+		if (ret != sizeof(HTTP_CODE_STATUS_OK_STR) - 1)
+			return -1;
+
+		*bytesent += ret;
+
+		if (send(s_user, " ", 1, 0) != 1)
+			return -1;
+
+		*bytesent += ret;
+
+		ret = send(s_user, HTTP_STRING_STATUS_OK, sizeof(HTTP_STRING_STATUS_OK) - 1, 0);
+		if (ret != sizeof(HTTP_STRING_STATUS_OK) - 1)
+			return -1;
 
 		*bytesent += ret;
 	}
 
-	ret = send(s, "\r\n", 2, 0);
+	ret = send(s_user, "\r\n", 2, 0);
+	if (ret != 2)
+		return -1;
 
 	*bytesent += ret;
 
-	if (ret != 2)
-		return 4;
-}
-
-send(s, "\r\n", 2, 0);
-
-*bytesent += ret;
-
-return 0;
-}
-
-static int
-http_send_status(int s_user, int *bytesent) {
-int ret;
-
-ret = send(s_user, HTTP_VERSION, sizeof(HTTP_VERSION) - 1, 0);
-if (ret != sizeof(HTTP_VERSION) - 1)
-	return -1;
-
-*bytesent += ret;
-
-if (send(s_user, " ", 1, 0) != 1)
-	return -1;
-
-*bytesent += ret;
-
-ret = send(s_user, HTTP_CODE_STATUS_OK_STR, sizeof(HTTP_CODE_STATUS_OK_STR) - 1, 0);
-if (ret != sizeof(HTTP_CODE_STATUS_OK_STR) - 1)
-	return -1;
-
-*bytesent += ret;
-
-if (send(s_user, " ", 1, 0) != 1)
-	return -1;
-
-*bytesent += ret;
-
-ret = send(s_user, HTTP_STRING_STATUS_OK, sizeof(HTTP_STRING_STATUS_OK) - 1, 0);
-if (ret != sizeof(HTTP_STRING_STATUS_OK) - 1)
-	return -1;
-
-*bytesent += ret;
-
-ret = send(s_user, "\r\n", 2, 0);
-if (ret != 2)
-	return -1;
-
-*bytesent += ret;
-
-return 0;
+	return 0;
 }
 
 static
 int get_hours_minutes(char hrmn[6]) {
-SYSTEMTIME sysTime;
+	SYSTEMTIME sysTime;
 
-ZeroMemory(&sysTime, sizeof(SYSTEMTIME));
-GetLocalTime(&sysTime);
-ZeroMemory(hrmn, 6);
-if (sysTime.wHour < 10 && sysTime.wMinute < 10)
-	StringCchPrintf(hrmn, 6, "0%hu:0%hu", sysTime.wHour, sysTime.wMinute);
-else if (sysTime.wHour < 10)
-	StringCchPrintf(hrmn, 6, "0%hu:%hu", sysTime.wHour, sysTime.wMinute);
-else if (sysTime.wMinute < 10)
-	StringCchPrintf(hrmn, 6, "%hu:0%hu", sysTime.wHour, sysTime.wMinute);
-else
-	StringCchPrintf(hrmn, 6, "%hu:%hu", sysTime.wHour, sysTime.wMinute);
+	ZeroMemory(&sysTime, sizeof(SYSTEMTIME));
+	GetLocalTime(&sysTime);
+	ZeroMemory(hrmn, 6);
+	if (sysTime.wHour < 10 && sysTime.wMinute < 10)
+		StringCchPrintf(hrmn, 6, "0%hu:0%hu", sysTime.wHour, sysTime.wMinute);
+	else if (sysTime.wHour < 10)
+		StringCchPrintf(hrmn, 6, "0%hu:%hu", sysTime.wHour, sysTime.wMinute);
+	else if (sysTime.wMinute < 10)
+		StringCchPrintf(hrmn, 6, "%hu:0%hu", sysTime.wHour, sysTime.wMinute);
+	else
+		StringCchPrintf(hrmn, 6, "%hu:%hu", sysTime.wHour, sysTime.wMinute);
 
-return 0;
+	return 0;
 }
 
 static
-int make_htmlpage(struct success_info *successinfo, char *resource, char *pbufferin,
-			char **pbufferout, size_t *pbufferoutlen, DWORD fsize, char hrmn[6]) {
+int make_htmlpage(struct success_info* successinfo, char* resource, char* pbufferin,
+	char** pbufferout, size_t* pbufferoutlen, DWORD fsize, char hrmn[6]) {
 	char BufferUserName[254];
 	DWORD BufferUserNameSize = 254;
 
@@ -333,8 +353,8 @@ int make_htmlpage(struct success_info *successinfo, char *resource, char *pbuffe
 
 
 static int
-send_http_header_html_content(int s_user, struct header_nv *httpnv, int *bytesent,
-				char *pbufferout, size_t pbufferoutlen, HANDLE hFile) {
+send_http_header_html_content(int s_user, struct header_nv* httpnv, int* bytesent,
+	char* pbufferout, size_t pbufferoutlen, HANDLE hFile) {
 	int ret = 0;
 
 	ret = send_http_header_nv(httpnv, s_user, bytesent);
@@ -359,7 +379,7 @@ send_http_header_html_content(int s_user, struct header_nv *httpnv, int *bytesen
 }
 
 static int
-send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv *httpnv, int *bytesent) {
+send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, int* bytesent) {
 	int ret = 0;
 	char buffer[1024];
 	DWORD read;
@@ -388,11 +408,11 @@ send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv *httpnv, 
 int
 http_serv_resource(struct http_resource* res, int s,
 	struct success_info* successinfo,
-	int* bytesent) {
+	int* bytesent, unsigned int status_code) {
 	HANDLE hFile;
 	DWORD fsize, read, err;
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
-	char* pbufferin = NULL, *pbufferout = NULL;
+	char* pbufferin = NULL, * pbufferout = NULL;
 	char BufferUserName[254];
 	size_t pbufferoutlen = 0;
 	char hrmn[6];
@@ -400,7 +420,7 @@ http_serv_resource(struct http_resource* res, int s,
 	int ret;
 
 
-	if (http_send_status(s, bytesent) < 0)
+	if (http_send_status(s, bytesent, status_code) < 0)
 		return -1;
 
 	hFile = CreateFile(res->resource, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
@@ -425,20 +445,21 @@ http_serv_resource(struct http_resource* res, int s,
 
 		plastBS = strrchr(res->resource, '\\') + 1;
 		if (make_htmlpage(successinfo, plastBS, pbufferin, &pbufferout,
-					&pbufferoutlen, fsize, hrmn) < 0)
+			&pbufferoutlen, fsize, hrmn) < 0)
 			goto err;
 
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 		create_http_header_nv(res, httpnv, pbufferoutlen);
 
 		if (send_http_header_html_content(s, httpnv, bytesent, pbufferout,
-						pbufferoutlen, hFile) != 0)
+			pbufferoutlen, hFile) != 0)
 			goto err;
 
 		free(pbufferout);
 	err:
 		CloseHandle(hFile);
-	} else if (strcmp(res->type, "image/png") == 0 || strcmp(res->type, "image/x-icon") == 0) {
+	}
+	else if (strcmp(res->type, "image/png") == 0 || strcmp(res->type, "image/x-icon") == 0) {
 		char buffer[1024];
 
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
