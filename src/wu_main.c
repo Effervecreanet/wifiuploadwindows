@@ -181,8 +181,7 @@ draw_rectangle_in_console(COORD cursPosStart) {
 	return;
 }
 
-int main(void)
-{
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
 	DWORD written, read, ret;
 	WSADATA wsaData;
 	CONSOLE_CURSOR_INFO cursorInfo;
@@ -201,6 +200,8 @@ int main(void)
 	g_fplog = NULL;
 	g_hNewFile_tmp = g_hConsoleOutput = INVALID_HANDLE_VALUE;
 	inaddr.s_addr = 0;
+
+	AllocConsole();
 
 	SetConsoleCtrlHandler(HandlerRoutine, TRUE);
 	SetConsoleTitleA(CONSOLE_TITLE);
