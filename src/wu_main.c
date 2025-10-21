@@ -35,6 +35,13 @@ HANDLE g_hConsoleOutput;
 HANDLE g_hNewFile_tmp;
 unsigned char g_sNewFile_tmp[1024];
 
+/*
+ * Function description:
+ * - Routine windows OS arise when the user close the app window or the user
+ *   log out or user shutdown the PC.
+ * Arguments:
+ * - dwCtrlType: Type of event Windows OS arise.
+ */
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
 {
@@ -63,6 +70,12 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 	return FALSE;
 }
 
+/*
+ * Function description:
+ * - Call to win32 API for getting user profile directory and add download directory.
+ * Arguments:
+ * - dd: Buffer for upload directory string path.
+ */
 void
 build_download_directory(char dd[1024]) {
 	DWORD szdd = 1024;
@@ -74,6 +87,14 @@ build_download_directory(char dd[1024]) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Write errors informations or informations in the console buffer. Before wu match the error
+ *  message string.
+ * Arguments:
+ * - id: Message identificator that wu match in order to get the error string and related data.
+ * - p: Data to insert in error string format (last function error code).
+ */
 void
 write_info_in_console(enum idmsg id, void* p) {
 	DWORD written;
@@ -98,6 +119,12 @@ write_info_in_console(enum idmsg id, void* p) {
 	return;
 };
 
+/*
+ * Function description:
+ * - Clean pane rectangle for two cases. 1) Write progress bar download. 2) Empty incoming connections strings.
+ * Arguments:
+ * - cursorPosition: Cursor position where we start cleaning.
+ */
 void
 clear_txrx_pane(COORD* cursorPosition) {
 	DWORD written;
@@ -116,6 +143,14 @@ clear_txrx_pane(COORD* cursorPosition) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Four for loop to draw one horizontale line, one vertical line, one horizontal line
+ *   and one vertical line. These four line are a rectangle where wu will print connection
+ *   info and upload progress bar.
+ * Parameters:
+ * - cursPosStart: Start cursor position where the rectangle begin.
+ */
 static void
 draw_rectangle_in_console(COORD cursPosStart) {
 	COORD cursPosEnd;
@@ -181,6 +216,17 @@ draw_rectangle_in_console(COORD cursPosStart) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Start a new console, configure it. Initialize wisock, create listening socket. Initialize
+ *   log files. Printf user interface, available address and so on. Enter main http loop and start
+ *   to accept connection.
+ * Arguments:
+ * - hInstace: Not used.
+ * - hPrevInstance: Not used.
+ * - lpCmdLine: Not used.
+ * - nCmdShow: Not used.
+ */
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
 	DWORD written, read, ret;
 	WSADATA wsaData;

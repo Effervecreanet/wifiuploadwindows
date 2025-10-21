@@ -148,7 +148,7 @@ wu_quit_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, 
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
-	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 404);
+	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);
 
 	return;
 }
