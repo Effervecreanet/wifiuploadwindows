@@ -218,7 +218,7 @@ draw_rectangle_in_console(COORD cursPosStart) {
 
 /*
  * Function description:
- * - Start a new console, configure it. Initialize wisock, create listening socket. Initialize
+ * - Alloc a new console, configure it. Initialize wisock, create listening socket. Initialize
  *   log files. Printf user interface, available address and so on. Enter main http loop and start
  *   to accept connection.
  * Arguments:

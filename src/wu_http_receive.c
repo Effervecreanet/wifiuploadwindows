@@ -359,6 +359,21 @@ chrono(struct success_info *successinfo, DWORD tick_start, u_int64 sizeNewFile) 
 
 	return;
 }
+
+/*
+ * Function description:
+ * - Upload file.
+ * Arguments:
+ * - cursorPosition: Localize the cursor at progress bar.
+ * - httpnv: Header pairs of name/value wu will send back to user.
+ * - s: User socket
+ * - upstats: statistics related to file upload.
+ * - theme: Should we use dark or light theme.
+ * - bytesent: Total byte sent in response.
+ * Return value:
+ * - -1: An error occured.
+ * - 0: Function success.
+ */
 int
 receive_file(COORD* cursorPosition,
 	struct header_nv* httpnv, int s,
@@ -410,6 +425,7 @@ receive_file(COORD* cursorPosition,
 
 	clear_txrx_pane(cursorPosition);
 
+	/* Print first progress bar character. */
 	coordAverageTX.X = cursorPosition->X;
 	coordAverageTX.Y = cursorPosition->Y + 1;
 	SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
@@ -417,12 +433,14 @@ receive_file(COORD* cursorPosition,
 	SetConsoleTextAttribute(g_hConsoleOutput, 0);
 	cursorPosition->X++;
 
+	/* Create or open temporary file. This file will be rename after. */
 	hFile = create_userfile_tmp(cursorPosition, upstats->filename, userfile_tmp);
 
 	ZeroMemory(&txstats, sizeof(struct tx_stats));
 	GetSystemTime(&txstats.start);
 	tick_start = GetTickCount();
 
+	/* Print download ui string. */
 	cursorPosition->Y += 2;
 	cursorPosition->X--;
 	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
@@ -431,6 +449,7 @@ receive_file(COORD* cursorPosition,
 	cursorPosition->Y -= 2;
 	cursorPosition->X++;
 
+	/* Initialize statistics and upload informations. */
 	content_length -= (MIMElen + 1);
 	txstats.total_size = content_length;
 	txstats.one_percent = (long long)txstats.total_size / 100;
@@ -440,9 +459,12 @@ receive_file(COORD* cursorPosition,
 	coordPerCent.X = cursorPosition->X + 52;
 	coordPerCent.Y = cursorPosition->Y;
 
+	/* Position the cursor to the extreme right of progress bar. And
+         * write zero per cent string. */
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
 	write_info_in_console(INF_ZERO_PERCENT, NULL);
 
+	/* Core upload loop: receive file and show receive progress. */
 	while (content_length > 0) {
 		ret = recv_file(hFile, s, &content_length, boundarylen);
 		if (ret < 0)
@@ -453,6 +475,7 @@ receive_file(COORD* cursorPosition,
 	}
 
 
+	/* If an error occurs: close opened resource and signal it to the user. */
 	if (content_length != 0) {
 		CloseHandle(hFile);
 		DeleteFileA(userfile_tmp);
@@ -464,11 +487,13 @@ receive_file(COORD* cursorPosition,
 		return -1;
 	}
 
+	/* No errors occured: print cent per cent string. */
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
 	write_info_in_console(INF_CENT_PERCENT, NULL);
 
 	GetSystemTime(&txstats.end);
 
+	/* Print last progress bar character just left befor the cent per cent string. */
 	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 	SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_RVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
 	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
@@ -487,6 +512,8 @@ receive_file(COORD* cursorPosition,
 	cursorPosition->Y += 2;
 	cursorPosition->X = (cursorPosition + 1)->X;
 
+	/* Move temporary file to definitive file (Remove the filename extension
+         * ".tmp"). */
 	newFile = _strdup(userfile_tmp);
 	*(strrchr(newFile, '.')) = '\0';
 	MoveFileExA(userfile_tmp, newFile, MOVEFILE_REPLACE_EXISTING);
@@ -509,6 +536,7 @@ receive_file(COORD* cursorPosition,
 			break;
 	}
 
+	/* Send back success upload info and stats to user mobile. */
 	create_local_resource(&httpres, ires, theme);
 	http_serv_resource(&httpres, s, &successinfo, bytesent, 200);
 
