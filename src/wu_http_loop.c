@@ -22,6 +22,15 @@ extern HANDLE g_hNewFile_tmp;
 extern int *g_listensocket;
 
 
+/*
+ * Function description:
+ * - Compare user requested resource against local resource array.
+ * Arguments:
+ * - res: Requested resource.
+ * Return value:
+ * - -1: No resource can be found.
+ * - i: Local resource index in array
+ */
 int
 http_match_resource(char* res)
 {
@@ -41,6 +50,19 @@ http_match_resource(char* res)
 	return -1;
 }
 
+/*
+ * Function description:
+ * - Map requested resource to local resource. There is three case: 1) Resource is text/html one
+ *   2) Resource is image/png 3) Resource is icon. Local resource is in Program Files application
+ *   directory.
+ * Arguments:
+ * - lres: Final local resource to serv
+ * - ires: Index for http local resource array
+ * - theme: Theme value used to build local resource path
+ * Return Value:
+ * - 0: No error occured.
+ * - 1: An error occured.
+ */
 int
 create_local_resource(struct http_resource* lres, int ires, int theme) {
 	char curDir[1024];
@@ -82,6 +104,13 @@ create_local_resource(struct http_resource* lres, int ires, int theme) {
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Parse the cookie header field to retrieve theme information value.
+ * Arguments:
+ * - hdr_nv: Header names values used to search "Cookie" value.
+ * - theme: Address pointer that store theme value ("light" or "dark")
+ */
 static void
 check_cookie_theme(struct header_nv hdrnv[], int* theme) {
 	int res;
@@ -101,6 +130,16 @@ check_cookie_theme(struct header_nv hdrnv[], int* theme) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Send "error 404" html page with 404 http status code.
+ * Arguments:
+ * - cursorPosition: Position of the cursor to print information related to an error. If one occurs.
+ * - httpnv: Used to check cookie header field. Cookie header field contains theme information.
+ * - theme: Is it dark or light theme in use.
+ * - s_user: Client socket to send data to.
+ * - bytesent: Total byte sent to user.
+ */
 static void
 wu_404_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, int s_user, int *bytesent) {
 	int ires;
@@ -127,6 +166,16 @@ wu_404_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, i
 	return;
 }
 
+/*
+ * Function description:
+ * - Send "erreur 404" html page with 200 http status code.
+ * Arguments:
+ * - cursorPosition: Position of the cursor to print information related to an error. If one occurs.
+ * - httpnv: Used to check cookie header field. Cookie header field contains theme information.
+ * - theme: Is it dark or light theme in use.
+ * - s_user: Client socket to send data to.
+ * - bytesent: Total byte sent to user.
+ */
 static void
 wu_quit_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, int s_user, int *bytesent) {
 	int ires;
@@ -152,6 +201,11 @@ wu_quit_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, 
 
 	return;
 }
+
+/*
+ * Function description:
+ * - Close sockets, close file and close winsock. Exit.
+ */
 static void
 quit_wu(int s_user) {
 	closesocket(s_user);
@@ -164,6 +218,10 @@ quit_wu(int s_user) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Build and show in explorer user download directory.
+ */
 static void
 show_download_directory(void) {
 	char dd[1024];
@@ -174,6 +232,17 @@ show_download_directory(void) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Receive the http body which contains the desired theme (dark or light). Set
+ *   a cookie in the user browser which hold wanted theme.
+ * Arguments:
+ * - httpnv: Contains "Content-Length" useful for the number of byte to receive.
+ * - s_user: User socket wu read data from.
+ * - theme: Is 0 or 1: dark theme or light theme
+ * Return value:
+ * - Return -1 if an error occurs and 0 if no errors occurs
+ */
 static int
 handle_theme_change(struct header_nv *httpnv, int s_user, int *theme) {
 	char cookie[48];
@@ -193,6 +262,18 @@ handle_theme_change(struct header_nv *httpnv, int s_user, int *theme) {
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Transforms a requested resource in a response resource and send it back to the user.
+ * Arguments:
+ * - httpnv: Contains theme information.
+ * - s_user: Client or user socket used for data transfer.
+ * - bytesent: Used to store the total number of bytes wu send to the client.
+ * - theme: Hold the theme informations: Is it dark or light.
+ * - resource_index: Index used to retrieve local resource information. Index is used
+ *   for searching and finding local resource information.
+ * - cursorPosition: Here cursorPosition is the cursor where wu start showing error if occurs.
+ */
 static void
 create_send_resource(struct header_nv *httpnv, int s_user, int *bytesent, int theme, int resource_index, COORD cursorPosition[2]) {
 		struct http_resource httplocalres;
@@ -232,6 +313,20 @@ create_send_resource(struct header_nv *httpnv, int s_user, int *bytesent, int th
 	return;
 }
 
+/*
+ * Function description:
+ * - Handle two "POST" request. One for changing theme and the other to upload a file.
+ * Arguments:
+ * - reqline: Contains the http resource string ("theme" or "upload")
+ * - httpnv: User header names values. Among these there is "Content-Length" and
+ *   "Cookie"
+ * - s_user: Client socket where send the data to.
+ * - bytesent: Total size of data the client are going to receive.
+ * - theme: Variable indicating whether the theme to serv is light theme or dark theme.
+ * - cursorPosition: User in clearing the screen pane.
+ * Return value:
+ * - Return -1 if an error occur and return 0 if no errors occur
+ */
 static int
 handle_post_request(struct http_reqline *reqline, struct header_nv *httpnv, int s_user,
 						int *bytesent, int theme, COORD cursorPosition[2]) {
@@ -259,6 +354,17 @@ handle_post_request(struct http_reqline *reqline, struct header_nv *httpnv, int 
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Format a string according to http log format.
+ * Arguments:
+ * - logentry: Contains the formatted buffer ready to be written in log file.
+ * - ipaddrstr: Client or user Internet Protocol address.
+ * - reqline: The client or user http request line which contains http method and
+ *   http resource and http version.
+ * - bytesent: Total byte sent to user socket (http header and http body)
+ * - status_code: Http "Ok" or "Bad Request" status code response.
+ */
 static void
 create_log_entry(char *logentry, char *ipaddrstr, struct http_reqline *reqline, int bytesent, unsigned int status_code) {
 	struct tm tmval;

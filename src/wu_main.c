@@ -148,7 +148,7 @@ clear_txrx_pane(COORD* cursorPosition) {
  * - Four for loop to draw one horizontale line, one vertical line, one horizontal line
  *   and one vertical line. These four line are a rectangle where wu will print connection
  *   info and upload progress bar.
- * Parameters:
+ * Arguments:
  * - cursPosStart: Start cursor position where the rectangle begin.
  */
 static void
