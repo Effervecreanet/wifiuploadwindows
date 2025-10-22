@@ -31,7 +31,7 @@ static int send_http_header_nv(struct header_nv* nv,
  * 1: Success.
  * -1: Failure.
  */
-static int
+int
 time_to_httpdate(char* http_date)
 {
 	struct tm intmv;

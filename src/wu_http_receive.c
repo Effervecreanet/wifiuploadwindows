@@ -162,7 +162,7 @@ receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen)
 }
 
 /*
- * Function description
+ * Function description:
  * - Parse "Content-Type" header value to find MIME boundary delimitation.
  * Arguments:
  * - httpnv: Header pairs of name/value where to search for "Content-Type" header name.
@@ -198,7 +198,7 @@ get_MIMEboundary(struct header_nv *httpnv, char boundary[64], unsigned short *bo
 }
 
 /*
- * Function description
+ * Function description:
  * - Receive socket data and write data to temporary file. Be conscious of
  *   trailer data.
  * Arguments:

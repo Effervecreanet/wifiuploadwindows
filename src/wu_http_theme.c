@@ -7,8 +7,8 @@
 #include "wu_http.h"
 
 
-void
-wu_http_post_theme_hdr_nv(struct header_nv hdrnv[32], char *cookie)
+static void
+wu_change_theme_hdr_nv_reply(struct header_nv hdrnv[32], char *cookie)
 {
 	int cnt = 0;
 	time_t now = time(NULL);
@@ -23,6 +23,9 @@ wu_http_post_theme_hdr_nv(struct header_nv hdrnv[32], char *cookie)
 
 	hdrnv[cnt].name.wsite = HTTP_HEADER_SERVER;
 	hdrnv[cnt++].value.pv = HTTP_HEADER_SERVER_VALUE;
+
+	hdrnv[cnt].name.wsite = HTTP_HEADER_DATE;
+	time_to_httpdate(hdrnv[cnt++].value.v);
 
 	hdrnv[cnt].name.wsite = HTTP_HEADER_CONTENT_LENGTH;
 	strcpy_s(hdrnv[cnt++].value.v, HEADER_VALUE_MAX_SIZE,"0");
@@ -48,7 +51,7 @@ wu_http_post_theme_hdr_nv(struct header_nv hdrnv[32], char *cookie)
 }
 
 int
-wu_http_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int *theme)
+wu_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int *theme)
 {
       int clen;
       int idxclen, i;
@@ -76,8 +79,8 @@ wu_http_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int 
     return 0;
 }
 
-void
-wu_http_send_hdr(int susr, struct header_nv hdrnv[32])
+static void
+wu_change_theme_send_hdr(int susr, struct header_nv hdrnv[32])
 {
 	int cnt = 0;
 
@@ -102,12 +105,12 @@ apply_theme(int susr, char *cookie)
 	struct header_nv hdrnv[32];
 
 	memset(hdrnv, 0, sizeof(struct header_nv) * 32);
-	wu_http_post_theme_hdr_nv(hdrnv, cookie);
+	wu_change_theme_hdr_nv_reply(hdrnv, cookie);
 
 	if (send(susr, "HTTP/1.1 301 Moved Permanently\r\n", 31, 0) <= 0)
 		return -1;
 	
-	wu_http_send_hdr(susr, hdrnv);
+	wu_change_theme_send_hdr(susr, hdrnv);
 
 	return 1;
 }
