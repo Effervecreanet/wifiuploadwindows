@@ -22,6 +22,15 @@ static void create_http_header_nv(struct http_resource* res,
 static int send_http_header_nv(struct header_nv* nv,
 	int s, int* bytesent);
 
+/*
+ * Function description:
+ * - Format date to GMT format.
+ * Arguments:
+ * - http_date: Hold the formated date
+ * Return value:
+ * 1: Success.
+ * -1: Failure.
+ */
 static int
 time_to_httpdate(char* http_date)
 {
@@ -41,6 +50,16 @@ time_to_httpdate(char* http_date)
 	return 1;
 }
 
+/*
+ * Function description:
+ * - Receive HTTP/1.1 request line.
+ * Arguments:
+ * - reqline: Used to store client request line.
+ * - s: Client socket wu receive data from.
+ * Return value:
+ * - -1: Function failure
+ * - 0: Success
+ */
 errno_t
 http_recv_reqline(struct http_reqline* reqline, int s) {
 	int i;
@@ -93,7 +112,16 @@ http_recv_reqline(struct http_reqline* reqline, int s) {
 	return 0;
 }
 
-
+/*
+ * Function description:
+ * - Receive http header request. Receive pairs of name/value split by ": "
+ * Arguments:
+ * - httpnv: Array to store pairs of name/value.
+ * - s: User socket wu receive data from.
+ * Return value:
+ * 1: Function failure.
+ * 0: Success.
+ */
 errno_t
 http_recv_headernv(struct header_nv* httpnv, int s) {
 	CHAR buffer[HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE + 2];
@@ -146,6 +174,14 @@ http_recv_headernv(struct header_nv* httpnv, int s) {
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Build http header pairs. Pairs are name/value strings.
+ * Arguments:
+ * - res: Contains the resource type (html or image or ...).
+ * - nv: Http header names/values pairs.
+ * - File size for "Content-Length" header field.
+ */
 static void
 create_http_header_nv(struct http_resource* res, struct header_nv* nv, size_t fsize) {
 	int i = 0;
@@ -179,6 +215,18 @@ create_http_header_nv(struct http_resource* res, struct header_nv* nv, size_t fs
 	return;
 }
 
+/*
+ * Function description:
+ * - Walk through nv array that contains pair of name value which shape
+ *  http header.
+ * Arguments:
+ * - nv: Name value array.
+ * - s: Socket.
+ * - bytesent: Total byte sent.
+ * Return value:
+ * - 0: Success.
+ * - 1: Failure.
+ */
 static int
 send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
 	int i;
@@ -193,21 +241,21 @@ send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
 
 		ret = send(s, ": ", 2, 0);
 		if (ret != 2)
-			return 2;
+			return 1;
 
 		*bytesent += ret;
 
 		if ((nv + i)->value.pv != NULL) {
 			ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
 			if (ret < 1)
-				return 3;
+				return 1;
 
 			*bytesent += ret;
 		}
 		else {
 			ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
 			if (ret < 1)
-				return 3;
+				return 1;
 
 			*bytesent += ret;
 		}
@@ -217,7 +265,7 @@ send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
 		*bytesent += ret;
 
 		if (ret != 2)
-			return 4;
+			return 1;
 	}
 
 	send(s, "\r\n", 2, 0);
@@ -227,6 +275,17 @@ send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Send HTTP/1.1 reply status code. It can be 200 Ok or 404 Bad Request.
+ * Arguments:
+ * - s_user: User socket to send data to.
+ * - bytesent: Total byte sent.
+ * - status_code: Ok status or Bad Request status.
+ * Return value:
+ * - 0: Success.
+ * - -1: Failure.
+ */
 static int
 http_send_status(int s_user, int* bytesent, unsigned int status_code) {
 	int ret;
@@ -288,6 +347,12 @@ http_send_status(int s_user, int* bytesent, unsigned int status_code) {
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Get current time and format it to store it in a buffer.
+ * Arguments:
+ * - hrmn: Hours minutes characters string.
+ */
 static
 int get_hours_minutes(char hrmn[6]) {
 	SYSTEMTIME sysTime;
@@ -307,6 +372,22 @@ int get_hours_minutes(char hrmn[6]) {
 	return 0;
 }
 
+/*
+ * Function description
+ * - Format html data with input variables. Store the formated html data in
+ *   pbufferout new buffer.
+ * Arguments:
+ * - successinfo: Hold tx statistics informations.
+ * - resource: Resource string name to validate.
+ * - pbufferin: No-formated html data page.
+ * - pbufferout: Buffer that will hold formated html data page.
+ * - pbufferoutlen: Length of data in pbufferout.
+ * - fsize: File size.
+ * - hrmn: Hours and minutes for current time to display.
+ * Return value:
+ * - -1: Function failed
+ * - 0: Function success.
+ */
 static
 int make_htmlpage(struct success_info* successinfo, char* resource, char* pbufferin,
 	char** pbufferout, size_t* pbufferoutlen, DWORD fsize, char hrmn[6]) {
@@ -351,7 +432,21 @@ int make_htmlpage(struct success_info* successinfo, char* resource, char* pbuffe
 	return 0;
 }
 
-
+/*
+ * Function description:
+ * - Send http header and send html body content.
+ * Arguments:
+ * - s_user: User socket.
+ * - httpnv: Prepared http header names values.
+ * - bytesent: Total byte sent.
+ * - pbufferout: Formated html content.
+ * - pbufferoutlen: Formated html content length.
+ * - hFile: Handle to be closed if an error occurs.
+ * Return value:
+ * - 0: Success.
+ * - 1: send_http_header_nv failed.
+ * - 2: Send body failed
+ */
 static int
 send_http_header_html_content(int s_user, struct header_nv* httpnv, int* bytesent,
 	char* pbufferout, size_t pbufferoutlen, HANDLE hFile) {
@@ -362,14 +457,14 @@ send_http_header_html_content(int s_user, struct header_nv* httpnv, int* bytesen
 		if (pbufferout)
 			free(pbufferout);
 		CloseHandle(hFile);
-		return 8;
+		return 1;
 	}
 
 	ret = send(s_user, pbufferout, (int)pbufferoutlen, 0);
 	if (ret <= 0) {
 		free(pbufferout);
 		CloseHandle(hFile);
-		return 10;
+		return 2;
 	}
 
 
@@ -378,6 +473,19 @@ send_http_header_html_content(int s_user, struct header_nv* httpnv, int* bytesen
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Send http header names values ("Content-Length" "Content-Type" ...) next
+ *   send image http body data.
+ * Arguments:
+ * - hFile: Handle that contains the file to read and send to user socket.
+ * - s_user: User socket.
+ * - httpnv: Header names values to send.
+ * - bytesent: Total byte sent.
+ * Return value:
+ * - 0: Success
+ * - 1: Failure
+ */
 static int
 send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, int* bytesent) {
 	int ret = 0;
@@ -387,7 +495,7 @@ send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, 
 	ret = send_http_header_nv(httpnv, s_user, bytesent);
 	if (ret > 0) {
 		CloseHandle(hFile);
-		return 11;
+		return 1;
 	}
 
 	*bytesent += ret;
@@ -405,6 +513,16 @@ send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, 
 }
 
 
+/*
+ * Function description:
+ * - Load data, format html data if required and send http and body data. 
+ * Arguments:
+ * - res: Resource to send.
+ * - s: User socket where send data.
+ * - successinfo: Structure that contains transfer statistics.
+ * - bytesent: Total byte wu send to the user socket.
+ * - status_code: HTTP status code response.
+ */
 int
 http_serv_resource(struct http_resource* res, int s,
 	struct success_info* successinfo,
