@@ -30,6 +30,16 @@ receive_MIME_header(struct user_stats* upstats,
 
 
 
+/*
+ * Function description:
+ * - Open or create a temporary file that is the upload file.
+ * Arguments:
+ * - cursorPosition: Position to show an error string.
+ * - filename: Upload file filename.
+ * - userfile_tmp: Temporary file filename.
+ * Return value:
+ * hFile: File handle.
+ */
 static HANDLE
 create_userfile_tmp(COORD* cursorPosition,
 	char* filename,
@@ -78,6 +88,20 @@ create_userfile_tmp(COORD* cursorPosition,
 	return hFile;
 }
 
+/*
+ * Function description:
+ * - Receive MIME header data delimitation parse it in order to find the filename
+ *   of the file wu upload.
+ * Arguments:
+ * - upstats: Upload statistics or informations. Here, it is used to store the
+ *   filename.
+ * - s: User or client socket wu receive data from.
+ * - MIMElen: Length of boundary data delimitation.
+ * Return value:
+ * - 0: Success.
+ * - -1: Fail.
+ * - EINVAL: Fail.
+ */
 static errno_t
 receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen)
 {
@@ -137,8 +161,19 @@ receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen)
 	return 0;
 }
 
+/*
+ * Function description
+ * - Parse "Content-Type" header value to find MIME boundary delimitation.
+ * Arguments:
+ * - httpnv: Header pairs of name/value where to search for "Content-Type" header name.
+ * - boundary: Buffer to store boundary delimitation.
+ * - boundarylen: Length of boundary delimitation.
+ * Return value:
+ * - -1: Function failure.
+ * - 0: Success.
+ */
 static int
-get_MIMEboundary(int s_user, struct header_nv *httpnv, char boundary[64], unsigned short *boundarylen) {
+get_MIMEboundary(struct header_nv *httpnv, char boundary[64], unsigned short *boundarylen) {
 	char *pboundary;
 	int ret;
 
@@ -162,6 +197,18 @@ get_MIMEboundary(int s_user, struct header_nv *httpnv, char boundary[64], unsign
 	return 0;
 }
 
+/*
+ * Function description
+ * - Receive socket data and write data to temporary file. Be conscious of
+ *   trailer data.
+ * Arguments:
+ * - hFile: File handle to temporary file.
+ * - s_user: Client or user socket.
+ * - content_length: File size decremented each time we receive data.
+ * - boundarylen: Used for receiving but skiping trailer data.
+ * Return value:
+ * - Count of bytes received.
+ */
 static int
 recv_file(HANDLE hFile, int s_user, u_int64 *content_length, unsigned short boundarylen) {
 	int ret = 0;
@@ -193,6 +240,13 @@ recv_file(HANDLE hFile, int s_user, u_int64 *content_length, unsigned short boun
 	return ret;
 }
 
+/*
+ * Function description:
+ * - Compute average tx speed, format a string for this speed. Show string.
+ * Arguments:
+ * - txstats: Transfer statistics or informations.
+ * - coordAverageTX: Position of speed string.
+ */
 static void
 print_tx_speed(struct tx_stats *txstats, COORD coordAverageTX) {
 	double averageRateTX;
@@ -229,6 +283,16 @@ print_tx_speed(struct tx_stats *txstats, COORD coordAverageTX) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Show tx speed, add one progress bar character each time the transfer
+ *   progress.
+ * Arguments:
+ * - txstats: Transfer statistics.
+ * - coordAverageTX: Position of average tx speed string.
+ * - cursorPosition: ???
+ * - coordPerCent: Position of percentage string.
+ */
 static void
 print_upload_info(struct tx_stats *txstats, COORD coordAverageTX, COORD *cursorPosition, COORD coordPerCent) {
 	GetSystemTime(&txstats->current);
@@ -254,7 +318,15 @@ print_upload_info(struct tx_stats *txstats, COORD coordAverageTX, COORD *cursorP
 	return;
 }
 
-static int
+/*
+ * Function description:
+ * - Compute the general upload elapsed time. Compute the average speed during this elapsed time.
+ * Arguments:
+ * - successinfo: Used to store the elapsed time and average speed.
+ * - tick_start: Start upload time.
+ * - sizeNewFile: File size used to compute average speed.
+ */ 
+static void
 chrono(struct success_info *successinfo, DWORD tick_start, u_int64 sizeNewFile) {
 	float average_speed = 0.0;
 	DWORD tick_end, tick_diff;
@@ -285,7 +357,7 @@ chrono(struct success_info *successinfo, DWORD tick_start, u_int64 sizeNewFile) 
 		sprintf_s(successinfo->averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_KO, average_speed / 100.00);
 
 
-	return 0;
+	return;
 }
 int
 receive_file(COORD* cursorPosition,
@@ -327,7 +399,7 @@ receive_file(COORD* cursorPosition,
 
 	content_length = _atoi64((httpnv + ret)->value.v);
 
-	if (get_MIMEboundary(s, httpnv, boundary, &boundarylen) < 0)
+	if (get_MIMEboundary(httpnv, boundary, &boundarylen) < 0)
 		return -1;
 
 	if (receive_MIME_header(upstats, s, &MIMElen) != 0)
