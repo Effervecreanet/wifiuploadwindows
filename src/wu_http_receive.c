@@ -20,16 +20,6 @@ extern HANDLE g_hNewFile_tmp;
 extern char g_sNewFile_tmp[1024];
 
 
-static HANDLE
-create_userfile_tmp(COORD* cursorPosition,
-	char* filename,
-	char* userfile_tmp);
-static errno_t
-receive_MIME_header(struct user_stats* upstats,
-	int s, unsigned short* MIMELen);
-
-
-
 /*
  * Function description:
  * - Open or create a temporary file that is the upload file.

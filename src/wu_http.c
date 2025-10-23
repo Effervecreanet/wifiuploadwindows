@@ -15,13 +15,6 @@ extern struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 extern FILE* g_fplog;
 
-static void create_http_header_nv(struct http_resource* res,
-	struct header_nv* nv,
-	size_t fsize);
-
-static int send_http_header_nv(struct header_nv* nv,
-	int s, int* bytesent);
-
 /*
  * Function description:
  * - Format date to GMT format.
