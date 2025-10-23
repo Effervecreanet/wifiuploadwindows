@@ -5,6 +5,17 @@
 
 extern HANDLE g_hConsoleOutput;
 
+/*
+ * Function description;
+ * - If only one IP address is available for the server socket wu print user
+ *   interface message and welcome the user to connect his phone to this
+ *   address.
+ * Arguments:
+ * - cursorPosition: Where to print interface message.
+ * - inaddr: IP address to stringify in order to print it in console
+ *   interface.
+ * - ipAddrTable: Same as above.
+ */
 static void
 write_info_one_available_addr(COORD cursorPosition[2], struct in_addr *inaddr, MIB_IPADDRTABLE ipAddrTable[4]) {
         PCHAR pStringIpAddr;
@@ -40,6 +51,18 @@ write_info_one_available_addr(COORD cursorPosition[2], struct in_addr *inaddr, M
 		return;
 } 
 
+/*
+ * Function description:
+ * - If two IP address are available for the server socket wu print these two
+ *   address in user interface message. wu prompt the user to select one
+ *   address. After wu prompt the user to connect to the address he has
+ *   chosen.
+ * Arguments:
+ * - cursorPosition: Where to print interface message.
+ * - inaddr: IP address to stringify in order to print it in console
+ *   interface.
+ * - ipAddrTable: Same as above.
+ */
 static void
 ui_two_available_addr(COORD cursorPosition[2], struct in_addr *inaddr, MIB_IPADDRTABLE ipAddrTable[4]) {
         struct in_addr inaddr1;
@@ -129,6 +152,19 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr *inaddr, MIB_IPADD
 	return;
 }
 
+
+/*
+ * Function description:
+ * - Get IP address that are available then there is two case wu support. There
+ *   is two address available or there is three address available. Handle these
+ *   two case with dedicated function. wu doesn't support more than three IP
+ *   address available.
+ * Arguments:
+ * - cursorPosition: Position where display error message.
+ * - inaddr: Used to hold raw IP address.
+ * Return value:
+ * - dwNumEntries: Number of IP address available.
+ */
 
 DWORD available_address_ui(COORD cursorPosition[2], struct in_addr *inaddr) {
     MIB_IPADDRTABLE ipAddrTable[4];
