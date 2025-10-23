@@ -5,6 +5,15 @@
 #include "wu_msg.h"
 #include "wu_log.h"
 
+/*
+ * Function description:
+ * Build log path. Log path is with the form of "year\month\day\log_19700101.txt". So
+ * first we create a year directory next a month directory in year directory next a
+ * day directory in month directory and eventualy the log file ending with ".txt".
+ * Arguments:
+ * - logpath: The output buffer for full log path.
+ * - log_filename: Log filename.
+ */
 void
 create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.txt")]) {
 	char userprofile[255 + sizeof(LOG_DIRECTORY)];
