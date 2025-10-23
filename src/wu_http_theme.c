@@ -7,6 +7,14 @@
 #include "wu_http.h"
 
 
+/*
+ * Function description:
+ * Build header pairs name/value with "Set-Cookie" which contains theme
+ * remembered information.
+ * Arguments:
+ * - hdrnv: Array of header pairs.
+ * - cookie: Contains theme information ("light" or "dark")
+ */
 static void
 wu_change_theme_hdr_nv_reply(struct header_nv hdrnv[32], char *cookie)
 {
@@ -50,6 +58,17 @@ wu_change_theme_hdr_nv_reply(struct header_nv hdrnv[32], char *cookie)
 	return;
 }
 
+/*
+ * Function description:
+ * Receive body data after a user POST request that change the theme.
+ * Arguments:
+ * - httpnv: Header pairs where wu search "Content-Length"
+ * - s_user: User socket
+ * - theme: Set the theme wu will use
+ * Return value:
+ * - -1: Function failed.
+ * - 0: Function succeded
+ */
 int
 wu_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int *theme)
 {
@@ -79,6 +98,13 @@ wu_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int *them
     return 0;
 }
 
+/*
+ * Function description:
+ * - Send back header pairs of name/value.
+ * Arguments:
+ * - susr: User socket where the header is sent.
+ * - hdrnv: Heador pair array
+ */
 static void
 wu_change_theme_send_hdr(int susr, struct header_nv hdrnv[32])
 {
@@ -99,6 +125,16 @@ wu_change_theme_send_hdr(int susr, struct header_nv hdrnv[32])
 	return;
 }
 
+/*
+ * Function description:
+ * - Handle a user POST request to change theme. Change theme and redirect to "/index".
+ * Arguments
+ * - user: User or client socket.
+ * - cookie: Contains theme informations. Is it "dark" or "light".
+ * Return value:
+ * - -1: Function failed.
+ * - 0: Success.
+ */
 int
 apply_theme(int susr, char *cookie)
 {
