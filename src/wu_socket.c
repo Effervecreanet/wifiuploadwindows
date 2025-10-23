@@ -8,6 +8,14 @@
 extern int *g_listensocket;
 extern HANDLE g_hConsoleOutput;
 
+/*
+ * Function description:
+ * - Create a tcp/ip socket, write a message in console if an error occurs.
+ * Arguments:
+ * - cursorPosition: Position of error message if any.
+ * Return value:
+ * - s: New socket.
+ */
 int
 create_socket(COORD *cursorPosition) {
 	int s;
@@ -34,6 +42,14 @@ create_socket(COORD *cursorPosition) {
   return s;
 }
 
+/*
+ * Function description:
+ * - Bind the new socket to an ip address. Start listening with the new binded socket.
+ * Arguments:
+ * - cursorPosition: Position where print an error message if any
+ * - s: New server socket.
+ * - inaddr: IP address the socket bind to.
+ */
 void
 bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
   struct sockaddr_in sainServer;
@@ -70,6 +86,17 @@ bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
   return;
 }
 
+/*
+ * Function description:
+ * - Accept new incoming connection write a error message if an error occurs.
+ * Arguments:
+ * - cursorPosition: Position where to print error message.
+ * - s: Socket server that accept new incoming connection.
+ * - ipaddrstr[16]: User or client IP address that initialize new incoming
+ *   connection.
+ * Return value:
+ * - s_user: New incoming connection socket.
+ */
 int
 accept_conn(COORD* cursorPosition, int s, char ipaddrstr[16]) {
   int s_user, sainLen;
