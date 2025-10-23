@@ -216,6 +216,43 @@ draw_rectangle_in_console(COORD cursPosStart) {
 	return;
 }
 
+static DWORD
+wu_user_interface_part1(COORD cursorPosition[2], struct in_addr *inaddr) {
+	CONSOLE_CURSOR_INFO cursorInfo;
+	DWORD dwNumEntries;
+
+	cursorPosition[0].X = 2;
+	cursorPosition[0].Y = 2;
+
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_PROMOTE_WIFIUPLOAD, NULL);
+
+	cursorPosition[0].Y++;
+
+	GetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
+	cursorInfo.bVisible = FALSE;
+	SetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
+
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_WIFIUPLOAD_SERVICE, NULL);
+
+	cursorPosition[0].Y++;
+
+	dwNumEntries = available_address_ui(cursorPosition, inaddr);
+
+	cursorPosition[0].Y += 2;;
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
+
+	cursorPosition[0].X += 5;
+	cursorPosition[0].Y += 2;
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
+	cursorPosition[0].X -= 5;
+
+	return dwNumEntries;
+}
+
 /*
  * Function description:
  * - Alloc a new console, configure it. Initialize wisock, create listening socket. Initialize
@@ -230,7 +267,6 @@ draw_rectangle_in_console(COORD cursPosStart) {
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
 	DWORD written, read, ret;
 	WSADATA wsaData;
-	CONSOLE_CURSOR_INFO cursorInfo;
 	CHAR dd[1024];
 	COORD cursorPosition[2];
 	HWND consoleWindow;
@@ -287,37 +323,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
 
 	SetConsoleActiveScreenBuffer(g_hConsoleOutput);
 
-	cursorPosition[0].X = 2;
-	cursorPosition[0].Y = 2;
-
-	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_PROMOTE_WIFIUPLOAD, NULL);
-
-	cursorPosition[0].Y++;
-
-	GetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
-	cursorInfo.bVisible = FALSE;
-	SetConsoleCursorInfo(g_hConsoleOutput, &cursorInfo);
-
-	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_WIFIUPLOAD_SERVICE, NULL);
-
-	cursorPosition[0].Y++;
-
-	dwNumEntries = available_address_ui(cursorPosition, &inaddr);
-
-	cursorPosition[0].Y += 2;;
-	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_WIFIUPLOAD_DOWNLOAD_DIRECTORY_IS, NULL);
-
-	ZeroMemory(dd, 1024);
-	build_download_directory(dd);
-
-	cursorPosition[0].X += 5;
-	cursorPosition[0].Y += 2;
-	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_WIFIUPLOAD_UI_DOWNLOAD_DIRECTORY, NULL);
-	cursorPosition[0].X -= 5;
+	dwNumEntries = wu_user_interface_part1(cursorPosition, &inaddr);
 
 	s = create_socket(&cursorPosition[0]);
 	bind_socket(&cursorPosition[0], s, inaddr);
