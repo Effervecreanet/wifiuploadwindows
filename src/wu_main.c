@@ -216,6 +216,17 @@ draw_rectangle_in_console(COORD cursPosStart) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Format and write wu initialisation infomation. Let the user select
+ *   an IP address.
+ * Arguments:
+ * - cursorPosition: Position where to write infos.
+ * - inaddr: Output selected IP address.
+ * Return value:
+ * - dwNumEntries: Number of IP address that were available. Used to add
+ *   an empty line between two interface message.
+ */
 static DWORD
 wu_user_interface_part1(COORD cursorPosition[2], struct in_addr *inaddr) {
 	CONSOLE_CURSOR_INFO cursorInfo;
