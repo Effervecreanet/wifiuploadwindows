@@ -388,7 +388,18 @@ create_log_entry(char *logentry, char *ipaddrstr, struct http_reqline *reqline, 
 }
 
 
-
+/*
+ * Function description:
+ * Receive client request (request line and header pairs) and handle the request and reply if
+ * the request is correct.
+ * Arguments:
+ * - cursorPosition: Position where to print error message or information.
+ * - inaddr: IP address used to match against "Host" header field.
+ * - s: Client or user socket.
+ * - logentry: Used to store the http log entry.
+ * Return value:
+ * - 0: Success.
+ */
 int
 http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[256]) {
 	struct http_reqline reqline;
