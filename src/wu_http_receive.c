@@ -11,7 +11,7 @@
 #include "wu_http_loop.h"
 #include "wu_content.h"
 
-extern FILE *g_fplog;
+extern FILE* g_fplog;
 
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
@@ -163,8 +163,8 @@ receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen)
  * - 0: Success.
  */
 static int
-get_MIMEboundary(struct header_nv *httpnv, char boundary[64], unsigned short *boundarylen) {
-	char *pboundary;
+get_MIMEboundary(struct header_nv* httpnv, char boundary[64], unsigned short* boundarylen) {
+	char* pboundary;
 	int ret;
 
 	ret = nv_find_name_client(httpnv, "Content-Type");
@@ -200,7 +200,7 @@ get_MIMEboundary(struct header_nv *httpnv, char boundary[64], unsigned short *bo
  * - Count of bytes received.
  */
 static int
-recv_file(HANDLE hFile, int s_user, u_int64 *content_length, unsigned short boundarylen) {
+recv_file(HANDLE hFile, int s_user, u_int64* content_length, unsigned short boundarylen) {
 	int ret = 0;
 	char buffer[1024];
 	DWORD written;
@@ -238,7 +238,7 @@ recv_file(HANDLE hFile, int s_user, u_int64 *content_length, unsigned short boun
  * - coordAverageTX: Position of speed string.
  */
 static void
-print_tx_speed(struct tx_stats *txstats, COORD coordAverageTX) {
+print_tx_speed(struct tx_stats* txstats, COORD coordAverageTX) {
 	double averageRateTX;
 	CHAR strAverageRateTX[42];
 
@@ -284,12 +284,12 @@ print_tx_speed(struct tx_stats *txstats, COORD coordAverageTX) {
  * - coordPerCent: Position of percentage string.
  */
 static void
-print_upload_info(struct tx_stats *txstats, COORD coordAverageTX, COORD *cursorPosition, COORD coordPerCent) {
+print_upload_info(struct tx_stats* txstats, COORD coordAverageTX, COORD* cursorPosition, COORD coordPerCent) {
 	GetSystemTime(&txstats->current);
 
 	if (txstats->current.wHour > txstats->currentbak.wHour ||
-			txstats->current.wMinute > txstats->currentbak.wMinute ||
-			txstats->current.wSecond > txstats->currentbak.wSecond) {
+		txstats->current.wMinute > txstats->currentbak.wMinute ||
+		txstats->current.wSecond > txstats->currentbak.wSecond) {
 		print_tx_speed(txstats, coordAverageTX);
 
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
@@ -315,9 +315,9 @@ print_upload_info(struct tx_stats *txstats, COORD coordAverageTX, COORD *cursorP
  * - successinfo: Used to store the elapsed time and average speed.
  * - tick_start: Start upload time.
  * - sizeNewFile: File size used to compute average speed.
- */ 
+ */
 static void
-chrono(struct success_info *successinfo, DWORD tick_start, u_int64 sizeNewFile) {
+chrono(struct success_info* successinfo, DWORD tick_start, u_int64 sizeNewFile) {
 	float average_speed = 0.0;
 	DWORD tick_end, tick_diff;
 
@@ -450,7 +450,7 @@ receive_file(COORD* cursorPosition,
 	coordPerCent.Y = cursorPosition->Y;
 
 	/* Position the cursor to the extreme right of progress bar. And
-         * write zero per cent string. */
+		 * write zero per cent string. */
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
 	write_info_in_console(INF_ZERO_PERCENT, NULL);
 
@@ -503,7 +503,7 @@ receive_file(COORD* cursorPosition,
 	cursorPosition->X = (cursorPosition + 1)->X;
 
 	/* Move temporary file to definitive file (Remove the filename extension
-         * ".tmp"). */
+		 * ".tmp"). */
 	newFile = _strdup(userfile_tmp);
 	*(strrchr(newFile, '.')) = '\0';
 	MoveFileExA(userfile_tmp, newFile, MOVEFILE_REPLACE_EXISTING);

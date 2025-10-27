@@ -228,7 +228,7 @@ draw_rectangle_in_console(COORD cursPosStart) {
  *   an empty line between two interface message.
  */
 static DWORD
-wu_user_interface_part1(COORD cursorPosition[2], struct in_addr *inaddr) {
+wu_user_interface_part1(COORD cursorPosition[2], struct in_addr* inaddr) {
 	CONSOLE_CURSOR_INFO cursorInfo;
 	DWORD dwNumEntries;
 

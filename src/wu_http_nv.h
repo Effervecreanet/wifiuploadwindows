@@ -51,18 +51,18 @@
 #define HEADER_VALUE_MAX_SIZE 512
 
 union header_name {
-    char            client[HEADER_NAME_MAX_SIZE];
-    const char* wsite;
+	char            client[HEADER_NAME_MAX_SIZE];
+	const char* wsite;
 };
 
 struct header_value {
-    char            v[HEADER_VALUE_MAX_SIZE];
-    const char* pv;
+	char            v[HEADER_VALUE_MAX_SIZE];
+	const char* pv;
 };
 
 struct header_nv {
-    union header_name name;
-    struct header_value value;
+	union header_name name;
+	struct header_value value;
 };
 
 int             nv_find_name_client(struct header_nv nv[HEADER_NV_MAX_SIZE], const char* name_client);

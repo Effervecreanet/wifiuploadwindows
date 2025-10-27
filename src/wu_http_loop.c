@@ -19,7 +19,7 @@ extern FILE* g_fplog;
 extern int* g_usersocket;
 extern HANDLE g_hConsoleOutput;
 extern HANDLE g_hNewFile_tmp;
-extern int *g_listensocket;
+extern int* g_listensocket;
 
 
 /*
@@ -141,7 +141,7 @@ check_cookie_theme(struct header_nv hdrnv[], int* theme) {
  * - bytesent: Total byte sent to user.
  */
 static void
-wu_404_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, int s_user, int *bytesent) {
+wu_404_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
 	int ires;
 	struct http_resource httplocalres;
 
@@ -177,7 +177,7 @@ wu_404_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, i
  * - bytesent: Total byte sent to user.
  */
 static void
-wu_quit_response(COORD cursorPosition[2], struct header_nv *httpnv, int *theme, int s_user, int *bytesent) {
+wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
 	int ires;
 	struct http_resource httplocalres;
 
@@ -244,7 +244,7 @@ show_download_directory(void) {
  * - Return -1 if an error occurs and 0 if no errors occurs
  */
 static int
-handle_theme_change(struct header_nv *httpnv, int s_user, int *theme) {
+handle_theme_change(struct header_nv* httpnv, int s_user, int* theme) {
 	char cookie[48];
 
 	if (wu_recv_theme(httpnv, s_user, theme) < 0)
@@ -275,40 +275,40 @@ handle_theme_change(struct header_nv *httpnv, int s_user, int *theme) {
  * - cursorPosition: Here cursorPosition is the cursor where wu start showing error if occurs.
  */
 static void
-create_send_resource(struct header_nv *httpnv, int s_user, int *bytesent, int theme, int resource_index, COORD cursorPosition[2]) {
-		struct http_resource httplocalres;
-		int err;
+create_send_resource(struct header_nv* httpnv, int s_user, int* bytesent, int theme, int resource_index, COORD cursorPosition[2]) {
+	struct http_resource httplocalres;
+	int err;
 
-		check_cookie_theme(httpnv, &theme);
+	check_cookie_theme(httpnv, &theme);
 
-		ZeroMemory(&httplocalres, sizeof(struct http_resource));
-		if (create_local_resource(&httplocalres, resource_index, theme) != 0) {
-			INPUT_RECORD inRec;
-			DWORD read;
+	ZeroMemory(&httplocalres, sizeof(struct http_resource));
+	if (create_local_resource(&httplocalres, resource_index, theme) != 0) {
+		INPUT_RECORD inRec;
+		DWORD read;
 
-			cursorPosition->Y++;
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
 
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-		}
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
 
-		err = http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);
-		if (err > 1) {
-			INPUT_RECORD inRec;
-			DWORD read;
+	err = http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);
+	if (err > 1) {
+		INPUT_RECORD inRec;
+		DWORD read;
 
-			cursorPosition->Y++;
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err);
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err);
 
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-		}
-		else if (err == 0) {
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL);
-			cursorPosition->Y++;
-		}
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+	else if (err == 0) {
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL);
+		cursorPosition->Y++;
+	}
 
 	return;
 }
@@ -328,28 +328,29 @@ create_send_resource(struct header_nv *httpnv, int s_user, int *bytesent, int th
  * - Return -1 if an error occur and return 0 if no errors occur
  */
 static int
-handle_post_request(struct http_reqline *reqline, struct header_nv *httpnv, int s_user,
-						int *bytesent, int theme, COORD cursorPosition[2]) {
+handle_post_request(struct http_reqline* reqline, struct header_nv* httpnv, int s_user,
+	int* bytesent, int theme, COORD cursorPosition[2]) {
 	int err;
 
-		if (strcmp(reqline->resource + 1, "theme") == 0) {
-			err = handle_theme_change(httpnv, s_user, &theme);
-			if (err < 0)
-				return -1;
-		} else if (strcmp(reqline->resource + 1, "upload") == 0) {
-			struct user_stats upstats;
+	if (strcmp(reqline->resource + 1, "theme") == 0) {
+		err = handle_theme_change(httpnv, s_user, &theme);
+		if (err < 0)
+			return -1;
+	}
+	else if (strcmp(reqline->resource + 1, "upload") == 0) {
+		struct user_stats upstats;
 
-			clear_txrx_pane(cursorPosition);
-			check_cookie_theme(httpnv, &theme);
+		clear_txrx_pane(cursorPosition);
+		check_cookie_theme(httpnv, &theme);
 
-			ZeroMemory(&upstats, sizeof(struct user_stats));
-			err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, bytesent);
+		ZeroMemory(&upstats, sizeof(struct user_stats));
+		err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, bytesent);
 
-			cursorPosition->Y++;
-			if (err < 0)
-				return -1;
-				
-		}
+		cursorPosition->Y++;
+		if (err < 0)
+			return -1;
+
+	}
 
 	return 0;
 }
@@ -366,7 +367,7 @@ handle_post_request(struct http_reqline *reqline, struct header_nv *httpnv, int 
  * - status_code: Http "Ok" or "Bad Request" status code response.
  */
 static void
-create_log_entry(char *logentry, char *ipaddrstr, struct http_reqline *reqline, int bytesent, unsigned int status_code) {
+create_log_entry(char* logentry, char* ipaddrstr, struct http_reqline* reqline, int bytesent, unsigned int status_code) {
 	struct tm tmval;
 	time_t wutime;
 	char log_timestr[42];
@@ -436,11 +437,13 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 			wu_404_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
 			create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 404);
 			goto err;
-		} else if (strcmp(reqline.resource + 1, "quit") == 0) {
+		}
+		else if (strcmp(reqline.resource + 1, "quit") == 0) {
 			create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);
 			wu_quit_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
 			quit_wu(s_user);
-		} else if (strcmp(reqline.resource + 1, "openRep") == 0) {
+		}
+		else if (strcmp(reqline.resource + 1, "openRep") == 0) {
 			show_download_directory();
 
 			if (strcpy_s(reqline.resource, HTTP_RESSOURCE_MAX_LENGTH, "/index") != 0)
@@ -451,9 +454,10 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 
 		create_send_resource(httpnv, s_user, &bytesent, theme, resource_index, cursorPosition);
 		create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);
-	} else if (strcmp(reqline.method, "POST") == 0) {
+	}
+	else if (strcmp(reqline.method, "POST") == 0) {
 		if (handle_post_request(&reqline, httpnv, s_user, &bytesent,
-							theme, cursorPosition) < 0)
+			theme, cursorPosition) < 0)
 			goto err;
 
 		create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);

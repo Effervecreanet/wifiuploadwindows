@@ -34,7 +34,7 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 		else {
-logyear:	char wYearStr[5];
+		logyear:	char wYearStr[5];
 
 			GetSystemTime(&systime);
 			ZeroMemory(log_filename, sizeof("log_19700101.txt"));

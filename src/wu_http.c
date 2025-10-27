@@ -296,7 +296,7 @@ http_send_status(int s_user, int* bytesent, unsigned int status_code) {
 
 	if (status_code == 404) {
 		ret = send(s_user, HTTP_CODE_STATUS_BAD_REQUEST_STR,
-				sizeof(HTTP_CODE_STATUS_BAD_REQUEST_STR) - 1, 0);
+			sizeof(HTTP_CODE_STATUS_BAD_REQUEST_STR) - 1, 0);
 		if (ret != sizeof(HTTP_CODE_STATUS_BAD_REQUEST_STR) - 1)
 			return -1;
 
@@ -308,7 +308,7 @@ http_send_status(int s_user, int* bytesent, unsigned int status_code) {
 		*bytesent += ret;
 
 		ret = send(s_user, HTTP_STRING_STATUS_BAD_REQUEST,
-				sizeof(HTTP_STRING_STATUS_BAD_REQUEST) - 1, 0);
+			sizeof(HTTP_STRING_STATUS_BAD_REQUEST) - 1, 0);
 
 		*bytesent += ret;
 	}
@@ -508,7 +508,7 @@ send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, 
 
 /*
  * Function description:
- * - Load data, format html data if required and send http and body data. 
+ * - Load data, format html data if required and send http and body data.
  * Arguments:
  * - res: Resource to send.
  * - s: User socket where send data.
