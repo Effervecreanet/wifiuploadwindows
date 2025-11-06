@@ -342,15 +342,18 @@ int main(void)
 
 	create_log_directory(logpath, log_filename, loghttps_filename);
 
-	ZeroMemory(logpath, 512);
 	ZeroMemory(logpath_https, 512);
+	strcpy_s(logpath_https, 512, logpath);
+
 	strcat_s(logpath, 512, "\\");
 	strcat_s(logpath, 512, log_filename);
-	strcpy_s(logpath_https, 512, logpath);
+
+	strcat_s(logpath_https, 512, "\\");
 	strcat_s(logpath_https, 512, loghttps_filename);
 
 	if (fopen_s(&g_fplog, logpath, "a+")) {
 		write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath, 0);
+		Sleep(5000);
 		WSACleanup();
 		return 3;
 	}
