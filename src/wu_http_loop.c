@@ -19,8 +19,18 @@ extern FILE* g_fplog;
 extern int* g_usersocket;
 extern HANDLE g_hConsoleOutput;
 extern HANDLE g_hNewFile_tmp;
+extern int* g_listensocket;
 
 
+/*
+ * Function description:
+ * - Compare user requested resource against local resource array.
+ * Arguments:
+ * - res: Requested resource.
+ * Return value:
+ * - -1: No resource can be found.
+ * - i: Local resource index in array
+ */
 int
 http_match_resource(char* res)
 {
@@ -40,6 +50,19 @@ http_match_resource(char* res)
 	return -1;
 }
 
+/*
+ * Function description:
+ * - Map requested resource to local resource. There is three case: 1) Resource is text/html one
+ *   2) Resource is image/png 3) Resource is icon. Local resource is in Program Files application
+ *   directory.
+ * Arguments:
+ * - lres: Final local resource to serv
+ * - ires: Index for http local resource array
+ * - theme: Theme value used to build local resource path
+ * Return Value:
+ * - 0: No error occured.
+ * - 1: An error occured.
+ */
 int
 create_local_resource(struct http_resource* lres, int ires, int theme) {
 	char curDir[1024];
@@ -81,6 +104,13 @@ create_local_resource(struct http_resource* lres, int ires, int theme) {
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Parse the cookie header field to retrieve theme information value.
+ * Arguments:
+ * - hdr_nv: Header names values used to search "Cookie" value.
+ * - theme: Address pointer that store theme value ("light" or "dark")
+ */
 void
 check_cookie_theme(struct header_nv hdrnv[], int* theme) {
 	int res;
@@ -100,7 +130,277 @@ check_cookie_theme(struct header_nv hdrnv[], int* theme) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Send "error 404" html page with 404 http status code.
+ * Arguments:
+ * - cursorPosition: Position of the cursor to print information related to an error. If one occurs.
+ * - httpnv: Used to check cookie header field. Cookie header field contains theme information.
+ * - theme: Is it dark or light theme in use.
+ * - s_user: Client socket to send data to.
+ * - bytesent: Total byte sent to user.
+ */
+static void
+wu_404_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
+	int ires;
+	struct http_resource httplocalres;
 
+	check_cookie_theme(httpnv, theme);
+
+	for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
+
+	ZeroMemory(&httplocalres, sizeof(struct http_resource));
+	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+
+	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 404);
+
+	return;
+}
+
+/*
+ * Function description:
+ * - Send "erreur 404" html page with 200 http status code.
+ * Arguments:
+ * - cursorPosition: Position of the cursor to print information related to an error. If one occurs.
+ * - httpnv: Used to check cookie header field. Cookie header field contains theme information.
+ * - theme: Is it dark or light theme in use.
+ * - s_user: Client socket to send data to.
+ * - bytesent: Total byte sent to user.
+ */
+static void
+wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
+	int ires;
+	struct http_resource httplocalres;
+
+	check_cookie_theme(httpnv, theme);
+
+	for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
+
+	ZeroMemory(&httplocalres, sizeof(struct http_resource));
+	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+
+	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);
+
+	return;
+}
+
+/*
+ * Function description:
+ * - Close sockets, close file and close winsock. Exit.
+ */
+static void
+quit_wu(int s_user) {
+	closesocket(s_user);
+	closesocket(*g_listensocket);
+	CloseHandle(g_hConsoleOutput);
+	fclose(g_fplog);
+	WSACleanup();
+	ExitProcess(0);
+
+	return;
+}
+
+/*
+ * Function description:
+ * - Build and show in explorer user download directory.
+ */
+static void
+show_download_directory(void) {
+	char dd[1024];
+
+	build_download_directory(dd);
+	ShellExecuteA(NULL, "open", dd, NULL, NULL, SW_SHOWNORMAL);
+
+	return;
+}
+
+/*
+ * Function description:
+ * - Receive the http body which contains the desired theme (dark or light). Set
+ *   a cookie in the user browser which hold wanted theme.
+ * Arguments:
+ * - httpnv: Contains "Content-Length" useful for the number of byte to receive.
+ * - s_user: User socket wu read data from.
+ * - theme: Is 0 or 1: dark theme or light theme
+ * Return value:
+ * - Return -1 if an error occurs and 0 if no errors occurs
+ */
+static int
+handle_theme_change(struct header_nv* httpnv, int s_user, int* theme) {
+	char cookie[48];
+
+	if (wu_recv_theme(httpnv, s_user, theme) < 0)
+		return -1;
+
+	ZeroMemory(cookie, 48);
+	if (*theme == 0)
+		strcpy_s(cookie, 48, "theme=dark");
+	else
+		strcpy_s(cookie, 48, "theme=light");
+
+	if (apply_theme(s_user, cookie) < 0)
+		return -1;
+
+	return 0;
+}
+
+/*
+ * Function description:
+ * - Transforms a requested resource in a response resource and send it back to the user.
+ * Arguments:
+ * - httpnv: Contains theme information.
+ * - s_user: Client or user socket used for data transfer.
+ * - bytesent: Used to store the total number of bytes wu send to the client.
+ * - theme: Hold the theme informations: Is it dark or light.
+ * - resource_index: Index used to retrieve local resource information. Index is used
+ *   for searching and finding local resource information.
+ * - cursorPosition: Here cursorPosition is the cursor where wu start showing error if occurs.
+ */
+static void
+create_send_resource(struct header_nv* httpnv, int s_user, int* bytesent, int theme, int resource_index, COORD cursorPosition[2]) {
+	struct http_resource httplocalres;
+	int err;
+
+	check_cookie_theme(httpnv, &theme);
+
+	ZeroMemory(&httplocalres, sizeof(struct http_resource));
+	if (create_local_resource(&httplocalres, resource_index, theme) != 0) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+
+	err = http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);
+	if (err > 1) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err, 0);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+	else if (err == 0) {
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);
+		cursorPosition->Y++;
+	}
+
+	return;
+}
+
+/*
+ * Function description:
+ * - Handle two "POST" request. One for changing theme and the other to upload a file.
+ * Arguments:
+ * - reqline: Contains the http resource string ("theme" or "upload")
+ * - httpnv: User header names values. Among these there is "Content-Length" and
+ *   "Cookie"
+ * - s_user: Client socket where send the data to.
+ * - bytesent: Total size of data the client are going to receive.
+ * - theme: Variable indicating whether the theme to serv is light theme or dark theme.
+ * - cursorPosition: User in clearing the screen pane.
+ * Return value:
+ * - Return -1 if an error occur and return 0 if no errors occur
+ */
+static int
+handle_post_request(struct http_reqline* reqline, struct header_nv* httpnv, int s_user,
+	int* bytesent, int theme, COORD cursorPosition[2]) {
+	int err;
+
+	if (strcmp(reqline->resource + 1, "theme") == 0) {
+		err = handle_theme_change(httpnv, s_user, &theme);
+		if (err < 0)
+			return -1;
+	}
+	else if (strcmp(reqline->resource + 1, "upload") == 0) {
+		struct user_stats upstats;
+
+		clear_txrx_pane(cursorPosition);
+		check_cookie_theme(httpnv, &theme);
+
+		ZeroMemory(&upstats, sizeof(struct user_stats));
+		err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, bytesent);
+
+		cursorPosition->Y++;
+		if (err < 0)
+			return -1;
+
+	}
+
+	return 0;
+}
+
+/*
+ * Function description:
+ * - Format a string according to http log format.
+ * Arguments:
+ * - logentry: Contains the formatted buffer ready to be written in log file.
+ * - ipaddrstr: Client or user Internet Protocol address.
+ * - reqline: The client or user http request line which contains http method and
+ *   http resource and http version.
+ * - bytesent: Total byte sent to user socket (http header and http body)
+ * - status_code: Http "Ok" or "Bad Request" status code response.
+ */
+static void
+create_log_entry(char* logentry, char* ipaddrstr, struct http_reqline* reqline, int bytesent, unsigned int status_code) {
+	struct tm tmval;
+	time_t wutime;
+	char log_timestr[42];
+
+	ZeroMemory(logentry, 256);
+	ZeroMemory(log_timestr, 42);
+
+	time(&wutime);
+
+	ZeroMemory(&tmval, sizeof(struct tm));
+	localtime_s(&tmval, &wutime);
+
+	strftime(log_timestr, 42, "%d/%b/%Y:%T -0600", &tmval);
+	sprintf_s(logentry, 256, "%s - - [%s] \"%s %s %s\" %i %i\n", ipaddrstr, log_timestr,
+		reqline->method, reqline->resource,
+		reqline->version, status_code, bytesent);
+
+	return;
+}
+
+
+/*
+ * Function description:
+ * Receive client request (request line and header pairs) and handle the request and reply if
+ * the request is correct.
+ * Arguments:
+ * - cursorPosition: Position where to print error message or information.
+ * - inaddr: IP address used to match against "Host" header field.
+ * - s: Client or user socket.
+ * - logentry: Used to store the http log entry.
+ * Return value:
+ * - 0: Success.
+ */
 int
 http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[256]) {
 	struct http_reqline reqline;
@@ -109,11 +409,8 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 	DWORD err;
 	int theme = 0;
 	char ipaddrstr[16];
-	struct tm tmval;
-	time_t wutime;
 	int bytesent;
-	int i;
-	char log_timestr[42];
+	int i, resource_index;
 
 	bytesent = 0;
 	memset(ipaddrstr, 0, 16);
@@ -134,125 +431,38 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 		goto err;
 
 	if (strcmp(reqline.method, "GET") == 0) {
-		int ires;
-		struct http_resource httplocalres;
+		resource_index = http_match_resource(reqline.resource);
 
-		ires = http_match_resource(reqline.resource);
-		if (ires < 0) {
-			check_cookie_theme(httpnv, &theme);
-
-			for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
-
-			ZeroMemory(&httplocalres, sizeof(struct http_resource));
-			if (create_local_resource(&httplocalres, ires, theme) != 0) {
-				INPUT_RECORD inRec;
-				DWORD read;
-
-				cursorPosition->Y++;
-				SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-				write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-			}
-
-			http_serv_resource(&httplocalres, s_user, NULL, &bytesent, 404);
-
+		if (resource_index < 0) {
+			wu_404_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
+			create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 404);
 			goto err;
 		}
-
-		if (strcmp(reqline.resource + 1, "quit") == 0) {
-			closesocket(s_user);
-			closesocket(s);
-			WSACleanup();
-			fclose(g_fplog);
-			CloseHandle(g_hConsoleOutput);
-			ExitProcess(0);
+		else if (strcmp(reqline.resource + 1, "quit") == 0) {
+			create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);
+			wu_quit_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
+			quit_wu(s_user);
 		}
 		else if (strcmp(reqline.resource + 1, "openRep") == 0) {
-			char dd[1024];
+			show_download_directory();
 
-			create_download_directory(dd);
-			ShellExecuteA(NULL, "open", dd, NULL, NULL, SW_SHOWNORMAL);
 			if (strcpy_s(reqline.resource, HTTP_RESSOURCE_MAX_LENGTH, "/index") != 0)
 				goto err;
-			ires = 0;
+
+			resource_index = 0;
 		}
 
-		check_cookie_theme(httpnv, &theme);
-
-		ZeroMemory(&httplocalres, sizeof(struct http_resource));
-		if (create_local_resource(&httplocalres, ires, theme) != 0) {
-			cursorPosition->Y++;
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-			Sleep(1000);
-		}
-
-		err = http_serv_resource(&httplocalres, s_user, NULL, &bytesent, 200);
-		if (err > 1) {
-			cursorPosition->Y++;
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err, 0);
-			Sleep(1000);
-		}
-		else if (err == 0) {
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);
-			cursorPosition->Y++;
-		}
-		else if (strcmp(reqline.method, "POST") == 0 && strcmp(reqline.resource, "/") == 0) {
-			struct user_stats upstats;
-
-			clear_txrx_pane(cursorPosition);
-
-			ZeroMemory(&upstats, sizeof(struct user_stats));
-			err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
-			cursorPosition->Y++;
-		}
+		create_send_resource(httpnv, s_user, &bytesent, theme, resource_index, cursorPosition);
+		create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);
 	}
 	else if (strcmp(reqline.method, "POST") == 0) {
-		if (strcmp(reqline.resource + 1, "theme") == 0) {
-			char cookie[48];
+		if (handle_post_request(&reqline, httpnv, s_user, &bytesent,
+			theme, cursorPosition) < 0)
+			goto err;
 
-			if (wu_http_recv_theme(httpnv, s_user, &theme) < 0)
-				goto err;
-
-			ZeroMemory(cookie, 48);
-			if (theme == 0)
-				strcpy_s(cookie, 48, "theme=dark");
-			else
-				strcpy_s(cookie, 48, "theme=light");
-
-			if (apply_theme(s_user, cookie) < 0)
-				return -1;
-
-
-			/* Use ret here if you want */
-		}
-		else if (strcmp(reqline.resource + 1, "upload") == 0) {
-			struct user_stats upstats;
-
-			clear_txrx_pane(cursorPosition);
-			check_cookie_theme(httpnv, &theme);
-
-			ZeroMemory(&upstats, sizeof(struct user_stats));
-			err = receive_file(cursorPosition, httpnv, s_user, &upstats, theme, &bytesent);
-			cursorPosition->Y++;
-		}
+		create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);
 	}
 
-	ZeroMemory(logentry, 256);
-	ZeroMemory(log_timestr, 42);
-
-	time(&wutime);
-
-	ZeroMemory(&tmval, sizeof(struct tm));
-	localtime_s(&tmval, &wutime);
-
-	strftime(log_timestr, 42, "%d/%b/%Y:%T -0600", &tmval);
-	sprintf_s(logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddrstr, log_timestr,
-		reqline.method, reqline.resource,
-		reqline.version, bytesent);
 
 err:
 	closesocket(s_user);

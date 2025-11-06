@@ -85,8 +85,15 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 	return FALSE;
 }
 
+
+/*
+ * Function description:
+ * - Call to win32 API for getting user profile directory and add download directory.
+ * Arguments:
+ * - dd: Buffer for upload directory string path.
+ */
 void
-create_download_directory(char dd[1024]) {
+build_download_directory(char dd[1024]) {
 	DWORD szdd = 1024;
 
 	ZeroMemory(dd, 1024);
@@ -95,7 +102,6 @@ create_download_directory(char dd[1024]) {
 
 	return;
 }
-
 void
 write_info_in_console(enum idmsg id, void* p, DWORD err) {
 	DWORD written;

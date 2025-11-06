@@ -47,7 +47,7 @@ create_userfile_tmp(COORD* cursorPosition,
 
 	ZeroMemory(userfile_tmp, FILENAME_MAX_SIZE + 6 + 1024);
 
-	create_download_directory(download_dir);
+	build_download_directory(download_dir);
 
 	strcpy_s(userfile_tmp, 1024, &download_dir[0]);
 	strcat_s(userfile_tmp, 1024, filename);
