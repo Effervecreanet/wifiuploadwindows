@@ -387,9 +387,9 @@ receive_file(COORD* cursorPosition,
 	u_int64 sizeNewFile = 0;
 	u_int64 sizeNewFileDup = 0;
 #ifdef VERSION_FR
-	const CCHAR* units[] = { "Octets", "KO", "MO", "GO", "TO", "" };
+	const CCHAR *units[] = { "Octets", "KO", "MO", "GO", "TO", "" };
 #else
-	const CCHAR* units[] = { "Bytes", "KB", "MB", "GB", "TB", "" };
+	const CCHAR *units[] = { "Bytes", "KB", "MB", "GB", "TB", "" };
 #endif
 	unsigned char idxunit;
 	int ret;
@@ -514,7 +514,10 @@ receive_file(COORD* cursorPosition,
 
 	for (idxunit = 0; sizeNewFile > 1024; sizeNewFile /= 999, ++idxunit);
 
-	StringCchPrintfA(successinfo.filenameSize, 24, "%u %s", sizeNewFile, units[idxunit]);
+	StringCchPrintfA(&successinfo.filenameSize[0], 24, "%u", sizeNewFile);
+
+	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), " ");
+	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), units[idxunit]);
 
 	sizeNewFile = sizeNewFileDup;
 
