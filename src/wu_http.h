@@ -4,28 +4,27 @@
 #define HTTP_STRING_DATE_SIZE sizeof("Mon, 01 Jan 1970 00:00:00 GMT")
 
 struct http_reqline {
-  char method[sizeof("POST")];
-  char resource[HTTP_RESSOURCE_MAX_LENGTH + 1];
-  char  version[sizeof("HTTTP/1.1")];
+	char method[sizeof("POST")];
+	char resource[HTTP_RESSOURCE_MAX_LENGTH + 1];
+	char  version[sizeof("HTTTP/1.1")];
 };
 
 struct http_resource {
-  char resource[HTTP_RESSOURCE_MAX_LENGTH];
-  char type[HTTP_TYPE_MAX_LENGTH];
+	char resource[HTTP_RESSOURCE_MAX_LENGTH];
+	char type[HTTP_TYPE_MAX_LENGTH];
 };
 
 struct success_info {
-  char filename[FILENAME_MAX_SIZE];
-  char filenameSize[24];
-  char elapsedTime[24];
-  char averagespeed[20];
+	char filename[FILENAME_MAX_SIZE];
+	char filenameSize[24];
+	char elapsedTime[24];
+	char averagespeed[20];
 };
 
 errno_t redir404(int s);
-errno_t http_recv_reqline(struct http_reqline *reqline, int s);
-errno_t http_recv_headernv(struct header_nv *nv, int s);
+errno_t http_recv_reqline(struct http_reqline* reqline, int s);
+errno_t http_recv_headernv(struct header_nv* nv, int s);
 int http_match_resource(char* resource);
-int http_serv_resource(struct http_resource *res, int s,
-                       struct success_info *successinfo,
-					   int *bytesent);
-void create_http_header_nv(struct http_resource *res, struct header_nv *nv, size_t fsize);
+int http_serv_resource(struct http_resource* res, int s,
+	struct success_info* successinfo,
+	int* bytesent, unsigned int status_code);

@@ -227,7 +227,7 @@ https_serv_resource(struct http_resource* res, int s,
 		}
 
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
-		create_http_header_nv(res, httpnv, pbufferoutlen);
+		create_http_header_nv(res, httpnv, pbufferoutlen, -1);
 
 		for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
 			messageLen = strlen(message);
@@ -254,7 +254,7 @@ https_serv_resource(struct http_resource* res, int s,
 		char buffer[1024];
 
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
-		create_http_header_nv(res, httpnv, fsize);
+		create_http_header_nv(res, httpnv, fsize, -1);
 
 		for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
 			messageLen = strlen(message);

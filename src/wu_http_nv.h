@@ -6,8 +6,11 @@
 #define HTTP_CODE_STATUS_MOVED_PERMANENTLY_STR          "301"
 #define HTTP_CODE_STATUS_PARTIAL_CONTENT                206
 #define HTTP_CODE_STATUS_PARTIAL_CONTENT_STR            "206"
+#define HTTP_CODE_STATUS_BAD_REQUEST     		404
+#define HTTP_CODE_STATUS_BAD_REQUEST_STR		"404"
 
 #define HTTP_STRING_STATUS_OK                           "Ok"
+#define HTTP_STRING_STATUS_BAD_REQUEST                  "Bad Request"
 #define HTTP_STRING_STATUS_NOT_MODIFIED                 "Not Modified"
 #define HTTP_STRING_STATUS_MOVED_PERMANENTLY            "Moved Permanently"
 #define HTTP_STRING_STATUS_PARTIAL_CONTENT              "Partial Content"
@@ -34,9 +37,9 @@
 #define HTTP_HEADER_KEEP_ALIVE                "Keep-Alive"
 
 #define HTTP_HEADER_CACHE_CONTROL_VALUE "no-cache, no-store, must-revalidate"
-#define HTTP_HEADER_SERVER_VALUE        "wifiupload/5.22"
+#define HTTP_HEADER_SERVER_VALUE        "wifiupload/5.41"
 #define HTTP_HEADER_CONNECTION_VALUE    "Keep-Alive"
-#define HTTP_HEADER_KEEP_ALIVE_VALUE    "timeout=120, max=224"
+#define HTTP_HEADER_KEEP_ALIVE_VALUE    "timeout=127, max=64"
 #define HTTP_HEADER_VARY_VALUE          "User-Agent"
 #define HTTP_HEADER_ACCEPT_RANGES_VALUE "bytes"
 #define HTTP_HEADER_CONTENT_LANGUAGE_VALUE "fr_FR"
@@ -49,19 +52,20 @@
 
 #define MAX_SP 32
 
+
 union header_name {
-    char            client[HEADER_NAME_MAX_SIZE];
-    const char* wsite;
+	char            client[HEADER_NAME_MAX_SIZE];
+	const char* wsite;
 };
 
 struct header_value {
-    char            v[HEADER_VALUE_MAX_SIZE];
-    const char* pv;
+	char            v[HEADER_VALUE_MAX_SIZE];
+	const char* pv;
 };
 
 struct header_nv {
-    union header_name name;
-    struct header_value value;
+	union header_name name;
+	struct header_value value;
 };
 
 int             nv_find_name_client(struct header_nv nv[HEADER_NV_MAX_SIZE], const char* name_client);

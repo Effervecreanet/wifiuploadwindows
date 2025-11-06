@@ -155,7 +155,7 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 			}
 
-			http_serv_resource(&httplocalres, s_user, NULL, &bytesent);
+			http_serv_resource(&httplocalres, s_user, NULL, &bytesent, 404);
 
 			goto err;
 		}
@@ -188,7 +188,7 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 			Sleep(1000);
 		}
 
-		err = http_serv_resource(&httplocalres, s_user, NULL, &bytesent);
+		err = http_serv_resource(&httplocalres, s_user, NULL, &bytesent, 200);
 		if (err > 1) {
 			cursorPosition->Y++;
 			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);

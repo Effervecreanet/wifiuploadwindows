@@ -391,7 +391,7 @@ receive_file(COORD* cursorPosition,
 	}
 
 	create_local_resource(&httpres, ires, theme);
-	http_serv_resource(&httpres, s, &successinfo, bytesent);
+	http_serv_resource(&httpres, s, &successinfo, bytesent, 200);
 
 	return 0;
 }
