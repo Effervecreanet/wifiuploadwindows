@@ -20,6 +20,7 @@
 #define CERT_STR	 "wifiupload_localhost"
 
 extern FILE* fp_log;
+extern FILE* g_fphttpslog;
 
 void generate_key(NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey) {
 	LPCWSTR strkeyname = L"wifiupload_key";
@@ -167,4 +168,75 @@ int get_credantials_handle(CredHandle* credHandle, PCCERT_CONTEXT pCertContext) 
 		return -1;
 
 	return 0;
+}
+
+int
+is_certificate_valid(CERT_CONTEXT* pCertContext) {
+	SYSTEMTIME sysTimeNow;
+	FILETIME ftSysTimeNow;
+
+	GetSystemTime(&sysTimeNow);
+	SystemTimeToFileTime(&sysTimeNow, &ftSysTimeNow);
+	if (CompareFileTime(&pCertContext->pCertInfo->NotAfter, &ftSysTimeNow) == -1)
+		return 1;
+
+	return 0;
+}
+
+static void
+inaddr2octaddr(BYTE ipAddr[4], struct in_addr inaddr2oct) {
+	ZeroMemory(ipAddr, 4);
+
+	ipAddr[0] = inaddr2oct.s_addr & 0x000000FF;
+	inaddr2oct.s_addr >>= 8;
+	ipAddr[1] = inaddr2oct.s_addr & 0x000000FF;
+	inaddr2oct.s_addr >>= 8;
+	ipAddr[2] = inaddr2oct.s_addr & 0x000000FF;
+	inaddr2oct.s_addr >>= 8;
+	ipAddr[3] = inaddr2oct.s_addr & 0x000000FF;
+
+	return;
+}
+
+void
+create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT** pCertContext, BYTE pbEncodedName[128], NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey, struct in_addr inaddr) {
+	CERT_NAME_BLOB SubjectBlob;
+	DWORD cbEncodedName = 128;
+	time_t wutime;
+	struct tm* tmval;
+	char log_timestr[64];
+	DWORD err, read;
+	INPUT_RECORD inRec;
+	BYTE ipAddr[4];
+
+	inaddr2octaddr(ipAddr, inaddr);
+
+	ZeroMemory(log_timestr, 64);
+	time(&wutime);
+	tmval = (struct tm*)localtime(&wutime);
+	strftime(log_timestr, 64, "%d/%b/%Y:%T -0600", tmval);
+	fprintf(g_fphttpslog, "%s -- Create certificate or replace existing one\n", log_timestr);
+	fflush(g_fphttpslog);
+	generate_key(phProvider, hKey);
+	if (get_cert_name(&SubjectBlob, pbEncodedName, &cbEncodedName) < 0) {
+		err = GetLastError();
+		write_info_in_console(ERR_MSG_CERTSTRTONAMEA, NULL, err);
+		NCryptFreeObject(*phProvider);
+		NCryptFreeObject(*hKey);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+
+	*pCertContext = (CERT_CONTEXT*)create_cert_self_sign(cursorPosition, ipAddr, &SubjectBlob, *phProvider, *hKey);
+
+	if (FALSE == CertAddCertificateContextToStore(hCertStore, *pCertContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL)) {
+		NCryptFreeObject(*phProvider);
+		NCryptFreeObject(*hKey);
+		err = GetLastError();
+		write_info_in_console(ERR_MSG_ADDCERT, NULL, err);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+
+	return;
 }
