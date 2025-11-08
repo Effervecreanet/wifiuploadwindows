@@ -30,9 +30,63 @@ extern FILE* g_fphttpslog;
 extern const struct _http_resources http_resources[];
 extern HANDLE g_hConsoleOutput;
 extern int g_tls_firstsend;
-extern CredHandle *g_credHandle;
-extern CtxtHandle *g_ctxtHandle;
-extern int *g_tls_sclt;
+extern CredHandle* g_credHandle;
+extern CtxtHandle* g_ctxtHandle;
+extern int* g_tls_sclt;
+
+int
+handle_get_request(int s_clt, COORD cursorPosition, CtxtHandle ctxtHandle, char* resource, struct header_nv* headernv) {
+	int ires;
+	struct http_resource httplocalres;
+	int theme, bytesent;
+
+	ires = http_match_resource(resource);
+	if (ires < 0) {
+		check_cookie_theme(headernv, &theme);
+
+		for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
+
+		ZeroMemory(&httplocalres, sizeof(struct http_resource));
+		if (create_local_resource(&httplocalres, ires, theme) != 0) {
+			INPUT_RECORD inRec;
+			DWORD read;
+
+			cursorPosition.Y++;
+			SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition);
+			write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		}
+
+		https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
+	}
+	else {
+		check_cookie_theme(headernv, &theme);
+
+		ZeroMemory(&httplocalres, sizeof(struct http_resource));
+		if (create_local_resource(&httplocalres, ires, theme) != 0) {
+			INPUT_RECORD inRec;
+			DWORD read;
+
+			cursorPosition.Y++;
+			SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition);
+			write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		}
+
+		https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
+	}
+
+	return bytesent;
+}
+
+void
+handle_post_request() {
+
+	return;
+}
+
 
 DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {
@@ -40,7 +94,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	WSADATA wsaData;
 	DWORD err, ret;
 	int s, s_clt;
-	CERT_CONTEXT *pCertContext;
+	CERT_CONTEXT* pCertContext;
 	CredHandle credHandle;
 	CtxtHandle ctxtHandle;
 	HCERTSTORE hCertStore;
@@ -69,7 +123,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	if (pCertContext) {
 		if (is_certificate_valid(pCertContext) != 0)
 			goto createcert;
-	} else {
+	}
+	else {
 	createcert:
 		create_certificate(prThread->cursorPosition, hCertStore, &pCertContext, pbEncodedName, &phProvider, &hKey, prThread->inaddr);
 	}
@@ -78,13 +133,9 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 	ZeroMemory(&credHandle, sizeof(CredHandle));
 	if (get_credantials_handle(&credHandle, pCertContext) < 0) {
-		CertFreeCertificateContext(pCertContext);
-		LocalFree(pbEncodedName);
-		NCryptFreeObject(phProvider);
-		NCryptFreeObject(hKey);
+		CertFreeCertificateContext(pCertContext); LocalFree(pbEncodedName); NCryptFreeObject(phProvider); NCryptFreeObject(hKey);
 		err = GetLastError();
 		write_info_in_console(ERR_MSG_ACQUIRECREDANTIALSHANDLE, NULL, err);
-
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
@@ -95,7 +146,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	ZeroMemory(headernv, HEADER_NV_MAX_SIZE * (HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE));
 
 	for (;;) {
-		
+
 		g_credHandle = g_ctxtHandle = NULL;
 		g_tls_sclt = NULL;
 
@@ -107,7 +158,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		g_ctxtHandle = &ctxtHandle;
 		g_tls_sclt = &s_clt;
 
-next_req:
+	next_req:
 		bytesent = 0;
 
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
@@ -137,11 +188,12 @@ next_req:
 
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 
-		ret += get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret);
-		if (ret < 0) {
+		err = get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret);
+		if (err < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
 		}
+		ret += err;
 
 		i = nv_find_name_client(headernv, "Host");
 		if (i < 0 || strcmp(headernv[i].value.v, inet_ntoa(prThread->inaddr)) != 0) {
@@ -150,62 +202,15 @@ next_req:
 		}
 
 		if (strcmp(reqline.method, "GET") == 0) {
-			int ires;
-			struct http_resource httplocalres;
-
-			ires = http_match_resource(reqline.resource);
-			if (ires < 0) {
-				check_cookie_theme(headernv, &theme);
-
-				for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
-
-				ZeroMemory(&httplocalres, sizeof(struct http_resource));
-				if (create_local_resource(&httplocalres, ires, theme) != 0) {
-					INPUT_RECORD inRec;
-					DWORD read;
-
-					prThread->cursorPosition.Y++;
-					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition);
-					write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-				}
-
-				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
-
-				// goto err;
-			}
-			else {
-				check_cookie_theme(headernv, &theme);
-
-				ZeroMemory(&httplocalres, sizeof(struct http_resource));
-				if (create_local_resource(&httplocalres, ires, theme) != 0) {
-					INPUT_RECORD inRec;
-					DWORD read;
-
-					prThread->cursorPosition.Y++;
-					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition);
-					write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-				}
-
-				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
-			}
-
-
-
-
-
-		}
-		else if (strcmp(reqline.method, "POST") == 0) {
+			bytesent = handle_get_request(s_clt, prThread->cursorPosition, ctxtHandle, reqline.resource, headernv);
+		} else if (strcmp(reqline.method, "POST") == 0) {
 			if (strcmp(reqline.resource, "/theme") == 0) {
 				char cookie[48];
 
 				ret = get_theme_param(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret + 2, &theme);
 				if (ret != 0) {
 					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-					continue;	
+					continue;
 				}
 
 				ZeroMemory(cookie, 48);
@@ -215,7 +220,8 @@ next_req:
 					strcpy_s(cookie, 48, "theme=light");
 
 				https_apply_theme(s_clt, &ctxtHandle, cookie);
-			} else if (strcmp(reqline.resource, "/upload") == 0) {
+			}
+			else if (strcmp(reqline.resource, "/upload") == 0) {
 				struct user_stats upstats;
 
 				clear_txrx_pane(&prThread->cursorPosition);
@@ -223,7 +229,7 @@ next_req:
 
 				ZeroMemory(&upstats, sizeof(struct user_stats));
 				tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle,
-									(char*)secBufferIn[data_idx].pvBuffer + ret + 2);
+					(char*)secBufferIn[data_idx].pvBuffer + ret + 2);
 				prThread->cursorPosition.Y++;
 
 
@@ -235,11 +241,11 @@ next_req:
 		ZeroMemory(log_timestr, 42);
 
 		time(&wutime);
-		
+
 		ZeroMemory(&tmval, sizeof(struct tm));
 		localtime_s(&tmval, &wutime);
 
-		strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval); 
+		strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval);
 		sprintf_s(https_logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddr_httpsclt, log_timestr, reqline.method, reqline.resource, reqline.version, bytesent);
 		fprintf(g_fphttpslog, https_logentry);
 		fflush(g_fphttpslog);
