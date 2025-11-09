@@ -81,12 +81,44 @@ handle_get_request(int s_clt, COORD cursorPosition, CtxtHandle ctxtHandle, char*
 	return bytesent;
 }
 
-void
-handle_post_request() {
+int
+handle_theme_request(int s_clt, CtxtHandle ctxtHandle, CredHandle credHandle, struct header_nv* headernv, char* buffer) {
+	char cookie[48];
+	int err;
+	int theme;
 
-	return;
+	err = get_theme_param(headernv, buffer, &theme);
+	if (err != 0) {
+		tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+		return -1;
+	}
+
+	ZeroMemory(cookie, 48);
+	if (theme == 0)
+		strcpy_s(cookie, 48, "theme=dark");
+	else
+		strcpy_s(cookie, 48, "theme=light");
+
+	https_apply_theme(s_clt, &ctxtHandle, cookie);
+
+	return 0;
 }
 
+int
+handle_upload_request(int s_clt, COORD cursorPosition, struct header_nv* headernv, CtxtHandle ctxtHandle, char *buffer) {
+	struct user_stats upstats;
+	int theme;
+	int bytesent;
+
+	clear_txrx_pane(&cursorPosition);
+	check_cookie_theme(headernv, &theme);
+
+	ZeroMemory(&upstats, sizeof(struct user_stats));
+	tls_receive_file(cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle, buffer);
+	cursorPosition.Y++;
+
+	return bytesent;
+}
 
 DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {
@@ -203,39 +235,17 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		if (strcmp(reqline.method, "GET") == 0) {
 			bytesent = handle_get_request(s_clt, prThread->cursorPosition, ctxtHandle, reqline.resource, headernv);
-		} else if (strcmp(reqline.method, "POST") == 0) {
+		}
+		else if (strcmp(reqline.method, "POST") == 0) {
 			if (strcmp(reqline.resource, "/theme") == 0) {
-				char cookie[48];
-
-				ret = get_theme_param(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret + 2, &theme);
-				if (ret != 0) {
-					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+				if (handle_theme_request(s_clt, ctxtHandle, credHandle, headernv,
+					(char*)secBufferIn[data_idx].pvBuffer + ret + 2) < 0)
 					continue;
-				}
-
-				ZeroMemory(cookie, 48);
-				if (theme == 0)
-					strcpy_s(cookie, 48, "theme=dark");
-				else
-					strcpy_s(cookie, 48, "theme=light");
-
-				https_apply_theme(s_clt, &ctxtHandle, cookie);
 			}
 			else if (strcmp(reqline.resource, "/upload") == 0) {
-				struct user_stats upstats;
-
-				clear_txrx_pane(&prThread->cursorPosition);
-				check_cookie_theme(headernv, &theme);
-
-				ZeroMemory(&upstats, sizeof(struct user_stats));
-				tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle,
+				bytesent = handle_upload_request(s_clt, prThread->cursorPosition, headernv, ctxtHandle,
 					(char*)secBufferIn[data_idx].pvBuffer + ret + 2);
-				prThread->cursorPosition.Y++;
-
-
 			}
-
-
 		}
 		ZeroMemory(https_logentry, 256);
 		ZeroMemory(log_timestr, 42);
