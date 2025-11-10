@@ -5,6 +5,8 @@
 #include "wu_msg.h"
 #include "wu_log.h"
 
+extern FILE* g_fplog;
+
 /*
  * Function description:
  * Build log path. Log path is with the form of "year\month\day\log_19700101.txt". So
@@ -31,7 +33,7 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 	if (ret) {
 		if (_mkdir(logpath)) {
 			INPUT_RECORD inRec;
-			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
+			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs", 0);
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 		}
 		else {
@@ -46,7 +48,7 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 
 			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 				INPUT_RECORD inRec;
-				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath, 0);
 				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 			}
 			else {
@@ -66,7 +68,7 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 				}
 				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 					INPUT_RECORD inRec;
-					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath, 0);
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 				}
 				else {
@@ -114,7 +116,7 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 
 					if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
 						INPUT_RECORD inRec;
-						write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+						write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath, 0);
 						while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 					}
 				}

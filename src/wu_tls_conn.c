@@ -75,6 +75,10 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* b
 	ZeroMemory(buffer, 2000);
 	ZeroMemory(secBufferIn[0].pvBuffer, 2000);
 	received = recv(s_clt, buffer, 1999, 0);
+
+	fprintf(g_fphttpslog, "received: %i\n", received);
+	fflush(g_fphttpslog);
+
 	secBufferIn[0].cbBuffer = received;
 	secBufferIn[0].pvBuffer = buffer;
 
