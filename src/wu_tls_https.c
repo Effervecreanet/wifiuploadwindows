@@ -49,7 +49,7 @@ int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 	return i + 2;
 }
 
-int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, DWORD bufferlen)
+int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer)
 {
 	int count;
 	int count2 = 0;
@@ -57,9 +57,8 @@ int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, D
 	int hlen = 0;
 	int nvnb = 0;
 
-	count2 = 0;
 	do {
-		for (count = 0; count < HEADER_NAME_MAX_SIZE && *(buffer + count2) != '\0' && count2 < bufferlen; count2++, count++) {
+		for (count = 0; count < HEADER_NAME_MAX_SIZE && *(buffer + count2) != '\0'; count2++, count++) {
 			if (isalpha(*(buffer + count2)) != 0 ||
 				*(buffer + count2) == '-' ||
 				*(buffer + count2) == '.') {

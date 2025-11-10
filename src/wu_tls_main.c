@@ -30,30 +30,23 @@ extern FILE* g_fphttpslog;
 extern const struct _http_resources http_resources[];
 extern HANDLE g_hConsoleOutput;
 extern int g_tls_firstsend;
-extern CredHandle* g_credHandle;
-extern CtxtHandle* g_ctxtHandle;
-extern int* g_tls_sclt;
+extern CredHandle *g_credHandle;
+extern CtxtHandle *g_ctxtHandle;
+extern int *g_tls_sclt;
+
+/* Test */
 
 DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {
-	NCRYPT_PROV_HANDLE phProvider;
-	NCRYPT_KEY_HANDLE hKey;
-	CERT_NAME_BLOB SubjectBlob;
 	BYTE pbEncodedName[128];
-	DWORD cbEncodedName = 128;
 	WSADATA wsaData;
 	DWORD err, ret;
 	int s, s_clt;
-	BYTE ipAddr[4];
-	BYTE* pbEncodedAltName = NULL;
-	DWORD cbEncodedAltName = 0;
-	PCCERT_CONTEXT pCertContext;
+	CERT_CONTEXT *pCertContext;
 	CredHandle credHandle;
 	CtxtHandle ctxtHandle;
 	HCERTSTORE hCertStore;
-	struct in_addr inaddr2oct;
 	char BufferIn[2000];
-	char* p;
 	int i;
 	struct http_reqline reqline;
 	INPUT_RECORD inRec;
@@ -70,72 +63,25 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	char log_timestr[42];
 	time_t wutime;
 	struct tm tmval;
+	NCRYPT_KEY_HANDLE hKey;
+	NCRYPT_PROV_HANDLE phProvider;
 
-	ZeroMemory(ipAddr, 4);
-	ZeroMemory(&inaddr2oct, sizeof(struct in_addr));
-	memcpy(&inaddr2oct, &prThread->inaddr, sizeof(struct in_addr));
-	ipAddr[0] = inaddr2oct.s_addr & 0x000000FF;
-	inaddr2oct.s_addr >>= 8;
-	ipAddr[1] = inaddr2oct.s_addr & 0x000000FF;
-	inaddr2oct.s_addr >>= 8;
-	ipAddr[2] = inaddr2oct.s_addr & 0x000000FF;
-	inaddr2oct.s_addr >>= 8;
-	ipAddr[3] = inaddr2oct.s_addr & 0x000000FF;
 
-	pCertContext = find_mycert_in_store(&hCertStore);
-	if (pCertContext == NULL) {
-	createcert:
-		time_t wutime;
-		struct tm* tmval;
-		char log_timestr[64];
-		ZeroMemory(log_timestr, 64);
-		time(&wutime);
-		tmval = localtime(&wutime);
-		strftime(log_timestr, 64, "%d/%b/%Y:%T -0600", tmval);
-		fprintf(g_fphttpslog, "%s -- Create certificate or replace existing one\n", log_timestr);
-		fflush(g_fphttpslog);
-		generate_key(&phProvider, &hKey);
-		if (get_cert_name(&SubjectBlob, pbEncodedName, &cbEncodedName) < 0) {
-			err = GetLastError();
-			write_info_in_console(ERR_MSG_CERTSTRTONAMEA, NULL, err);
-			NCryptFreeObject(phProvider);
-			NCryptFreeObject(hKey);
-
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-		}
-
-		pCertContext = (PCCERT_CONTEXT)create_cert_self_sign(&prThread->cursorPosition, ipAddr, &SubjectBlob, phProvider, hKey);
-
-		if (FALSE == CertAddCertificateContextToStore(hCertStore, pCertContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL)) {
-			NCryptFreeObject(phProvider);
-			NCryptFreeObject(hKey);
-			err = GetLastError();
-			write_info_in_console(ERR_MSG_ADDCERT, NULL, err);
-
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-		}
-	}
-	else {
-		SYSTEMTIME sysTimeNow;
-		FILETIME ftSysTimeNow;
-
-		GetSystemTime(&sysTimeNow);
-		SystemTimeToFileTime(&sysTimeNow, &ftSysTimeNow);
-		if (CompareFileTime(&pCertContext->pCertInfo->NotAfter, &ftSysTimeNow) == -1)
+	pCertContext = (CERT_CONTEXT*)find_mycert_in_store(&hCertStore);
+	if (pCertContext) {
+		if (is_certificate_valid(pCertContext) != 0)
 			goto createcert;
-
+	} else {
+	createcert:
+		create_certificate(prThread->cursorPosition, hCertStore, &pCertContext, pbEncodedName, &phProvider, &hKey, prThread->inaddr);
 	}
 
 	CertCloseStore(hCertStore, 0);
 
-	s = create_socket(&prThread->cursorPosition);
-	bind_socket2(&prThread->cursorPosition, s,
-		prThread->inaddr);
-
 	ZeroMemory(&credHandle, sizeof(CredHandle));
 	if (get_credantials_handle(&credHandle, pCertContext) < 0) {
 		CertFreeCertificateContext(pCertContext);
-		LocalFree(pbEncodedAltName);
+		LocalFree(pbEncodedName);
 		NCryptFreeObject(phProvider);
 		NCryptFreeObject(hKey);
 		err = GetLastError();
@@ -145,10 +91,13 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	}
 
 
+	s = create_socket(&prThread->cursorPosition);
+	bind_socket2(&prThread->cursorPosition, s, prThread->inaddr);
+
 	ZeroMemory(headernv, HEADER_NV_MAX_SIZE * (HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE));
 
 	for (;;) {
-
+		
 		g_credHandle = g_ctxtHandle = NULL;
 		g_tls_sclt = NULL;
 
@@ -160,7 +109,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		g_ctxtHandle = &ctxtHandle;
 		g_tls_sclt = &s_clt;
 
-	next_req:
+next_req:
 		bytesent = 0;
 
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
@@ -258,7 +207,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				ret = get_theme_param(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret + 2, &theme);
 				if (ret != 0) {
 					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-					continue;
+					continue;	
 				}
 
 				ZeroMemory(cookie, 48);
@@ -268,8 +217,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 					strcpy_s(cookie, 48, "theme=light");
 
 				https_apply_theme(s_clt, &ctxtHandle, cookie);
-			}
-			else if (strcmp(reqline.resource, "/upload") == 0) {
+			} else if (strcmp(reqline.resource, "/upload") == 0) {
 				struct user_stats upstats;
 
 				clear_txrx_pane(&prThread->cursorPosition);
@@ -277,7 +225,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 				ZeroMemory(&upstats, sizeof(struct user_stats));
 				tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle,
-					(char*)secBufferIn[data_idx].pvBuffer + ret + 2);
+									(char*)secBufferIn[data_idx].pvBuffer + ret + 2);
 				prThread->cursorPosition.Y++;
 
 
@@ -289,11 +237,11 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		ZeroMemory(log_timestr, 42);
 
 		time(&wutime);
-
+		
 		ZeroMemory(&tmval, sizeof(struct tm));
 		localtime_s(&tmval, &wutime);
 
-		strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval);
+		strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval); 
 		sprintf_s(https_logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddr_httpsclt, log_timestr, reqline.method, reqline.resource, reqline.version, bytesent);
 		fprintf(g_fphttpslog, https_logentry);
 		fflush(g_fphttpslog);
@@ -302,7 +250,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	}
 
 	CertFreeCertificateContext(pCertContext);
-	LocalFree(pbEncodedAltName);
+	LocalFree(pbEncodedName);
 	NCryptFreeObject(phProvider);
 	NCryptFreeObject(hKey);
 
@@ -311,3 +259,4 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 	return 0;
 }
+
