@@ -125,6 +125,9 @@ next_req:
 			continue;
 		}
 
+		fprintf(g_fphttpslog, "buffer:\n%s\n", secBufferIn[data_idx].pvBuffer);
+		fflush(g_fphttpslog);
+
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
 		ret = get_request_line(&reqline, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer);
 		if (ret < 0) {
