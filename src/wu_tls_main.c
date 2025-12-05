@@ -64,6 +64,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	struct tm tmval;
 	NCRYPT_KEY_HANDLE hKey;
 	NCRYPT_PROV_HANDLE phProvider;
+	int header_offset;
 
 
 	pCertContext = (CERT_CONTEXT*)find_mycert_in_store(&hCertStore);
@@ -122,7 +123,7 @@ next_req:
 		fflush(g_fphttpslog);
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		ret = get_request_line(&reqline, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer);
+		header_offset = get_request_line(&reqline, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
@@ -135,8 +136,8 @@ next_req:
 
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 
-		ret += get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret,
-							secBufferIn[data_idx].cbBuffer - ret);
+		header_offset += get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + header_offset,
+										secBufferIn[data_idx].cbBuffer - header_offset);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
@@ -201,7 +202,7 @@ next_req:
 			if (strcmp(reqline.resource, "/theme") == 0) {
 				char cookie[48];
 
-				ret = get_theme_param(headernv, (char*)secBufferIn[data_idx].pvBuffer + ret + 2, &theme);
+				ret = get_theme_param(headernv, (char*)secBufferIn[data_idx].pvBuffer + header_offset, &theme);
 				if (ret != 0) {
 					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 					continue;	

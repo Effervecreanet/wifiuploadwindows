@@ -70,85 +70,65 @@ int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 
 int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength)
 {
-	int count;
-	int count2 = 0;
-	int maxsp;
-	int hlen = 0;
-	int nvnb = 0;
+	int count_hdr_nv = 0;
+	int headerlen = 0;
+	int i;
 
-	do {
-		for (count = 0; count < HEADER_NAME_MAX_SIZE && *(buffer + count2) != '\0'; count2++, count++) {
-			if (isalpha(*(buffer + count2)) != 0 ||
-				*(buffer + count2) == '-' ||
-				*(buffer + count2) == '.') {
-				headernv[nvnb].name.client[count] = *(buffer + count2);
-				continue;
-			}
-			switch (*(buffer + count2)) {
-			case ':':
-				break;
-			case '\n':
-				goto crlfcrlf;
-			case '\r':
-				if (*(buffer + count2 + 1) == '\n')
-					goto crlfcrlf;
-				return -1;
-			default:
-				return -1;
-			}
-			break;
-		}
-
-		if (*(buffer + count2) == '\0' || count == HEADER_NAME_MAX_SIZE)
-			return -1;
-
-		if (*(buffer + ++count2) != ' ' && *(buffer + count2) != '\t')
-			return -1;
-
-		for (maxsp = 0; *(buffer + ++count2) != '\0' && maxsp < MAX_SP; ++maxsp) {
-			switch (*(buffer + count2)) {
-			case ' ':
-			case '\t':
-				continue;
-			default:
-				headernv[nvnb].value.v[0] = *(buffer + count2);
-				break;
-			}
-			break;
-		}
-
-		if (*(buffer + count2) == '\0' || maxsp == MAX_SP)
-			return -1;
-
-		for (count = 1; *(buffer + ++count2) != '\0' && count < HEADER_VALUE_MAX_SIZE; count++) {
-			switch (*(buffer + count2)) {
-			case '\r':
-			case '\n':
-				break;
-			default:
-				headernv[nvnb].value.v[count] = *(buffer + count2);
-				continue;
-			}
-			break;
-		}
-
-		if (*(buffer + count2) == '\0' || count == HEADER_VALUE_MAX_SIZE)
-			return -1;
-
-		if (*(buffer + count2) == '\r' && *(buffer + ++count2) != '\n')
-			return -1;
-		/*
-		   printf("header_name: %s header_value: %s\n",
-		   hdr_nv[nvnb].name.client, hdr_nv[nvnb].value.v);
-		 */
-		++count2;
-	} while (++nvnb < HEADER_NV_MAX_SIZE);
-
-crlfcrlf:
-	if (nvnb == HEADER_NV_MAX_SIZE)
+	if (bufferlength == 0)
 		return -1;
 
-	return count2; 
+	do {
+
+		i = 0;
+
+		do {
+			if (isalpha(*buffer) != 0 || *buffer == '-' || *buffer == '.')
+				headernv[count_hdr_nv].name.client[i++] = *buffer++;
+			else if (*buffer == ':' && *(buffer + 1) == ' ')
+				break;
+			else if (*buffer == '\r' && *(buffer + 1) == '\n')
+				goto crlfcrlf;
+			if (headerlen++ >= HEADER_MAX_SIZE)
+				return -1;
+		} while (i < HEADER_NAME_MAX_SIZE);
+
+		if (i == HEADER_NAME_MAX_SIZE)
+			return -1;
+
+		buffer += 2;
+		headerlen += 2;
+
+		if (headerlen >= HEADER_MAX_SIZE)
+			return -1;
+
+		i = 0;
+
+		do {
+			headernv[count_hdr_nv].value.v[i++] = *buffer++;
+			if (*buffer == '\r' && *(buffer + 1) == '\n')
+				break;
+			if (headerlen++ >= HEADER_MAX_SIZE)
+				return -1;
+		} while (i < HEADER_VALUE_MAX_SIZE);
+
+		if (i == HEADER_VALUE_MAX_SIZE)
+			return -1;
+
+		buffer += 2;
+		headerlen += 3;
+
+		if (headerlen >= HEADER_MAX_SIZE)
+			return -1;
+	} while (++count_hdr_nv < HEADER_NV_MAX_SIZE);
+
+crlfcrlf:
+	buffer += 2;
+	headerlen += 2;
+
+	if (headerlen >= HEADER_MAX_SIZE)
+		return -1;
+
+	return headerlen;
 }
 
 int
