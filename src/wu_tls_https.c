@@ -146,7 +146,6 @@ https_serv_resource(struct http_resource* res, int s,
 	char hrmn[6];
 	char* plastBS;
 	int ret;
-	static SecPkgContext_StreamSizes Sizes;
 	SecBufferDesc bufferDesc;
 	SecBuffer secBufferOut[4];
 	int i;
@@ -230,14 +229,14 @@ https_serv_resource(struct http_resource* res, int s,
 
 		for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
 			messageLen = strlen(message);
-			sprintf_s(message + messageLen, Sizes.cbMaximumMessage - messageLen,
+			sprintf_s(message + messageLen, 8192 - messageLen,
 				"%s: %s\r\n", httpnv[i].name.wsite,
 				httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
 		}
 
 		messageLen = strlen(message);
-		strcat_s(message, Sizes.cbMaximumMessage - messageLen, "\r\n");
-		strcat_s(message, Sizes.cbMaximumMessage - messageLen, pbufferout);
+		strcat_s(message, 8192 - messageLen, "\r\n");
+		strcat_s(message, 8192 - messageLen - 2, pbufferout);
 
 		messageLen = strlen(message);
 		tls_send(s, ctxtHandle, message, strlen(message));
@@ -257,12 +256,12 @@ https_serv_resource(struct http_resource* res, int s,
 
 		for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
 			messageLen = strlen(message);
-			sprintf_s(message + messageLen, Sizes.cbMaximumMessage - messageLen, "%s: %s\r\n", httpnv[i].name.wsite,
+			sprintf_s(message + messageLen, 8192 - messageLen, "%s: %s\r\n", httpnv[i].name.wsite,
 				httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
 		}
 
 		messageLen = strlen(message);
-		strcat_s(message, Sizes.cbMaximumMessage - messageLen, "\r\n");
+		strcat_s(message, 8192 - messageLen, "\r\n");
 
 		messageLen = strlen(message);
 
