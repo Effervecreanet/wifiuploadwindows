@@ -301,6 +301,12 @@ struct wu_msg wumsg[] = {
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{
+		ERR_MSG_ENCRYPTMESSAGE,
+		"Erreur lors de l'appel " "\xE0" " EncryptMessage (erreur: %x)",
+		sizeof("Erreur lors de l'appel " "\xE0" " EncryptMessage (erreur: %x)") - 1,
+		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
 		INF_ERR_END,
 		"",
 		1,
@@ -598,6 +604,12 @@ struct wu_msg wumsg[] = {
 		ERR_MSG_DECRYPTMESSAGE,
 		"DecryptMessage failed with %x",
 		sizeof("DecryptMessage failed with %x") - 1,
+		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_ENCRYPTMESSAGE,
+		"EncryptMessage failed with %x",
+		sizeof("EncryptMessage failed with %x") - 1,
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{

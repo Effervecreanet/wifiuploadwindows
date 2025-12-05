@@ -171,7 +171,7 @@ next_req:
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 				}
 
-				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
+				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition);
 
 				// goto err;
 			}
@@ -190,7 +190,7 @@ next_req:
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 				}
 
-				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle);
+				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition);
 			}
 
 

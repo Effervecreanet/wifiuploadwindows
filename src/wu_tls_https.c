@@ -134,7 +134,8 @@ crlfcrlf:
 int
 https_serv_resource(struct http_resource* res, int s,
 	struct success_info* successinfo,
-	int* bytesent, CtxtHandle* ctxtHandle) {
+	int* bytesent, CtxtHandle* ctxtHandle,
+	COORD cursorPosition) {
 	HANDLE hFile;
 	DWORD fsize, read, err;
 	DWORD BufferUserNameSize = 254;
@@ -239,7 +240,7 @@ https_serv_resource(struct http_resource* res, int s,
 		strcat_s(message, 8192 - messageLen - 2, pbufferout);
 
 		messageLen = strlen(message);
-		tls_send(s, ctxtHandle, message, strlen(message));
+		tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
 
 		*bytesent += messageLen;
 
@@ -267,10 +268,10 @@ https_serv_resource(struct http_resource* res, int s,
 
 		*bytesent += strlen(message);
 
-		tls_send(s, ctxtHandle, message, strlen(message));
+		tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
 
 		while (ReadFile(hFile, message, 2048, &read, NULL) != 0 && read) {
-			tls_send(s, ctxtHandle, message, read);
+			tls_send(s, ctxtHandle, message, read, cursorPosition);
 
 			*bytesent += read;
 		}

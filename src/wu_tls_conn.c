@@ -16,14 +16,15 @@
 #include "wu_msg.h"
 
 extern FILE* g_fphttpslog;
+extern HANDLE g_hConsoleOutput;
 
-int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int message_size) {
+int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int message_size, COORD cursorPosition) {
 	SecPkgContext_StreamSizes Sizes;
 	char *encryptBuffer;
 	unsigned int encryptBufferLen;
 	SecBufferDesc bufferDesc;
 	SecBuffer secBufferOut[4];
-	int i;
+	int ret;
 
 	QueryContextAttributes(ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &Sizes);
 	encryptBufferLen = Sizes.cbHeader + Sizes.cbMaximumMessage + Sizes.cbTrailer;
@@ -51,7 +52,17 @@ int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int mess
 	secBufferOut[2].cbBuffer = Sizes.cbTrailer;
 	secBufferOut[3].BufferType = SECBUFFER_EMPTY;
 
-	EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
+	ret = EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
+	if (ret != 0) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		cursorPosition.Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition);
+		write_info_in_console(ERR_MSG_ENCRYPTMESSAGE, NULL, ret);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
 
 	if (send(s_clt, encryptBuffer, secBufferOut[0].cbBuffer + secBufferOut[1].cbBuffer + secBufferOut[2].cbBuffer, 0) < 0) {
 		free(encryptBuffer);
