@@ -295,6 +295,12 @@ struct wu_msg wumsg[] = {
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{
+		ERR_MSG_DECRYPTMESSAGE,
+		"Erreur lors de l'appel" "\xE0" "DecryptMessage (erreur: %x)",
+		sizeof("Erreur lors de l'appel" "\xE0" "DecryptMessage (erreur: %x)") - 1,
+		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
 		INF_ERR_END,
 		"",
 		1,
@@ -586,6 +592,12 @@ struct wu_msg wumsg[] = {
 		ERR_MSG_BADVERSION,
 		"Bad version of HTTP protocol.",
 		sizeof("Bad version of HTTP protocol.")
+		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_DECRYPTMESSAGE,
+		"DecryptMessage failed with %x",
+		sizeof("DecryptMessage failed with %x") - 1,
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{

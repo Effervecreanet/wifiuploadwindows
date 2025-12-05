@@ -13,6 +13,8 @@
 
 #include <sspi.h>
 
+#include "wu_msg.h"
+
 extern FILE* g_fphttpslog;
 
 int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int message_size) {
@@ -62,34 +64,37 @@ int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int mess
 }
 
 
-int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* bytereceived, int *data_idx) {
+int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* data_idx) {
 	SecBufferDesc secBufferDescInput;
 	int ret, i, received;
-	char buffer[2000];
 
 	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 	secBufferDescInput.cBuffers = 4;
 	secBufferDescInput.pBuffers = secBufferIn;
 
-	ZeroMemory(buffer, 2000);
 	ZeroMemory(secBufferIn[0].pvBuffer, 2000);
-	received = recv(s_clt, buffer, 1999, 0);
-	secBufferIn[0].cbBuffer = received;
-	secBufferIn[0].pvBuffer = buffer;
+	received = recv(s_clt, secBufferIn[0].pvBuffer, 2000, 0);
 
 	secBufferIn[0].BufferType = SECBUFFER_DATA;
+	secBufferIn[0].cbBuffer = received;
 	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
 	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
+	if (ret != 0)
+		return -1;
 
-	*data_idx = 1;
-
-	*bytereceived = secBufferIn[1].cbBuffer;
+	for (i = 0; i < secBufferDescInput.cBuffers; i++)
+		if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
+			break;
+ 
+	*data_idx = i;
 
 	if (secBufferIn[0].BufferType == SECBUFFER_MISSING) {
+		/* To rewrite */
+		char buffer[2000];
 		char *buffer_missing = malloc(received + secBufferIn[0].cbBuffer);
 
 		fprintf(g_fphttpslog, "MISSING: %i\n", secBufferIn[0].cbBuffer);

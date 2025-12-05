@@ -18,38 +18,57 @@
 extern FILE* g_fphttpslog;
 extern int g_tls_firstsend;
 
+
 int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 {
-	char* p, * psav, * sp;
-	int i;
+	char* p_bufferin = BufferIn;
+	int i = 0, count = 0;
 
-	for (i = 0, psav = p = BufferIn; i < length - 2; p++, i++)
-		if (*p == '\r' && *(p + 1) == '\n')
+	if (length == 0)
+		return -1;
+
+	do {
+		reqline->method[i++] = *p_bufferin++;
+		if (*p_bufferin == ' ')
 			break;
+	} while (i <= REQUEST_LINE_METHOD_MAX_SIZE);
 
-	if (i >= length - 2)
+	if (*p_bufferin != ' ')
+		return -1;
+	p_bufferin++;
+
+	count += i;
+	i = 0;
+
+	do {
+		reqline->resource[i++] = *p_bufferin++;
+		if (*p_bufferin == ' ')
+			break;
+	} while (i <= HTTP_RESSOURCE_MAX_LENGTH);
+
+	if (*p_bufferin != ' ')
+		return -1;
+	p_bufferin++;
+
+	count += i;
+	i = 0;
+
+	do {
+		reqline->version[i++] = *p_bufferin++;
+		if (*p_bufferin == '\r')
+			break;
+	} while (i <= sizeof("HTTP/1.1") - 1);
+
+	if (*p_bufferin != '\r')
 		return -1;
 
-	*p = '\0';
+	count += i;
+	count += 4; /* Add ignored characters count and skip "\r\n" */
 
-	if ((sp = strchr(psav, ' ')) == NULL)
-		return -1;
-
-	*sp = '\0';
-	strcpy_s(reqline->method, sizeof(HTTP_METHOD_POST), psav);
-
-	psav = ++sp;
-	if ((sp = strchr(psav, ' ')) == NULL)
-		return -1;
-
-	*sp = '\0';
-	strcpy_s(reqline->resource, HTTP_RESSOURCE_MAX_LENGTH, psav);
-	strcpy_s(reqline->version, sizeof(HTTP_VERSION), sp + 1);
-
-	return i + 2;
+	return count;
 }
 
-int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer)
+int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength)
 {
 	int count;
 	int count2 = 0;
