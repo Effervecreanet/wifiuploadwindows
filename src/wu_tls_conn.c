@@ -60,10 +60,8 @@ int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int mess
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 
-	if (send(s_clt, encryptBuffer, secBufferOut[0].cbBuffer + secBufferOut[1].cbBuffer + secBufferOut[2].cbBuffer, 0) < 0) {
-		free(encryptBuffer);
+	if (send(s_clt, encryptBuffer, secBufferOut[0].cbBuffer + secBufferOut[1].cbBuffer + secBufferOut[2].cbBuffer, 0) < 0)
 		return -1;
-	}
 
 	return 0;
 }
@@ -88,8 +86,6 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
 	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
-	if (ret != 0)
-		return -1;
 
 	for (i = 0; i < secBufferDescInput.cBuffers; i++)
 		if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)

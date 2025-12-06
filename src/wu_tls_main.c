@@ -162,6 +162,9 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		g_ctxtHandle = &ctxtHandle;
 		g_tls_sclt = &s_clt;
 
+		if (encryptBuffer != NULL)
+			free(encryptBuffer);
+
 		QueryContextAttributes(&ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &context_sizes);
 		encryptBuffer = malloc(context_sizes.cbHeader + context_sizes.cbMaximumMessage + context_sizes.cbTrailer);
 
@@ -178,9 +181,6 @@ next_req:
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
 		}
-
-		fprintf(g_fphttpslog, "buffer (%i):\n%s\n", secBufferIn[data_idx].cbBuffer, secBufferIn[data_idx].pvBuffer);
-		fflush(g_fphttpslog);
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
 		header_offset = get_request_line(&reqline, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer);
@@ -256,11 +256,6 @@ next_req:
 
 				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition);
 			}
-
-
-
-
-
 		}
 		else if (strcmp(reqline.method, "POST") == 0) {
 			if (strcmp(reqline.resource, "/theme") == 0) {
@@ -286,14 +281,15 @@ next_req:
 				check_cookie_theme(headernv, &theme);
 
 				ZeroMemory(&upstats, sizeof(struct user_stats));
-				tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle,
-									(char*)secBufferIn[data_idx].pvBuffer + ret + 2);
+
+				fprintf(g_fphttpslog, "body_buffer:\n%s\n", (char*)secBufferIn[data_idx].pvBuffer);
+				ret = tls_recv(s_clt, &ctxtHandle, secBufferIn, &data_idx);
+				fprintf(g_fphttpslog, "body_buffer:\n%s\n", (char*)secBufferIn[data_idx].pvBuffer);
+				fflush(g_fphttpslog);
+				// tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle,
+				//					(char*)secBufferIn[data_idx].pvBuffer + header_offset);
 				prThread->cursorPosition.Y++;
-
-
 			}
-
-
 		}
 		ZeroMemory(https_logentry, 256);
 		ZeroMemory(log_timestr, 42);
