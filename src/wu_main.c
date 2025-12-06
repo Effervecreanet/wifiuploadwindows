@@ -51,6 +51,7 @@ int g_tls_firstsend = 0;
 CtxtHandle *g_ctxtHandle = NULL;
 CredHandle *g_credHandle = NULL;
 int *g_tls_sclt = NULL;
+extern char* encryptBuffer;
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
@@ -76,6 +77,8 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 		if (g_credHandle != NULL && g_ctxtHandle != NULL &&
 			g_tls_sclt != NULL)
 			tls_shutdown(g_credHandle, g_ctxtHandle, g_tls_sclt);
+		if (encryptBuffer != NULL)
+			free(encryptBuffer);
 		WSACleanup();
 		ExitProcess(TRUE);
 	default:

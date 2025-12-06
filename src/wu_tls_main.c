@@ -34,7 +34,34 @@ extern CredHandle *g_credHandle;
 extern CtxtHandle *g_ctxtHandle;
 extern int *g_tls_sclt;
 
-/* Test */
+SecPkgContext_StreamSizes context_sizes;
+char* encryptBuffer = NULL;
+
+static void
+https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
+	int ires;
+	struct http_resource httplocalres;
+
+	check_cookie_theme(httpnv, theme);
+
+	for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
+
+	ZeroMemory(&httplocalres, sizeof(struct http_resource));
+	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+	}
+
+	https_serv_resource(&httplocalres, s_user, NULL, bytesent, g_ctxtHandle, *cursorPosition);
+
+	return;
+}
 
 DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {
@@ -56,7 +83,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	int theme = 0;
 	int data_idx;
 	SecBuffer secBufferIn[4];
-	SecPkgContext_StreamSizes Sizes;
 	char https_logentry[256];
 	char ipaddr_httpsclt[16];
 	char log_timestr[42];
@@ -104,6 +130,9 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		g_credHandle = &credHandle;
 		g_ctxtHandle = &ctxtHandle;
 		g_tls_sclt = &s_clt;
+
+		QueryContextAttributes(&ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &context_sizes);
+		encryptBuffer = malloc(context_sizes.cbHeader + context_sizes.cbMaximumMessage + context_sizes.cbTrailer);
 
 next_req:
 		bytesent = 0;
@@ -174,6 +203,10 @@ next_req:
 				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition);
 
 				// goto err;
+			}
+			else if (strcmp(reqline.resource + 1, "quit") == 0) {
+				https_wu_quit_response(&prThread->cursorPosition, headernv, &theme, s_clt, &bytesent);
+				
 			}
 			else {
 				check_cookie_theme(headernv, &theme);

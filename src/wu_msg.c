@@ -571,11 +571,12 @@ struct wu_msg wumsg[] = {
 		sizeof("CertAddCertificateToStore failed (error: %i)") - 1,
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
+	{
 		ERR_MSG_ACQUIRECREDANTIALSHANDLE,
 		"AcquireCredantialsHandle failed (error: %i)",
 		sizeof("AcquireCredantialsHandle failed (error: %i)") - 1,
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
-},
+	},
 	{
 		ERR_MSG_CRYPTENCODEOBJECTEX,
 		"CryptEncodeObjectEx failed (error: %i)",
@@ -597,7 +598,7 @@ struct wu_msg wumsg[] = {
 	{
 		ERR_MSG_BADVERSION,
 		"Bad version of HTTP protocol.",
-		sizeof("Bad version of HTTP protocol.")
+		sizeof("Bad version of HTTP protocol."),
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{

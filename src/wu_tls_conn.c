@@ -17,18 +17,14 @@
 
 extern FILE* g_fphttpslog;
 extern HANDLE g_hConsoleOutput;
+extern SecPkgContext_StreamSizes context_sizes;
+extern char* encryptBuffer;
 
 int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int message_size, COORD cursorPosition) {
-	SecPkgContext_StreamSizes Sizes;
-	char *encryptBuffer;
-	unsigned int encryptBufferLen;
 	SecBufferDesc bufferDesc;
 	SecBuffer secBufferOut[4];
 	int ret;
 
-	QueryContextAttributes(ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &Sizes);
-	encryptBufferLen = Sizes.cbHeader + Sizes.cbMaximumMessage + Sizes.cbTrailer;
-	encryptBuffer = malloc(encryptBufferLen);
 
 	ZeroMemory(&bufferDesc, sizeof(SecBufferDesc));
 
@@ -36,20 +32,20 @@ int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int mess
 	bufferDesc.cBuffers = 4;
 	bufferDesc.pBuffers = secBufferOut;
 
-	ZeroMemory(encryptBuffer, encryptBufferLen);
+	ZeroMemory(encryptBuffer, context_sizes.cbHeader + context_sizes.cbMaximumMessage + context_sizes.cbTrailer);
 
-	memcpy(encryptBuffer + Sizes.cbHeader, message, message_size);
+	memcpy(encryptBuffer + context_sizes.cbHeader, message, message_size);
 
 	ZeroMemory(secBufferOut, sizeof(SecBuffer) * 4);
 	secBufferOut[0].BufferType = SECBUFFER_STREAM_HEADER;
 	secBufferOut[0].pvBuffer = encryptBuffer;
-	secBufferOut[0].cbBuffer = Sizes.cbHeader;
+	secBufferOut[0].cbBuffer = context_sizes.cbHeader;
 	secBufferOut[1].BufferType = SECBUFFER_DATA;
-	secBufferOut[1].pvBuffer = encryptBuffer + Sizes.cbHeader;
+	secBufferOut[1].pvBuffer = encryptBuffer + context_sizes.cbHeader;
 	secBufferOut[1].cbBuffer = message_size;
 	secBufferOut[2].BufferType = SECBUFFER_STREAM_TRAILER;
-	secBufferOut[2].pvBuffer = encryptBuffer + Sizes.cbHeader + message_size;
-	secBufferOut[2].cbBuffer = Sizes.cbTrailer;
+	secBufferOut[2].pvBuffer = encryptBuffer + context_sizes.cbHeader + message_size;
+	secBufferOut[2].cbBuffer = context_sizes.cbTrailer;
 	secBufferOut[3].BufferType = SECBUFFER_EMPTY;
 
 	ret = EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
@@ -68,8 +64,6 @@ int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int mess
 		free(encryptBuffer);
 		return -1;
 	}
-
-	free(encryptBuffer);
 
 	return 0;
 }
