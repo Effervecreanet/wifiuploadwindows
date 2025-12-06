@@ -70,6 +70,7 @@ int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int mess
 int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* data_idx) {
 	SecBufferDesc secBufferDescInput;
 	int ret, i, received;
+	char buffer[2000];
 
 	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
@@ -77,47 +78,57 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 	secBufferDescInput.pBuffers = secBufferIn;
 
 	ZeroMemory(secBufferIn[0].pvBuffer, 2000);
-	received = recv(s_clt, secBufferIn[0].pvBuffer, 2000, 0);
+	ZeroMemory(buffer, 2000);
+	received = recv(s_clt, buffer, 2000, 0);
 
 	secBufferIn[0].BufferType = SECBUFFER_DATA;
 	secBufferIn[0].cbBuffer = received;
+	memcpy(secBufferIn[0].pvBuffer, buffer, 2000);
+
 	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
 	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
-
-	for (i = 0; i < secBufferDescInput.cBuffers; i++)
-		if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
-			break;
- 
-	*data_idx = i;
-
-	if (secBufferIn[0].BufferType == SECBUFFER_MISSING) {
-		/* To rewrite */
-		char buffer[2000];
+	if (ret == SEC_E_INCOMPLETE_MESSAGE) {
 		char *buffer_missing = malloc(received + secBufferIn[0].cbBuffer);
 
-		fprintf(g_fphttpslog, "MISSING: %i\n", secBufferIn[0].cbBuffer);
-		fflush(g_fphttpslog);
-
+		ZeroMemory(buffer_missing, received + secBufferIn[0].cbBuffer);
 		memcpy(buffer_missing, buffer, received);
 		ret = recv(s_clt, buffer_missing + received, secBufferIn[0].cbBuffer, 0);
-		if (ret != secBufferIn[0].cbBuffer)
-			ret = recv(s_clt, buffer_missing + received + ret, secBufferIn[0].cbBuffer - ret, 0);
-
+		if (ret < 0)
+			return -1;
+		
 		secBufferIn[0].BufferType = SECBUFFER_DATA;
 		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[0].pvBuffer = buffer_missing;
-		secBufferIn[0].cbBuffer += received;
+		secBufferIn[0].cbBuffer = received;
+		secBufferIn[0].cbBuffer += ret;
 
 		ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
-		fprintf(g_fphttpslog, "ret: %x missing: %s\n", ret, secBufferIn[1].pvBuffer);
-		fflush(g_fphttpslog);
-		free(buffer_missing);
+		if (ret != SEC_E_OK)
+			return -1;
+
+		for (i = 0; i < secBufferDescInput.cBuffers; i++)
+			if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
+				break;
+ 
+		*data_idx = i;
 	}
+	else if (ret == SEC_E_OK) {
+		for (i = 0; i < secBufferDescInput.cBuffers; i++)
+			if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
+				break;
+ 
+		*data_idx = i;
+
+	}
+	else {
+		return -1;
+	}
+
 
 	return 0;
 }
