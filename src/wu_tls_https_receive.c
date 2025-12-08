@@ -8,6 +8,7 @@
 #include "wu_txstats.h"
 #include "wu_http_loop.h"
 #include "wu_content.h"
+#include "wu_http_receive.h"
 
 #define SCHANNEL_USE_BLACKLIST
 
@@ -20,12 +21,12 @@
 #include "wu_tls_https_receive.h"
 #include "wu_http.h"
 
+
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 extern HANDLE g_hConsoleOutput;
 extern HANDLE g_hNewFile_tmp;
 extern char g_sNewFile_tmp[1024];
-extern FILE *g_fphttpslog;
 
 
 static HANDLE
@@ -33,7 +34,8 @@ create_userfile_tmp(COORD* cursorPosition,
 	char* filename,
 	char* userfile_tmp);
 static errno_t
-get_MIME_filename(struct user_stats* upstats, char *req_buffer, unsigned short* MIMELen);
+receive_MIME_header(struct user_stats* upstats,
+	int s, unsigned short* MIMELen);
 
 
 
@@ -84,14 +86,15 @@ create_userfile_tmp(COORD* cursorPosition,
 	return hFile;
 }
 
+
 static errno_t
-get_MIME_filename(struct user_stats* upstats, char *req_buffer, unsigned short* MIMElen)
+get_MIME_filename(struct user_stats* upstats, char* req_buffer, unsigned short* MIMElen)
 {
 	int ret;
 	unsigned short i;
 	char* p_MIME_filename;
 	char* p_quote;
-	char *p_MIMEend;
+	char* p_MIMEend;
 
 	p_MIMEend = strstr(req_buffer, "\r\n\r\n");
 	if (p_MIMEend == NULL)
@@ -128,7 +131,7 @@ int
 tls_receive_file(COORD* cursorPosition,
 	struct header_nv* httpnv, int s,
 	struct user_stats* upstats, int theme,
-	int* bytesent, CtxtHandle *ctxtHandle, char *req_buffer) {
+	int* bytesent, CtxtHandle *ctxtHandle) {
 	unsigned short MIMElen, boundarylen;
 	HANDLE hFile;
 	DWORD written, tick_start, tick_end, tick_diff;
@@ -136,7 +139,6 @@ tls_receive_file(COORD* cursorPosition,
 	char boundary[64];
 	u_int64 content_length;
 	struct tx_stats txstats;
-	char buffer[10000];
 	COORD coordPerCent;
 	COORD coordAverageTX;
 	struct http_resource httpres;
@@ -155,9 +157,9 @@ tls_receive_file(COORD* cursorPosition,
 	unsigned char idxunit;
 	int ret;
 	int ires;
-	int data_idx;
 	SecBuffer secBufferIn[4];
-	int bytereceived;
+	char buffer[2000];
+	int data_idx;
 
 	ZeroMemory(&httpres, sizeof(struct http_resource));
 	ret = nv_find_name_client(httpnv, "Content-Type");
@@ -183,30 +185,24 @@ tls_receive_file(COORD* cursorPosition,
 
 	content_length = _atoi64((httpnv + ret)->value.v);
 
-	fprintf(g_fphttpslog, "START\n");
-	fflush(g_fphttpslog);
-
-	ZeroMemory(buffer, 2048);
+	ZeroMemory(buffer, 2000);
 	ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 	secBufferIn[0].pvBuffer = buffer;
+	secBufferIn[0].cbBuffer = 2000;
+	secBufferIn[0].BufferType = SECBUFFER_DATA;
+	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
+	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
+	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-	if (tls_recv(s, ctxtHandle, secBufferIn, &bytereceived, &data_idx) < 0)
-		return -1;
+	tls_recv(s, ctxtHandle, secBufferIn, &data_idx);
 
-	fprintf(g_fphttpslog, "BSTART: %s\n", secBufferIn[1].pvBuffer);
-	fflush(g_fphttpslog);
-
-	return 0;
-
-	if (get_MIME_filename(upstats, buffer, &MIMElen) != 0)
+	if (get_MIME_filename(upstats, secBufferIn[data_idx].pvBuffer, &MIMElen) != 0)
 		return -1;
 
 	if (strlen(upstats->filename) == 0)
 		return -1;
 
-	fprintf(g_fphttpslog, "filename: %s MIMElen: %i\n", upstats->filename, MIMElen);
-	fflush(g_fphttpslog);
-	clear_txrx_pane(cursorPosition);
+	// clear_txrx_pane(cursorPosition);
 
 	coordAverageTX.X = cursorPosition->X;
 	coordAverageTX.Y = cursorPosition->Y + 1;
@@ -229,7 +225,7 @@ tls_receive_file(COORD* cursorPosition,
 	cursorPosition->Y -= 2;
 	cursorPosition->X++;
 
-	content_length -= (MIMElen + 1);
+	content_length -= secBufferIn[data_idx].cbBuffer;
 	txstats.total_size = content_length;
 	txstats.one_percent = (long long)txstats.total_size / 100;
 	txstats.curr_percent = txstats.curr_percent_bak = 0;
@@ -241,31 +237,29 @@ tls_receive_file(COORD* cursorPosition,
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
 	write_info_in_console(INF_ZERO_PERCENT, NULL, 0);
 
+	WriteFile(hFile, (char*)secBufferIn[data_idx].pvBuffer + MIMElen, secBufferIn[data_idx].cbBuffer - MIMElen, &written, NULL);
+
 	while (content_length > 0) {
-		if (content_length < (1024 + boundarylen + 8) && content_length > 1024) {
-			ret = recv(s, buffer, 777, MSG_WAITALL);
-			if (ret <= 0)
-				break;
-			WriteFile(hFile, buffer, ret, &written, NULL);
-			content_length -= ret;
-		}
-		else if (content_length <= 1024) {
-			ret = recv(s, buffer, (USHORT)content_length, MSG_WAITALL);
-			if (ret <= 0)
-				break;
-			WriteFile(hFile, buffer, ret - boundarylen - 8, &written, NULL);
-			content_length -= ret;
+		ZeroMemory(buffer, 2000);
+		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
+		secBufferIn[0].pvBuffer = buffer;
+		secBufferIn[0].cbBuffer = 2000;
+		secBufferIn[0].BufferType = SECBUFFER_DATA;
+		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
+		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
+		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
+		
+		ret = tls_recv(s, ctxtHandle, secBufferIn, &data_idx);
+		content_length -= secBufferIn[data_idx].cbBuffer;
+
+		if (content_length == 0) {
+			WriteFile(hFile, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer - boundarylen - 8, &written, NULL);
 			break;
 		}
-		else {
-			ret = recv(s, buffer, 1024, MSG_WAITALL);
-			if (ret <= 0)
-				break;
-			WriteFile(hFile, buffer, ret, &written, NULL);
-			content_length -= ret;
-		}
+		else
+			WriteFile(hFile, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer, &written, NULL);
 
-		txstats.received_size += (unsigned int)ret;
+		txstats.received_size += (unsigned int) secBufferIn[data_idx].cbBuffer;
 
 		GetSystemTime(&txstats.current);
 
@@ -363,7 +357,10 @@ tls_receive_file(COORD* cursorPosition,
 
 	for (idxunit = 0; sizeNewFile > 1024; sizeNewFile /= 999, ++idxunit);
 
-	StringCchPrintfA(successinfo.filenameSize, 24, "%u %s", sizeNewFile, units[idxunit]);
+	StringCchPrintfA(successinfo.filenameSize, 24, "%u", sizeNewFile);
+
+	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), " ");
+	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), units[idxunit]);
 
 	sizeNewFile = sizeNewFileDup;
 	average_speed = 0.0;
@@ -400,7 +397,7 @@ tls_receive_file(COORD* cursorPosition,
 	}
 
 	create_local_resource(&httpres, ires, theme);
-	http_serv_resource(&httpres, s, &successinfo, bytesent, 200);
+	https_serv_resource(&httpres, s, &successinfo, bytesent, ctxtHandle, *cursorPosition);
 
 	return 0;
 }

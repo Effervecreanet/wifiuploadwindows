@@ -1,5 +1,6 @@
 #define _WIN32_WINNT 0x0601
 
+#include <WinSock2.h>
 #include <Windows.h>
 #include <winternl.h>
 #include <wincrypt.h>
@@ -19,24 +20,25 @@ extern FILE* g_fphttpslog;
 extern HANDLE g_hConsoleOutput;
 extern SecPkgContext_StreamSizes context_sizes;
 extern char* encryptBuffer;
+extern char* decryptBuffer;
+extern char* decryptBuffer2;
 
 int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int message_size, COORD cursorPosition) {
 	SecBufferDesc bufferDesc;
-	SecBuffer secBufferOut[4];
+	SecBuffer secBufferOut[3];
 	int ret;
-
 
 	ZeroMemory(&bufferDesc, sizeof(SecBufferDesc));
 
 	bufferDesc.ulVersion = SECBUFFER_VERSION;
-	bufferDesc.cBuffers = 4;
+	bufferDesc.cBuffers = 3;
 	bufferDesc.pBuffers = secBufferOut;
 
 	ZeroMemory(encryptBuffer, context_sizes.cbHeader + context_sizes.cbMaximumMessage + context_sizes.cbTrailer);
 
 	memcpy(encryptBuffer + context_sizes.cbHeader, message, message_size);
 
-	ZeroMemory(secBufferOut, sizeof(SecBuffer) * 4);
+	ZeroMemory(secBufferOut, sizeof(SecBuffer) * 3);
 	secBufferOut[0].BufferType = SECBUFFER_STREAM_HEADER;
 	secBufferOut[0].pvBuffer = encryptBuffer;
 	secBufferOut[0].cbBuffer = context_sizes.cbHeader;
@@ -46,8 +48,11 @@ int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int mess
 	secBufferOut[2].BufferType = SECBUFFER_STREAM_TRAILER;
 	secBufferOut[2].pvBuffer = encryptBuffer + context_sizes.cbHeader + message_size;
 	secBufferOut[2].cbBuffer = context_sizes.cbTrailer;
-	secBufferOut[3].BufferType = SECBUFFER_EMPTY;
-
+	
+	fprintf(g_fphttpslog, "AAA\n");
+	fflush(g_fphttpslog);
+	fprintf(g_fphttpslog, "B: %i A: %s\n", message_size, encryptBuffer + context_sizes.cbHeader);
+	fflush(g_fphttpslog);
 	ret = EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
 	if (ret != 0) {
 		INPUT_RECORD inRec;
@@ -69,68 +74,87 @@ int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int mess
 
 int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* data_idx) {
 	SecBufferDesc secBufferDescInput;
-	int ret, i, received;
+	int ret, i, received_1stcall = 0, received_2ndcall = 0, received_3rdcall = 0;
+	int missing_cbbuffer = 0;
 	char buffer[2000];
 
-	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
-	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
-	secBufferDescInput.cBuffers = 4;
+	decryptBuffer = NULL;
+
+	ZeroMemory(&secBufferDescInput, sizeof(secBufferDescInput));
 	secBufferDescInput.pBuffers = secBufferIn;
+	secBufferDescInput.cBuffers = 4;
+	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 
-	ZeroMemory(secBufferIn[0].pvBuffer, 2000);
-	ZeroMemory(buffer, 2000);
-	received = recv(s_clt, buffer, 2000, 0);
-
-	secBufferIn[0].BufferType = SECBUFFER_DATA;
-	secBufferIn[0].cbBuffer = received;
-	memcpy(secBufferIn[0].pvBuffer, buffer, 2000);
-
-	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
-	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
-	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
-
-	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
+	received_1stcall = recv(s_clt, secBufferIn[0].pvBuffer, 2000, 0);
+	memcpy(buffer, secBufferIn[0].pvBuffer, 2000);
+	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, NULL);
 	if (ret == SEC_E_INCOMPLETE_MESSAGE) {
-		char *buffer_missing = malloc(received + secBufferIn[0].cbBuffer);
+		int missing_size = secBufferIn[1].cbBuffer;
 
-		ZeroMemory(buffer_missing, received + secBufferIn[0].cbBuffer);
-		memcpy(buffer_missing, buffer, received);
-		ret = recv(s_clt, buffer_missing + received, secBufferIn[0].cbBuffer, 0);
-		if (ret < 0)
-			return -1;
+		if (decryptBuffer != NULL)
+			free(decryptBuffer);
+
+		decryptBuffer = malloc(received_1stcall + missing_size);
+		memcpy(decryptBuffer, buffer, received_1stcall);
+
+		ZeroMemory(&secBufferDescInput, sizeof(secBufferDescInput));
+		secBufferDescInput.pBuffers = secBufferIn;
+		secBufferDescInput.cBuffers = 4;
+		secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 		
+		received_2ndcall = recv(s_clt, decryptBuffer + received_1stcall, missing_size, MSG_WAITALL);
+
+		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 		secBufferIn[0].BufferType = SECBUFFER_DATA;
+		secBufferIn[0].pvBuffer = decryptBuffer;
+		secBufferIn[0].cbBuffer = received_1stcall + received_2ndcall;
 		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[0].pvBuffer = buffer_missing;
-		secBufferIn[0].cbBuffer = received;
-		secBufferIn[0].cbBuffer += ret;
 
-		ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, 0);
-		if (ret != SEC_E_OK)
-			return -1;
+		ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, NULL);
+		if (ret == SEC_E_INCOMPLETE_MESSAGE) {
+			int missing_size2 = secBufferIn[1].cbBuffer;
 
+			if (decryptBuffer2 != NULL)
+				free(decryptBuffer2);
+
+			decryptBuffer2 = malloc(received_1stcall + received_2ndcall + missing_size2);
+			memcpy(decryptBuffer2, decryptBuffer, received_1stcall + received_2ndcall);
+
+			ZeroMemory(&secBufferDescInput, sizeof(secBufferDescInput));
+			secBufferDescInput.pBuffers = secBufferIn;
+			secBufferDescInput.cBuffers = 4;
+			secBufferDescInput.ulVersion = SECBUFFER_VERSION;
+
+			received_3rdcall = recv(s_clt, decryptBuffer2 + received_1stcall + received_2ndcall, missing_size2, MSG_WAITALL);
+
+			ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
+			secBufferIn[0].BufferType = SECBUFFER_DATA;
+			secBufferIn[0].pvBuffer = decryptBuffer2;
+			secBufferIn[0].cbBuffer = received_1stcall + received_2ndcall + received_3rdcall;
+			secBufferIn[1].BufferType = SECBUFFER_EMPTY;
+			secBufferIn[2].BufferType = SECBUFFER_EMPTY;
+			secBufferIn[3].BufferType = SECBUFFER_EMPTY;
+
+			ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, NULL);
+		}
 		for (i = 0; i < secBufferDescInput.cBuffers; i++)
 			if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
 				break;
- 
 		*data_idx = i;
 	}
 	else if (ret == SEC_E_OK) {
 		for (i = 0; i < secBufferDescInput.cBuffers; i++)
 			if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
 				break;
- 
 		*data_idx = i;
-
 	}
 	else {
 		return -1;
 	}
 
-
-	return 0;
+	return received_1stcall + received_2ndcall;
 }
 
 void tls_shutdown(CtxtHandle *ctxtHandle, CredHandle *credHandle, int s_clt) {
