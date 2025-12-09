@@ -27,6 +27,7 @@ extern struct wu_msg wumsg[];
 extern HANDLE g_hConsoleOutput;
 extern HANDLE g_hNewFile_tmp;
 extern char g_sNewFile_tmp[1024];
+extern FILE* g_fphttpslog;
 
 
 static HANDLE
@@ -194,7 +195,8 @@ tls_receive_file(COORD* cursorPosition,
 	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-	tls_recv(s, ctxtHandle, secBufferIn, &data_idx);
+	if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx) < 0)
+		return -1;
 
 	if (get_MIME_filename(upstats, secBufferIn[data_idx].pvBuffer, &MIMElen) != 0)
 		return -1;
@@ -202,7 +204,7 @@ tls_receive_file(COORD* cursorPosition,
 	if (strlen(upstats->filename) == 0)
 		return -1;
 
-	// clear_txrx_pane(cursorPosition);
+	clear_txrx_pane(cursorPosition);
 
 	coordAverageTX.X = cursorPosition->X;
 	coordAverageTX.Y = cursorPosition->Y + 1;
@@ -249,7 +251,9 @@ tls_receive_file(COORD* cursorPosition,
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 		
-		ret = tls_recv(s, ctxtHandle, secBufferIn, &data_idx);
+		if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx) < 0)
+			return -1;
+
 		content_length -= secBufferIn[data_idx].cbBuffer;
 
 		if (content_length == 0) {

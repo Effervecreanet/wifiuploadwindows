@@ -124,8 +124,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	NCRYPT_KEY_HANDLE hKey;
 	NCRYPT_PROV_HANDLE phProvider;
 	int header_offset;
-	COORD cursorPositionBak = prThread->cursorPosition;
-
 
 	pCertContext = (CERT_CONTEXT*)find_mycert_in_store(&hCertStore);
 	if (pCertContext) {
@@ -161,18 +159,15 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		s_clt = acceptSecure(s, &credHandle, &ctxtHandle, ipaddr_httpsclt);
 
-		if (prThread->cursorPosition.Y > cursorPositionBak.Y + 5) {
-			COORD cursorPos[2];
-
-			cursorPos[0] = prThread->cursorPosition;
-			cursorPos[1] = cursorPositionBak;
-			
-			clear_txrx_pane(cursorPos);
+		if (prThread->cursorPosition[0].Y > prThread->cursorPosition[1].Y + 5) {
+			prThread->cursorPosition[0] = prThread->cursorPosition[1];
+			clear_txrx_pane(&prThread->cursorPosition[0]);
 		}
 
+		SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
 		write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);
-		prThread->cursorPosition.Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition);
+		prThread->cursorPosition[0].Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
 
 		g_credHandle = &credHandle;
 		g_ctxtHandle = &ctxtHandle;
@@ -195,7 +190,10 @@ next_req:
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-		tls_recv(s_clt, &ctxtHandle, secBufferIn, &data_idx);
+		if (tls_recv(s_clt, &ctxtHandle, secBufferIn, &data_idx) < 0) {
+			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			continue;
+		}
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
 		header_offset = get_request_line(&reqline, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer);
@@ -231,19 +229,19 @@ next_req:
 					INPUT_RECORD inRec;
 					DWORD read;
 
-					prThread->cursorPosition.Y++;
-					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition);
+					prThread->cursorPosition[0].Y++;
+					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
 					write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 				}
 
-				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition);
+				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition[0]);
 
 				// goto err;
 			}
 			else if (strcmp(reqline.resource + 1, "quit") == 0) {
-				https_wu_quit_response(&prThread->cursorPosition, headernv, &theme, s_clt, &bytesent);
+				https_wu_quit_response(&prThread->cursorPosition[0], headernv, &theme, s_clt, &bytesent);
 				https_quit_wu(s_clt);
 			}
 			else {
@@ -254,14 +252,14 @@ next_req:
 					INPUT_RECORD inRec;
 					DWORD read;
 
-					prThread->cursorPosition.Y++;
-					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition);
+					prThread->cursorPosition[0].Y++;
+					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
 					write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 				}
 
-				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition);
+				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition[0]);
 			}
 		}
 		else if (strcmp(reqline.method, "POST") == 0) {
@@ -283,23 +281,17 @@ next_req:
 				https_apply_theme(s_clt, &ctxtHandle, cookie);
 			} else if (strcmp(reqline.resource, "/upload") == 0) {
 				struct user_stats upstats;
-				/*
-				COORD cursorPos[2];
-
-				cursorPos[0] = prThread->cursorPosition;
-				cursorPos[1] = cursorPositionBak;
-
-				clear_txrx_pane(&cursorPos);
-				*/
+				
+				clear_txrx_pane(&prThread->cursorPosition[0]);
+				
 				check_cookie_theme(headernv, &theme);
 
 				ZeroMemory(&upstats, sizeof(struct user_stats));
 
 				tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle);
-				/*
-				prThread->cursorPosition = cursorPos[0];
-				prThread->cursorPosition.Y++;
-				*/
+				
+				prThread->cursorPosition[0].Y++;
+				prThread->cursorPosition[0].X = prThread->cursorPosition[1].X;
 			}
 		}
 		ZeroMemory(https_logentry, 256);

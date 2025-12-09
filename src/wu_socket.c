@@ -72,7 +72,7 @@ bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
 void
 bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 	struct sockaddr_in sainServer;
-	unsigned char tval = 1;
+	unsigned char tval = 2;
 
 	ZeroMemory(&sainServer, sizeof(struct sockaddr_in));
 	sainServer.sin_addr = inaddr;

@@ -375,7 +375,8 @@ int main(void)
 
 	ZeroMemory(&prThread, sizeof(struct paramThread));
 	memcpy_s(&prThread.inaddr, sizeof(struct in_addr), &inaddr, sizeof(struct in_addr));
-	prThread.cursorPosition = cursorPosition[0];
+	prThread.cursorPosition[0] = cursorPosition[0];
+	prThread.cursorPosition[1] = cursorPosition[0];
 	hThread1 = CreateThread(NULL, 0, wu_tls_loop, &prThread, 0, NULL);
 
 	for (cursorPosition[1].Y = cursorPosition[0].Y, cursorPosition[1].X = cursorPosition[0].X;;) {

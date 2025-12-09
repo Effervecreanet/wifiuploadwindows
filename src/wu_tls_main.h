@@ -1,6 +1,6 @@
 struct paramThread {
 	struct in_addr inaddr;
-	COORD cursorPosition;
+	COORD cursorPosition[2];
 };
 
 

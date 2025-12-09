@@ -49,10 +49,6 @@ int tls_send(int s_clt, CtxtHandle *ctxtHandle, char *message, unsigned int mess
 	secBufferOut[2].pvBuffer = encryptBuffer + context_sizes.cbHeader + message_size;
 	secBufferOut[2].cbBuffer = context_sizes.cbTrailer;
 	
-	fprintf(g_fphttpslog, "AAA\n");
-	fflush(g_fphttpslog);
-	fprintf(g_fphttpslog, "B: %i A: %s\n", message_size, encryptBuffer + context_sizes.cbHeader);
-	fflush(g_fphttpslog);
 	ret = EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
 	if (ret != 0) {
 		INPUT_RECORD inRec;
@@ -86,7 +82,9 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 
 	received_1stcall = recv(s_clt, secBufferIn[0].pvBuffer, 2000, 0);
-	memcpy(buffer, secBufferIn[0].pvBuffer, 2000);
+	if (received_1stcall <= 0)
+		return -1;
+	memcpy(buffer, secBufferIn[0].pvBuffer, received_1stcall);
 	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, NULL);
 	if (ret == SEC_E_INCOMPLETE_MESSAGE) {
 		int missing_size = secBufferIn[1].cbBuffer;
@@ -103,6 +101,8 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 		secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 		
 		received_2ndcall = recv(s_clt, decryptBuffer + received_1stcall, missing_size, MSG_WAITALL);
+		if (received_2ndcall <= 0)
+			return -1;
 
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 		secBufferIn[0].BufferType = SECBUFFER_DATA;
@@ -128,6 +128,8 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 			secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 
 			received_3rdcall = recv(s_clt, decryptBuffer2 + received_1stcall + received_2ndcall, missing_size2, MSG_WAITALL);
+			if (received_3rdcall <= 0)
+				return -1;
 
 			ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 			secBufferIn[0].BufferType = SECBUFFER_DATA;
@@ -138,11 +140,22 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 			secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
 			ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, NULL);
+			if (ret != 0)
+				return -1;
+			for (i = 0; i < secBufferDescInput.cBuffers; i++)
+				if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
+					break;
+			*data_idx = i;
 		}
-		for (i = 0; i < secBufferDescInput.cBuffers; i++)
-			if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
-				break;
-		*data_idx = i;
+		else if (ret == SEC_E_OK) {
+			for (i = 0; i < secBufferDescInput.cBuffers; i++)
+				if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
+					break;
+			*data_idx = i;
+		}
+		else {
+			return -1;
+		}
 	}
 	else if (ret == SEC_E_OK) {
 		for (i = 0; i < secBufferDescInput.cBuffers; i++)
@@ -154,7 +167,7 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 		return -1;
 	}
 
-	return received_1stcall + received_2ndcall;
+	return 0;
 }
 
 void tls_shutdown(CtxtHandle *ctxtHandle, CredHandle *credHandle, int s_clt) {

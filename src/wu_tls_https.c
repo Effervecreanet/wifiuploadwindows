@@ -237,9 +237,6 @@ https_serv_resource(struct http_resource* res, int s,
 		strcat_s(message, 8192 - messageLen, "\r\n");
 		strcat_s(message, 8192 - messageLen - 2, pbufferout);
 
-		fprintf(g_fphttpslog, "message:\n%s\n", message);
-		fflush(g_fphttpslog);
-
 		tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
 
 		*bytesent += messageLen;
