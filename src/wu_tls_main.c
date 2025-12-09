@@ -92,9 +92,11 @@ https_quit_wu(int s_clt) {
 		tls_shutdown(g_credHandle, g_ctxtHandle, *g_tls_sclt);
 	if (encryptBuffer != NULL)
 		free(encryptBuffer);
-	for (i = 0; i < 10; i++)
-		if (decryptBuffer[i] != NULL)
-			free(decryptBuffer[i]);
+	i = 1;
+	while (i < 10 && decryptBuffer[i] != NULL) {
+		free(decryptBuffer[i]);
+		decryptBuffer[i++] = NULL;
+	}
 	WSACleanup();
 	ExitProcess(TRUE);
 
@@ -258,7 +260,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				goto after_openrep;
 			}
 			else {
-after_openrep:
+			after_openrep:
 				check_cookie_theme(headernv, &theme);
 
 				ZeroMemory(&httplocalres, sizeof(struct http_resource));

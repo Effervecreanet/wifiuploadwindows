@@ -88,11 +88,11 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, NULL);
 	if (ret == SEC_E_INCOMPLETE_MESSAGE) {
 		int missing_size;
-		for (i = 1; i < 10; i++) {
-			if (decryptBuffer[i] != NULL) {
-				free(decryptBuffer[i]);
-				decryptBuffer[i] = NULL;
-			}
+
+		i = 1;
+		while (i < 10 && decryptBuffer[i] != NULL) {
+			free(decryptBuffer[i]);
+			decryptBuffer[i++] = NULL;
 		}
 
 		for (i = 1; i < 10; i++) {
