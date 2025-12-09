@@ -52,10 +52,13 @@ CtxtHandle *g_ctxtHandle = NULL;
 CredHandle *g_credHandle = NULL;
 int *g_tls_sclt = NULL;
 extern char* encryptBuffer;
+extern char* decryptBuffer[10];
 
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
 {
+	int i;
+
 	switch (dwCtrlType) {
 	case CTRL_CLOSE_EVENT:
 	case CTRL_LOGOFF_EVENT:
@@ -79,6 +82,9 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 			tls_shutdown(g_credHandle, g_ctxtHandle, g_tls_sclt);
 		if (encryptBuffer != NULL)
 			free(encryptBuffer);
+		for (i = 0; i < 10; i++)
+			if (decryptBuffer[i] != NULL)
+				free(decryptBuffer[i]);
 		WSACleanup();
 		ExitProcess(TRUE);
 	default:

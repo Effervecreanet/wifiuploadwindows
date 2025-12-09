@@ -41,8 +41,7 @@ extern int *g_tls_sclt;
 
 SecPkgContext_StreamSizes context_sizes;
 char* encryptBuffer = NULL;
-char* decryptBuffer = NULL;
-char* decryptBuffer2 = NULL;
+char* decryptBuffer[10];
 
 static void
 https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
@@ -72,6 +71,8 @@ https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* t
 
 static void
 https_quit_wu(int s_clt) {
+	int i;
+
 	if (g_fplog != NULL)
 		fclose(g_fplog);
 	if (g_fphttpslog != NULL)
@@ -91,6 +92,9 @@ https_quit_wu(int s_clt) {
 		tls_shutdown(g_credHandle, g_ctxtHandle, *g_tls_sclt);
 	if (encryptBuffer != NULL)
 		free(encryptBuffer);
+	for (i = 0; i < 10; i++)
+		if (decryptBuffer[i] != NULL)
+			free(decryptBuffer[i]);
 	WSACleanup();
 	ExitProcess(TRUE);
 
@@ -106,7 +110,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	CredHandle credHandle;
 	CtxtHandle ctxtHandle;
 	HCERTSTORE hCertStore;
-	char BufferIn[2000];
 	int i;
 	struct http_reqline reqline;
 	INPUT_RECORD inRec;
@@ -148,6 +151,11 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	s = create_socket(&prThread->cursorPosition);
 	bind_socket2(&prThread->cursorPosition, s, prThread->inaddr);
 
+	for (i = 0; i < 10; i++)
+		decryptBuffer[i] = NULL;
+
+	decryptBuffer[0] = malloc(2000);
+
 	ZeroMemory(headernv, HEADER_NV_MAX_SIZE * (HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE));
 
 	for (;;) {
@@ -183,9 +191,7 @@ next_req:
 		bytesent = 0;
 
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
-		secBufferIn[0].pvBuffer = BufferIn;
 		secBufferIn[0].BufferType = SECBUFFER_DATA;
-		secBufferIn[0].cbBuffer = 2000;
 		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
