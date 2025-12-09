@@ -92,10 +92,11 @@ https_quit_wu(int s_clt) {
 		tls_shutdown(g_credHandle, g_ctxtHandle, *g_tls_sclt);
 	if (encryptBuffer != NULL)
 		free(encryptBuffer);
-	i = 1;
-	while (i < 10 && decryptBuffer[i] != NULL) {
-		free(decryptBuffer[i]);
-		decryptBuffer[i++] = NULL;
+	for (i = 1; i < 10; i++) {
+		if (decryptBuffer[i] != NULL) {
+			free(decryptBuffer[i]);
+			decryptBuffer[i] = NULL;
+		}
 	}
 	WSACleanup();
 	ExitProcess(TRUE);
