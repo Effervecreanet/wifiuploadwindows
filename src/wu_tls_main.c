@@ -28,16 +28,16 @@
 
 extern FILE* g_fphttpslog;
 extern FILE* g_fplog;
-extern int *g_usersocket;
-extern int *g_listensocket;
+extern int* g_usersocket;
+extern int* g_listensocket;
 extern HANDLE g_hNewFile_tmp;
 extern char* g_sNewFile_tmp;
 extern const struct _http_resources http_resources[];
 extern HANDLE g_hConsoleOutput;
 extern int g_tls_firstsend;
-extern CredHandle *g_credHandle;
-extern CtxtHandle *g_ctxtHandle;
-extern int *g_tls_sclt;
+extern CredHandle* g_credHandle;
+extern CtxtHandle* g_ctxtHandle;
+extern int* g_tls_sclt;
 
 SecPkgContext_StreamSizes context_sizes;
 char* encryptBuffer = NULL;
@@ -106,7 +106,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	WSADATA wsaData;
 	DWORD err, ret;
 	int s, s_clt;
-	CERT_CONTEXT *pCertContext;
+	CERT_CONTEXT* pCertContext;
 	CredHandle credHandle;
 	CtxtHandle ctxtHandle;
 	HCERTSTORE hCertStore;
@@ -132,7 +132,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	if (pCertContext) {
 		if (is_certificate_valid(pCertContext) != 0)
 			goto createcert;
-	} else {
+	}
+	else {
 	createcert:
 		create_certificate(prThread->cursorPosition, hCertStore, &pCertContext, pbEncodedName, &phProvider, &hKey, prThread->inaddr);
 	}
@@ -186,8 +187,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		QueryContextAttributes(&ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &context_sizes);
 		encryptBuffer = malloc(context_sizes.cbHeader + context_sizes.cbMaximumMessage + context_sizes.cbTrailer);
-		
-next_req:
+
+	next_req:
 		bytesent = 0;
 
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
@@ -212,7 +213,7 @@ next_req:
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 
 		header_offset += get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + header_offset,
-										secBufferIn[data_idx].cbBuffer - header_offset);
+			secBufferIn[data_idx].cbBuffer - header_offset);
 
 		i = nv_find_name_client(headernv, "Host");
 		if (i < 0 || strcmp(headernv[i].value.v, inet_ntoa(prThread->inaddr)) != 0) {
@@ -250,7 +251,14 @@ next_req:
 				https_wu_quit_response(&prThread->cursorPosition[0], headernv, &theme, s_clt, &bytesent);
 				https_quit_wu(s_clt);
 			}
+			else if (strcmp(reqline.resource + 1, "openRep") == 0) {
+				show_download_directory();
+				strcpy_s(reqline.resource, HTTP_RESSOURCE_MAX_LENGTH, "/index");
+				ires = 0;
+				goto after_openrep;
+			}
 			else {
+after_openrep:
 				check_cookie_theme(headernv, &theme);
 
 				ZeroMemory(&httplocalres, sizeof(struct http_resource));
@@ -275,7 +283,7 @@ next_req:
 				ret = get_theme_param(headernv, (char*)secBufferIn[data_idx].pvBuffer + header_offset, &theme);
 				if (ret != 0) {
 					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-					continue;	
+					continue;
 				}
 
 				ZeroMemory(cookie, 48);
@@ -285,17 +293,18 @@ next_req:
 					strcpy_s(cookie, 48, "theme=light");
 
 				https_apply_theme(s_clt, &ctxtHandle, cookie);
-			} else if (strcmp(reqline.resource, "/upload") == 0) {
+			}
+			else if (strcmp(reqline.resource, "/upload") == 0) {
 				struct user_stats upstats;
-				
+
 				clear_txrx_pane(&prThread->cursorPosition[0]);
-				
+
 				check_cookie_theme(headernv, &theme);
 
 				ZeroMemory(&upstats, sizeof(struct user_stats));
 
 				tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle);
-				
+
 				prThread->cursorPosition[0].Y++;
 				prThread->cursorPosition[0].X = prThread->cursorPosition[1].X;
 			}
@@ -304,11 +313,11 @@ next_req:
 		ZeroMemory(log_timestr, 42);
 
 		time(&wutime);
-		
+
 		ZeroMemory(&tmval, sizeof(struct tm));
 		localtime_s(&tmval, &wutime);
 
-		strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval); 
+		strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval);
 		sprintf_s(https_logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddr_httpsclt, log_timestr, reqline.method, reqline.resource, reqline.version, bytesent);
 		fprintf(g_fphttpslog, https_logentry);
 		fflush(g_fphttpslog);

@@ -222,7 +222,7 @@ quit_wu(int s_user) {
  * Function description:
  * - Build and show in explorer user download directory.
  */
-static void
+void
 show_download_directory(void) {
 	char dd[1024];
 
