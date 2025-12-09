@@ -296,14 +296,20 @@ struct wu_msg wumsg[] = {
 	},
 	{
 		ERR_MSG_DECRYPTMESSAGE,
-		"Erreur lors de l'appel" "\xE0" "DecryptMessage (erreur: %x)",
-		sizeof("Erreur lors de l'appel" "\xE0" "DecryptMessage (erreur: %x)") - 1,
+		"Erreur lors de l'appel " "\xE0" " DecryptMessage (erreur: %x)",
+		sizeof("Erreur lors de l'appel " "\xE0" " DecryptMessage (erreur: %x)") - 1,
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{
 		ERR_MSG_ENCRYPTMESSAGE,
 		"Erreur lors de l'appel " "\xE0" " EncryptMessage (erreur: %x)",
 		sizeof("Erreur lors de l'appel " "\xE0" " EncryptMessage (erreur: %x)") - 1,
+		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_CONGESTED_NETWORK,
+		"Erreur parce que le r" "\xE9" "seau est congestionn" "\xE9" ".",
+		sizeof("Erreur parce que le r" "\xE9" "seau est congestionn" "\xE9" ".") - 1,
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{
@@ -611,6 +617,12 @@ struct wu_msg wumsg[] = {
 		ERR_MSG_ENCRYPTMESSAGE,
 		"EncryptMessage failed with %x",
 		sizeof("EncryptMessage failed with %x") - 1,
+		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_CONGESTED_NETWORK,
+		"Error because the network is congested.",
+		sizeof("Error because the network is congested."),
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{

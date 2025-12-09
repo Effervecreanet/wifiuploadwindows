@@ -197,7 +197,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-		if (tls_recv(s_clt, &ctxtHandle, secBufferIn, &data_idx) < 0) {
+		if (tls_recv(s_clt, &ctxtHandle, secBufferIn, &data_idx, &prThread->cursorPosition[0]) < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
 		}

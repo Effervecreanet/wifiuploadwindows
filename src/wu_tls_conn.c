@@ -67,7 +67,7 @@ int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int mess
 }
 
 
-int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* data_idx) {
+int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* data_idx, COORD* cursorPosition) {
 	SecBufferDesc secBufferDescInput;
 	int ret, i, j, received[10], received_total = 0;
 	int missing_cbbuffer = 0;
@@ -132,11 +132,31 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 				break;
 			}
 			else {
+				INPUT_RECORD inRec;
+				DWORD read;
+
+				cursorPosition->Y++;
+				SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+				write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
+
+				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+
 				return -1;
 			}
 		}
-		if (i == 10)
+		
+		if (i == 10) {
+			INPUT_RECORD inRec;
+			DWORD read;
+
+			cursorPosition->Y++;
+			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+			write_info_in_console(ERR_MSG_CONGESTED_NETWORK, NULL, 0);
+
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+
 			return -1;
+		}
 	}
 	else if (ret == SEC_E_OK) {
 		for (i = 0; i < secBufferDescInput.cBuffers; i++)

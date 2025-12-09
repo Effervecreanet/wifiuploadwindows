@@ -195,7 +195,7 @@ tls_receive_file(COORD* cursorPosition,
 	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-	if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx) < 0)
+	if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx, cursorPosition) < 0)
 		return -1;
 
 	if (get_MIME_filename(upstats, secBufferIn[data_idx].pvBuffer, &MIMElen) != 0)
@@ -251,7 +251,7 @@ tls_receive_file(COORD* cursorPosition,
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 		
-		if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx) < 0)
+		if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx, cursorPosition) < 0)
 			return -1;
 
 		content_length -= secBufferIn[data_idx].cbBuffer;
