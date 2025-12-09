@@ -42,13 +42,13 @@ cb2.checked = false;
 		</form>
 	</div>
   <p style="display: block; width: 90%%; margin: 30px 5%%; padding: 11px 0; background: #767676; background-image: url('/images/crypto_lock_illu_effervecrea.png'); background-position: 14px; background-repeat: no-repeat; color: #F2F2F2; text-align: center; border-radius: 9px; height: 64px; font-size: 48px;">Param&egrave;tre: securit&eacute; (Pro)</p>
-	  <a id="hrefsecu1" style="font-size: 48px; color: white; text-align: center;display: block; width: 100%; height: 100px; margin: 0; padding: 0;" href="">Utiliser https</a>
+	  <a id="hrefsecu1" style="font-size: 48px; color: white; text-align: center;display: block; width: 100%%; height: 100px; margin: 0; padding: 0;" href="">Utiliser https</a>
 	  <script>
 		  var hn = window.location.hostname;
 		  var link = document.getElementById('hrefsecu1');
 		  link.href = 'https://' + hn;
 	  </script>
-	  <a id="hrefsecu2" style="font-size: 48px; color: white; text-align: center;display: block; width: 100%; height: 100px; margin: 0; padding: 0;" href="">Utiliser http</a>
+	  <a id="hrefsecu2" style="font-size: 48px; color: white; text-align: center;display: block; width: 100%%; height: 100px; margin: 0; padding: 0;" href="">Utiliser http</a>
 	  <script>
 		  var hn = window.location.hostname;
 		  var link = document.getElementById('hrefsecu2');
