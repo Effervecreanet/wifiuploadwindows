@@ -133,15 +133,15 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 				break;
 			}
 			else {
+				
 				INPUT_RECORD inRec;
 				DWORD read;
 
-				cursorPosition->Y++;
 				SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 				write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
 
-				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
+				// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+				
 				return -1;
 			}
 		}

@@ -306,10 +306,19 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 				ZeroMemory(&upstats, sizeof(struct user_stats));
 
-				tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle);
+				ret = tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle);
+				fprintf(g_fphttpslog, "tls_receive_file ret: %i\n", ret);
+				fflush(g_fphttpslog);
+
 
 				prThread->cursorPosition[0].Y++;
 				prThread->cursorPosition[0].X = prThread->cursorPosition[1].X;
+
+				if (ret < 0) {
+					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+					prThread->cursorPosition[0].Y += 5;
+					continue;
+				}
 			}
 		}
 		ZeroMemory(https_logentry, 256);
