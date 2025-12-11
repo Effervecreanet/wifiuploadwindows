@@ -171,7 +171,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		ZeroMemory(ipaddr_httpsclt, 16);
 
-		Sleep(222);
+		Sleep(333);
 
 		s_clt = acceptSecure(s, &credHandle, &ctxtHandle, ipaddr_httpsclt);
 		if (prThread->cursorPosition[0].Y > prThread->cursorPosition[1].Y + 5) {
@@ -210,6 +210,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		ret = tls_recv(s_clt, &ctxtHandle, secBufferIn, &data_idx, &prThread->cursorPosition[0]);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			prThread->cursorPosition[0].Y++;
 			continue;
 		}
 		
@@ -320,7 +321,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 				if (ret < 0) {
 					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-					Sleep(222);
+					prThread->cursorPosition[0].Y += 2;
 					continue;
 				}
 				else {
