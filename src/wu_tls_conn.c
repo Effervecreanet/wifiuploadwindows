@@ -70,7 +70,7 @@ int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int mess
 int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* data_idx, COORD* cursorPosition) {
 	SecBufferDesc secBufferDescInput;
 	int ret, i, j, received[10], received_total = 0;
-	int missing_cbbuffer = 0;
+	int missing_size = 0;
 
 	for (i = 0; i < 10; i++)
 		received[i] = 0;
@@ -81,13 +81,18 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 
 	received[0] = recv(s_clt, decryptBuffer[0], 2000, 0);
-	if (received[0] <= 0)
+	if (received[0] <= 0) {
+		if (WSAGetLastError() == WSAETIMEDOUT)
+			Sleep(500);
+
 		return -1;
+	}
+
 	secBufferIn[0].pvBuffer = decryptBuffer[0];
 	secBufferIn[0].cbBuffer = received[0];
 	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, NULL);
 	if (ret == SEC_E_INCOMPLETE_MESSAGE) {
-		int missing_size;
+
 
 		for (i = 1; i < 10; i++) {
 			if (decryptBuffer[i] != NULL) {
@@ -95,7 +100,8 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 				decryptBuffer[i] = NULL;
 			}
 		}
-		
+
+
 		for (i = 1; i < 10; i++) {
 			missing_size = secBufferIn[1].cbBuffer;
 
@@ -110,6 +116,7 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 			secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 
 			received[i] = recv(s_clt, decryptBuffer[i] + received_total, missing_size, MSG_WAITALL);
+
 			if (received[i] <= 0)
 				return -1;
 
@@ -133,7 +140,7 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 				break;
 			}
 			else {
-				
+
 				INPUT_RECORD inRec;
 				DWORD read;
 
@@ -141,11 +148,11 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 				write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
 
 				// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-				
+
 				return -1;
 			}
 		}
-		
+
 		if (i == 10) {
 			INPUT_RECORD inRec;
 			DWORD read;
@@ -166,6 +173,14 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 		*data_idx = i;
 	}
 	else {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
+
+		// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+
 		return -1;
 	}
 

@@ -130,6 +130,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	NCRYPT_KEY_HANDLE hKey;
 	NCRYPT_PROV_HANDLE phProvider;
 	int header_offset;
+	DWORD timeout = 5000;
+	unsigned char tval = 1;
 
 	pCertContext = (CERT_CONTEXT*)find_mycert_in_store(&hCertStore);
 	if (pCertContext) {
@@ -169,12 +171,17 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		ZeroMemory(ipaddr_httpsclt, 16);
 
-		s_clt = acceptSecure(s, &credHandle, &ctxtHandle, ipaddr_httpsclt);
+		Sleep(222);
 
+		s_clt = acceptSecure(s, &credHandle, &ctxtHandle, ipaddr_httpsclt);
 		if (prThread->cursorPosition[0].Y > prThread->cursorPosition[1].Y + 5) {
 			prThread->cursorPosition[0] = prThread->cursorPosition[1];
 			clear_txrx_pane(&prThread->cursorPosition[0]);
 		}
+
+		setsockopt(s_clt, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(DWORD));
+		setsockopt(s_clt, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(DWORD));
+		setsockopt(s_clt, SOL_SOCKET, SO_KEEPALIVE, &tval, sizeof(unsigned char));
 
 		SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
 		write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);
@@ -200,11 +207,12 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-		if (tls_recv(s_clt, &ctxtHandle, secBufferIn, &data_idx, &prThread->cursorPosition[0]) < 0) {
+		ret = tls_recv(s_clt, &ctxtHandle, secBufferIn, &data_idx, &prThread->cursorPosition[0]);
+		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
 		}
-
+		
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
 		header_offset = get_request_line(&reqline, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer);
 
@@ -307,17 +315,16 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				ZeroMemory(&upstats, sizeof(struct user_stats));
 
 				ret = tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle);
-				fprintf(g_fphttpslog, "tls_receive_file ret: %i\n", ret);
-				fflush(g_fphttpslog);
 
-
-				prThread->cursorPosition[0].Y++;
 				prThread->cursorPosition[0].X = prThread->cursorPosition[1].X;
 
 				if (ret < 0) {
 					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-					prThread->cursorPosition[0].Y += 5;
+					Sleep(222);
 					continue;
+				}
+				else {
+					prThread->cursorPosition[0].Y++;
 				}
 			}
 		}

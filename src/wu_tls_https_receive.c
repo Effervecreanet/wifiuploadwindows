@@ -159,7 +159,6 @@ tls_receive_file(COORD* cursorPosition,
 	int ret;
 	int ires;
 	SecBuffer secBufferIn[4];
-	char buffer[2000];
 	int data_idx;
 
 	ZeroMemory(&httpres, sizeof(struct http_resource));
@@ -186,17 +185,20 @@ tls_receive_file(COORD* cursorPosition,
 
 	content_length = _atoi64((httpnv + ret)->value.v);
 
-	ZeroMemory(buffer, 2000);
 	ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
-	secBufferIn[0].pvBuffer = buffer;
-	secBufferIn[0].cbBuffer = 2000;
 	secBufferIn[0].BufferType = SECBUFFER_DATA;
 	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
+	fprintf(g_fphttpslog, "AAA\n");
+	fflush(g_fphttpslog);
+
 	if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx, cursorPosition) < 0)
 		return -1;
+
+	fprintf(g_fphttpslog, "BBB\n");
+	fflush(g_fphttpslog);
 
 	if (get_MIME_filename(upstats, secBufferIn[data_idx].pvBuffer, &MIMElen) != 0)
 		return -1;
@@ -239,13 +241,13 @@ tls_receive_file(COORD* cursorPosition,
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
 	write_info_in_console(INF_ZERO_PERCENT, NULL, 0);
 
-	WriteFile(hFile, (char*)secBufferIn[data_idx].pvBuffer + MIMElen, secBufferIn[data_idx].cbBuffer - MIMElen, &written, NULL);
+	if (content_length == 0)
+		WriteFile(hFile, (char*)secBufferIn[data_idx].pvBuffer + MIMElen, secBufferIn[data_idx].cbBuffer - MIMElen - boundarylen - 8, &written, NULL);
+	else
+		WriteFile(hFile, (char*)secBufferIn[data_idx].pvBuffer + MIMElen, secBufferIn[data_idx].cbBuffer - MIMElen, &written, NULL);
 
 	while (content_length > 0) {
-		ZeroMemory(buffer, 2000);
 		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
-		secBufferIn[0].pvBuffer = buffer;
-		secBufferIn[0].cbBuffer = 2000;
 		secBufferIn[0].BufferType = SECBUFFER_DATA;
 		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;

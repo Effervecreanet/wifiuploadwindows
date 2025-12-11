@@ -296,7 +296,7 @@ struct wu_msg wumsg[] = {
 	},
 	{
 		ERR_MSG_DECRYPTMESSAGE,
-		"Erreur lors de l'appel " "\xE0" " DecryptMessage (erreur: %x)",
+		"Veuillez r" "\xE9" "essayer. (DecryptMessage: %x)",
 		sizeof("Erreur lors de l'appel " "\xE0" " DecryptMessage (erreur: %x)") - 1,
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
@@ -609,7 +609,7 @@ struct wu_msg wumsg[] = {
 	},
 	{
 		ERR_MSG_DECRYPTMESSAGE,
-		"DecryptMessage failed with %x",
+		"Please retry. (DecryptMessage: %x)",
 		sizeof("DecryptMessage failed with %x") - 1,
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
