@@ -4,6 +4,7 @@
 #include <winternl.h>
 #include <ncrypt.h>
 #include <stdio.h>
+#include <time.h>
 
 #define SCHANNEL_USE_BLACKLISTS
 
@@ -203,7 +204,7 @@ create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT*
 	CERT_NAME_BLOB SubjectBlob;
 	DWORD cbEncodedName = 128;
 	time_t wutime;
-	struct tm* tmval;
+	struct tm *tmval;
 	char log_timestr[64];
 	DWORD err, read;
 	INPUT_RECORD inRec;

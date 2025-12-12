@@ -72,8 +72,8 @@ bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
 void
 bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 	struct sockaddr_in sainServer;
+	unsigned char opt = 1;
 	DWORD timeout = 5000;
-	unsigned char tval = 1;
 
 	ZeroMemory(&sainServer, sizeof(struct sockaddr_in));
 	sainServer.sin_addr = inaddr;
@@ -101,10 +101,9 @@ bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 
 	g_listenhttpssocket = &s;
 
-	setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(DWORD));
-	setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(DWORD));
-
-	setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &tval, sizeof(unsigned char));
+	setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(unsigned char));
+	setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*) &timeout, sizeof(DWORD));
+	setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char*) &timeout, sizeof(DWORD));
 
 	return;
 }

@@ -176,6 +176,7 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 		INPUT_RECORD inRec;
 		DWORD read;
 
+		cursorPosition->Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
 
