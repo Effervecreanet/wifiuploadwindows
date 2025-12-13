@@ -263,8 +263,7 @@ draw_rectangle_in_console(COORD cursPosStart) {
 	return;
 }
 
-int main(void)
-{
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
 	DWORD written, read, ret;
 	WSADATA wsaData;
 	MIB_IPADDRTABLE ipAddrTable[4];
@@ -294,6 +293,7 @@ int main(void)
 	g_tls_firstsend = 1;
 	inaddr.s_addr = 0;
 
+	AllocConsole();
 	SetConsoleCtrlHandler(HandlerRoutine, TRUE);
 	SetConsoleTitleA(CONSOLE_TITLE);
 
