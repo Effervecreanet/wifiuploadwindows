@@ -73,7 +73,7 @@ void
 bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 	struct sockaddr_in sainServer;
 	unsigned char opt = 1;
-	DWORD timeout = 222;
+	DWORD timeout = 5000;
 
 	ZeroMemory(&sainServer, sizeof(struct sockaddr_in));
 	sainServer.sin_addr = inaddr;
@@ -97,7 +97,7 @@ bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 	}
 	
-	listen(s, 100);
+	listen(s, 50);
 
 	g_listenhttpssocket = &s;
 

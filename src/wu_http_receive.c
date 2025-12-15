@@ -231,6 +231,7 @@ receive_file(COORD* cursorPosition,
 
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
 	write_info_in_console(INF_ZERO_PERCENT, NULL, 0);
+
 	while (content_length > 0) {
 		if (content_length < (1024 + boundarylen + 8) && content_length > 1024) {
 			ret = recv(s, buffer, 777, MSG_WAITALL);
