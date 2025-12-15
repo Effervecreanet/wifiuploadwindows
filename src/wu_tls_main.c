@@ -131,7 +131,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	NCRYPT_PROV_HANDLE phProvider;
 	int header_offset;
 	unsigned char opt = 1;
-	DWORD timeout = 5000;
+	DWORD timeout = 1000;
 
 	pCertContext = (CERT_CONTEXT*)find_mycert_in_store(&hCertStore);
 	if (pCertContext) {

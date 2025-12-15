@@ -73,7 +73,7 @@ void
 bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 	struct sockaddr_in sainServer;
 	unsigned char opt = 1;
-	DWORD timeout = 5000;
+	DWORD timeout = 1000;
 
 	ZeroMemory(&sainServer, sizeof(struct sockaddr_in));
 	sainServer.sin_addr = inaddr;

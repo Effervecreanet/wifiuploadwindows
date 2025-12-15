@@ -75,6 +75,13 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 	for (i = 0; i < 10; i++)
 		received[i] = 0;
 
+		for (i = 1; i < 10; i++) {
+			if (decryptBuffer[i] != NULL) {
+				free(decryptBuffer[i]);
+				decryptBuffer[i] = NULL;
+			}
+		}
+
 	ZeroMemory(&secBufferDescInput, sizeof(secBufferDescInput));
 	secBufferDescInput.pBuffers = secBufferIn;
 	secBufferDescInput.cBuffers = 4;
@@ -92,18 +99,8 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 	secBufferIn[0].cbBuffer = received[0];
 	ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, NULL);
 	if (ret == SEC_E_INCOMPLETE_MESSAGE) {
-
-
 		for (i = 1; i < 10; i++) {
-			if (decryptBuffer[i] != NULL) {
-				free(decryptBuffer[i]);
-				decryptBuffer[i] = NULL;
-			}
-		}
-
-
-		for (i = 1; i < 10; i++) {
-			missing_size = secBufferIn[1].cbBuffer;
+			missing_size = secBufferIn[0].cbBuffer;
 
 			for (j = 0, received_total = 0; j < 10; j++)
 				received_total += received[j];
