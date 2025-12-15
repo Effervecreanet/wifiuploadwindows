@@ -114,8 +114,12 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 
 			received[i] = recv(s_clt, decryptBuffer[i] + received_total, missing_size, MSG_WAITALL);
 
-			if (received[i] <= 0)
+			if (received[0] <= 0) {
+				if (WSAGetLastError() == WSAETIMEDOUT)
+					Sleep(500);
+
 				return -1;
+			}
 
 			ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 			secBufferIn[0].BufferType = SECBUFFER_DATA;
