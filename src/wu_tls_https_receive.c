@@ -175,6 +175,8 @@ tls_receive_file(COORD* cursorPosition,
 	if (*pboundary == '\0' || boundarylen < 7 || boundarylen > 63)
 		return -1;
 
+	fprintf(g_fphttpslog, "DDD\n");
+	fflush(g_fphttpslog);
 	ZeroMemory(boundary, 64);
 	if (strcpy_s(boundary, 64, pboundary) != 0)
 		return -1;
@@ -185,6 +187,8 @@ tls_receive_file(COORD* cursorPosition,
 
 	content_length = _atoi64((httpnv + ret)->value.v);
 
+	fprintf(g_fphttpslog, "CCC\n");
+	fflush(g_fphttpslog);
 	ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
 	secBufferIn[0].BufferType = SECBUFFER_DATA;
 	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
@@ -194,6 +198,9 @@ tls_receive_file(COORD* cursorPosition,
 	if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx, cursorPosition) < 0)
 		return -1;
 
+
+	fprintf(g_fphttpslog, "EEE\n");
+	fflush(g_fphttpslog);
 	if (get_MIME_filename(upstats, secBufferIn[data_idx].pvBuffer, &MIMElen) != 0)
 		return -1;
 
@@ -223,6 +230,8 @@ tls_receive_file(COORD* cursorPosition,
 	cursorPosition->Y -= 2;
 	cursorPosition->X++;
 
+	fprintf(g_fphttpslog, "BBB\n");
+	fflush(g_fphttpslog);
 	content_length -= secBufferIn[data_idx].cbBuffer;
 	txstats.total_size = content_length;
 	txstats.one_percent = (long long)txstats.total_size / 100;

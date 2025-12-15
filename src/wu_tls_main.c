@@ -131,7 +131,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	NCRYPT_PROV_HANDLE phProvider;
 	int header_offset;
 	unsigned char opt = 1;
-	DWORD timeout = 5000;
+	DWORD timeout = 222;
 
 	pCertContext = (CERT_CONTEXT*)find_mycert_in_store(&hCertStore);
 	if (pCertContext) {
@@ -171,7 +171,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		ZeroMemory(ipaddr_httpsclt, 16);
 
-		Sleep(333);
+		Sleep(111);
 
 		s_clt = acceptSecure(s, &credHandle, &ctxtHandle, ipaddr_httpsclt);
 		if (prThread->cursorPosition[0].Y > prThread->cursorPosition[1].Y + 5) {
@@ -313,6 +313,9 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				check_cookie_theme(headernv, &theme);
 
 				ZeroMemory(&upstats, sizeof(struct user_stats));
+
+				fprintf(g_fphttpslog, "AAA\n");
+				fflush(g_fphttpslog);
 
 				ret = tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle);
 

@@ -81,12 +81,11 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 
 	received[0] = recv(s_clt, decryptBuffer[0], 2000, 0);
-	if (received[0] <= 0) {
+		fprintf(g_fphttpslog, "received[0]: %i WSAGetLastError(): %i\n", received[0], WSAGetLastError());
+		fflush(g_fphttpslog);
+
 		if (WSAGetLastError() == WSAETIMEDOUT)
 			Sleep(500);
-
-		return -1;
-	}
 
 	secBufferIn[0].pvBuffer = decryptBuffer[0];
 	secBufferIn[0].cbBuffer = received[0];
@@ -103,6 +102,9 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 
 
 		for (i = 1; i < 10; i++) {
+			for (j = 0; j < 4; j++)
+				if (secBufferIn[j].BufferType == SECBUFFER_MISSING)
+					break;
 			missing_size = secBufferIn[1].cbBuffer;
 
 			for (j = 0, received_total = 0; j < 10; j++)
@@ -116,6 +118,11 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 			secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 
 			received[i] = recv(s_clt, decryptBuffer[i] + received_total, missing_size, MSG_WAITALL);
+				fprintf(g_fphttpslog, "received[i]: %i WSAGetLastError(): %i missing_size: %i\n", received[i], WSAGetLastError(), missing_size);
+				fflush(g_fphttpslog);
+
+				if (WSAGetLastError() == WSAETIMEDOUT)
+					Sleep(500);
 
 			if (received[i] <= 0)
 				return -1;
@@ -128,11 +135,15 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 			secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 			secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
+			fprintf(g_fphttpslog, "received_total: %i\n", received_total);
+			fflush(g_fphttpslog);
 			ret = DecryptMessage(ctxtHandle, &secBufferDescInput, 0, NULL);
 			if (ret == SEC_E_INCOMPLETE_MESSAGE) {
 				continue;
 			}
 			else if (ret == SEC_E_OK) {
+				fprintf(g_fphttpslog, "SEC_E_OK\n");
+				fflush(g_fphttpslog);
 				for (i = 0; i < secBufferDescInput.cBuffers; i++)
 					if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
 						break;
@@ -144,6 +155,8 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 				INPUT_RECORD inRec;
 				DWORD read;
 
+		fprintf(g_fphttpslog, "ret0: %x\n", ret);
+		fflush(g_fphttpslog);
 				SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 				write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
 
@@ -171,10 +184,15 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 			if (secBufferDescInput.pBuffers[i].BufferType == SECBUFFER_DATA)
 				break;
 		*data_idx = i;
+		fprintf(g_fphttpslog, "SEC_E_OK 1\n", ret);
+		fflush(g_fphttpslog);
 	}
 	else {
 		INPUT_RECORD inRec;
 		DWORD read;
+
+		fprintf(g_fphttpslog, "ret1: %x\n", ret);
+		fflush(g_fphttpslog);
 
 		cursorPosition->Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
@@ -200,6 +218,7 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 	ULONG contextAttr = 0;
 	int i;
 
+	
 	ZeroMemory(&bufferDesc, sizeof(SecBufferDesc));
 	ZeroMemory(&secBuffer, sizeof(SecBuffer) * 1);
 
@@ -270,7 +289,7 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 	SecBuffer secBufferIn[2];
 	SecBuffer secBufferIn2[4];
 	SecBuffer secBufferOut[3];
-	int timeout = 2000;
+	int timeout = 500;
 
 	ZeroMemory(&ctxNewHandle, sizeof(CtxtHandle));
 	ZeroMemory(&ctxNewHandle2, sizeof(CtxtHandle));
