@@ -130,8 +130,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	NCRYPT_KEY_HANDLE hKey;
 	NCRYPT_PROV_HANDLE phProvider;
 	int header_offset;
-	unsigned char opt = 1;
-	DWORD timeout = 20000;
 
 	pCertContext = (CERT_CONTEXT*)find_mycert_in_store(&hCertStore);
 	if (pCertContext) {
@@ -178,10 +176,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 			prThread->cursorPosition[0] = prThread->cursorPosition[1];
 			clear_txrx_pane(&prThread->cursorPosition[0]);
 		}
-
-		setsockopt(s_clt, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(unsigned char));
-		setsockopt(s_clt, SOL_SOCKET, SO_RCVTIMEO, (const char*) &timeout, sizeof(DWORD));
-		setsockopt(s_clt, SOL_SOCKET, SO_SNDTIMEO, (const char*) &timeout, sizeof(DWORD));
 
 		SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
 		write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);

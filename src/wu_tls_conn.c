@@ -75,12 +75,12 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 	for (i = 0; i < 10; i++)
 		received[i] = 0;
 
-		for (i = 1; i < 10; i++) {
-			if (decryptBuffer[i] != NULL) {
-				free(decryptBuffer[i]);
-				decryptBuffer[i] = NULL;
-			}
+	for (i = 1; i < 10; i++) {
+		if (decryptBuffer[i] != NULL) {
+			free(decryptBuffer[i]);
+			decryptBuffer[i] = NULL;
 		}
+	}
 
 	ZeroMemory(&secBufferDescInput, sizeof(secBufferDescInput));
 	secBufferDescInput.pBuffers = secBufferIn;
@@ -181,6 +181,8 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, SecBuffer secBufferIn[4], int* d
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
 
+		fprintf(g_fphttpslog, "decypt_failure 1: %x\n", ret);
+		fflush(g_fphttpslog);
 		// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
 		return -1;
