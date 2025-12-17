@@ -146,9 +146,9 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* siz
 		for (i = 0; i < 4; i++)
 			if (secBufferIn[i].BufferType == SECBUFFER_DATA)
 				break;
+
 		*output = secBufferIn[i].pvBuffer;
 		*size_output = secBufferIn[i].cbBuffer;
-
 	}
 	else if (ret == SEC_E_INCOMPLETE_MESSAGE) {
 		for (i = 1; i < 10; i++) {
