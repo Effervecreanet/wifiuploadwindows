@@ -185,6 +185,7 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* siz
 					buffer_extra = NULL;
 					cb_buffer_extra = 0;
 				}
+				/* Fix me (i = j) */
 				for (i = 0; i < 4; i++)
 					if (secBufferIn[i].BufferType == SECBUFFER_DATA)
 						break;
