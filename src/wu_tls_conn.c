@@ -208,6 +208,18 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* siz
 				return -1;
 			}
 		}
+		if (i == 10) {
+			INPUT_RECORD inRec;
+			DWORD read;
+
+			cursorPosition->Y++;
+			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+			write_info_in_console(ERR_MSG_CONGESTED_NETWORK, NULL, 0);
+
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+
+			return -1;
+		}
 	}
 	else {
 		INPUT_RECORD inRec;
