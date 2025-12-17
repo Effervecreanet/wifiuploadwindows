@@ -89,41 +89,58 @@ create_userfile_tmp(COORD* cursorPosition,
 
 
 static errno_t
-get_MIME_filename(struct user_stats* upstats, char* req_buffer, unsigned short* MIMElen)
+get_MIME_filename(struct user_stats* upstats, char* req_buffer, unsigned int req_buffer_size, unsigned short* MIMElen)
 {
 	int ret;
 	unsigned short i;
 	char* p_MIME_filename;
 	char* p_quote;
 	char* p_MIMEend;
+	char* buffer;
 
-	p_MIMEend = strstr(req_buffer, "\r\n\r\n");
-	if (p_MIMEend == NULL)
+	buffer = malloc(req_buffer_size + 1);
+	ZeroMemory(buffer, req_buffer_size + 1);
+	memcpy(buffer, req_buffer, req_buffer_size);
+	
+	p_MIMEend = strstr(buffer, "\r\n\r\n");
+	if (p_MIMEend == NULL) {
+		free(buffer);
 		return -1;
+	}
 
 	*(p_MIMEend + 3) = '\0';
-	*MIMElen = strlen(req_buffer);
+	*MIMElen = strlen(buffer);
 	*(p_MIMEend + 3) = '\n';
 
-	p_MIME_filename = strstr(req_buffer, "filename=\"");
-	if (p_MIME_filename == NULL)
+	p_MIME_filename = strstr(buffer, "filename=\"");
+	if (p_MIME_filename == NULL) {
+		free(buffer);
 		return EINVAL;
+	}
 
 	p_MIME_filename += (sizeof("filename=\"") - 1);
 
 	p_quote = strchr(p_MIME_filename, '"');
-	if (p_quote == NULL)
+	if (p_quote == NULL) {
+		free(buffer);
 		return EINVAL;
+	}
 
 	*p_quote = '\0';
 
-	if (strcpy_s(upstats->filename, FILENAME_MAX_SIZE, p_MIME_filename) != 0)
+	if (strcpy_s(upstats->filename, FILENAME_MAX_SIZE, p_MIME_filename) != 0) {
+		free(buffer);
 		return EINVAL;
+	}
 
-	if (strchr(upstats->filename, '\\') != NULL)
+	if (strchr(upstats->filename, '\\') != NULL) {
+		free(buffer);
 		return EINVAL;
+	}
 
 	*MIMElen += 1;
+
+	free(buffer);
 
 	return 0;
 }
@@ -132,7 +149,7 @@ int
 tls_receive_file(COORD* cursorPosition,
 	struct header_nv* httpnv, int s,
 	struct user_stats* upstats, int theme,
-	int* bytesent, CtxtHandle *ctxtHandle) {
+	int* bytesent, CtxtHandle* ctxtHandle) {
 	unsigned short MIMElen, boundarylen;
 	HANDLE hFile;
 	DWORD written, tick_start, tick_end, tick_diff;
@@ -158,8 +175,8 @@ tls_receive_file(COORD* cursorPosition,
 	unsigned char idxunit;
 	int ret;
 	int ires;
-	SecBuffer secBufferIn[4];
-	int data_idx;
+	char* tls_recv_output;
+	unsigned int tls_recv_output_size;
 
 	ZeroMemory(&httpres, sizeof(struct http_resource));
 	ret = nv_find_name_client(httpnv, "Content-Type");
@@ -185,16 +202,10 @@ tls_receive_file(COORD* cursorPosition,
 
 	content_length = _atoi64((httpnv + ret)->value.v);
 
-	ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
-	secBufferIn[0].BufferType = SECBUFFER_DATA;
-	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
-	secBufferIn[2].BufferType = SECBUFFER_EMPTY;
-	secBufferIn[3].BufferType = SECBUFFER_EMPTY;
-
-	if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx, cursorPosition) < 0)
+	if (tls_recv(s, ctxtHandle, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
 		return -1;
 
-	if (get_MIME_filename(upstats, secBufferIn[data_idx].pvBuffer, &MIMElen) != 0)
+	if (get_MIME_filename(upstats, tls_recv_output, tls_recv_output_size, &MIMElen) != 0)
 		return -1;
 
 	if (strlen(upstats->filename) == 0)
@@ -223,7 +234,7 @@ tls_receive_file(COORD* cursorPosition,
 	cursorPosition->Y -= 2;
 	cursorPosition->X++;
 
-	content_length -= secBufferIn[data_idx].cbBuffer;
+	content_length -= tls_recv_output_size;
 	txstats.total_size = content_length;
 	txstats.one_percent = (long long)txstats.total_size / 100;
 	txstats.curr_percent = txstats.curr_percent_bak = 0;
@@ -236,30 +247,24 @@ tls_receive_file(COORD* cursorPosition,
 	write_info_in_console(INF_ZERO_PERCENT, NULL, 0);
 
 	if (content_length == 0)
-		WriteFile(hFile, (char*)secBufferIn[data_idx].pvBuffer + MIMElen, secBufferIn[data_idx].cbBuffer - MIMElen - boundarylen - 8, &written, NULL);
+		WriteFile(hFile, tls_recv_output + MIMElen, tls_recv_output_size - MIMElen - boundarylen - 8, &written, NULL);
 	else
-		WriteFile(hFile, (char*)secBufferIn[data_idx].pvBuffer + MIMElen, secBufferIn[data_idx].cbBuffer - MIMElen, &written, NULL);
+		WriteFile(hFile, tls_recv_output + MIMElen, tls_recv_output_size - MIMElen, &written, NULL);
 
 	while (content_length > 0) {
-		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
-		secBufferIn[0].BufferType = SECBUFFER_DATA;
-		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
-		
-		if (tls_recv(s, ctxtHandle, secBufferIn, &data_idx, cursorPosition) < 0)
+		if (tls_recv(s, ctxtHandle, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
 			return -1;
 
-		content_length -= secBufferIn[data_idx].cbBuffer;
+		content_length -= tls_recv_output_size;
 
 		if (content_length == 0) {
-			WriteFile(hFile, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer - boundarylen - 8, &written, NULL);
+			WriteFile(hFile, tls_recv_output, tls_recv_output_size - boundarylen - 8, &written, NULL);
 			break;
 		}
 		else
-			WriteFile(hFile, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer, &written, NULL);
+			WriteFile(hFile, tls_recv_output, tls_recv_output_size, &written, NULL);
 
-		txstats.received_size += (unsigned int) secBufferIn[data_idx].cbBuffer;
+		txstats.received_size += tls_recv_output_size;
 
 		GetSystemTime(&txstats.current);
 
@@ -401,4 +406,3 @@ tls_receive_file(COORD* cursorPosition,
 
 	return 0;
 }
-

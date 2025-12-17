@@ -42,6 +42,8 @@ extern int* g_tls_sclt;
 SecPkgContext_StreamSizes context_sizes;
 char* encryptBuffer = NULL;
 char* decryptBuffer[10];
+unsigned int cb_buffer_extra;
+char* buffer_extra;
 
 static void
 https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
@@ -120,8 +122,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	struct header_nv headernv[HEADER_NV_MAX_SIZE];
 	int bytesent = 0;
 	int theme = 0;
-	int data_idx;
-	SecBuffer secBufferIn[4];
 	char https_logentry[256];
 	char ipaddr_httpsclt[16];
 	char log_timestr[42];
@@ -130,6 +130,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	NCRYPT_KEY_HANDLE hKey;
 	NCRYPT_PROV_HANDLE phProvider;
 	int header_offset;
+	char* tls_recv_output;
+	unsigned int tls_recv_output_size;
 
 	pCertContext = (CERT_CONTEXT*)find_mycert_in_store(&hCertStore);
 	if (pCertContext) {
@@ -159,6 +161,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		decryptBuffer[i] = NULL;
 
 	decryptBuffer[0] = malloc(2000);
+	buffer_extra = NULL;
+	cb_buffer_extra = 0;
 
 	ZeroMemory(headernv, HEADER_NV_MAX_SIZE * (HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE));
 
@@ -195,20 +199,15 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	next_req:
 		bytesent = 0;
 
-		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 4);
-		secBufferIn[0].BufferType = SECBUFFER_DATA;
-		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-		ret = tls_recv(s_clt, &ctxtHandle, secBufferIn, &data_idx, &prThread->cursorPosition[0]);
+		ret = tls_recv(s_clt, &ctxtHandle, &tls_recv_output, &tls_recv_output_size, &prThread->cursorPosition[0]);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
 		}
-		
+
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		header_offset = get_request_line(&reqline, secBufferIn[data_idx].pvBuffer, secBufferIn[data_idx].cbBuffer);
+		header_offset = get_request_line(&reqline, tls_recv_output, tls_recv_output_size);
 
 		if (strcmp(reqline.version, HTTP_VERSION) != 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
@@ -217,8 +216,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 
-		header_offset += get_header_nv(headernv, (char*)secBufferIn[data_idx].pvBuffer + header_offset,
-			secBufferIn[data_idx].cbBuffer - header_offset);
+		header_offset += get_header_nv(headernv, tls_recv_output + header_offset, tls_recv_output_size - header_offset);
 
 		i = nv_find_name_client(headernv, "Host");
 		if (i < 0 || strcmp(headernv[i].value.v, inet_ntoa(prThread->inaddr)) != 0) {
@@ -285,7 +283,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 			if (strcmp(reqline.resource, "/theme") == 0) {
 				char cookie[48];
 
-				ret = get_theme_param(headernv, (char*)secBufferIn[data_idx].pvBuffer + header_offset, &theme);
+				ret = get_theme_param(headernv, tls_recv_output + header_offset, &theme);
 				if (ret != 0) {
 					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 					continue;
@@ -347,4 +345,3 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 	return 0;
 }
-
