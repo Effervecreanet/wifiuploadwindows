@@ -19,6 +19,18 @@ extern FILE* g_fphttpslog;
 extern int g_tls_firstsend;
 
 
+/*
+ * Function description:
+ *  - Parse client request line. Get http method, http ressource and http
+ * version.
+ * Arguments:
+ *  - reqline: Structure to store user http method, ressource and version.
+ *  - BufferIn: tls_recv() output buffer
+ *  - length: Length of BufferIn.
+ * Return value:
+ *  - -1: Failure
+ *  - 0: Number of data characters parsed. 
+ */
 int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 {
 	char* p_bufferin = BufferIn;
@@ -68,6 +80,19 @@ int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 	return count;
 }
 
+/*
+ * Function description:
+ *  - Parse user http header name/value pairs. Store http header name/value
+ *    pairs in a struct header_nv.
+ * Arguments:
+ *  - headernv: Structure that contains http header name/value pairs.
+ *  - buffer: tls_recv() output buffer specified with an offset
+ *            (+= length of request line).
+ *  - bufferlength: Length of buffer.
+ * Return value:
+ *  -1: Function failure. NAME or VALUE size out of bounds. Or invalid characters.
+ *   0: Number of byte parsed.
+ */
 int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength)
 {
 	int count_hdr_nv = 0;
@@ -130,6 +155,22 @@ crlfcrlf:
 
 	return headerlen;
 }
+
+/*
+ * Function description:
+ *  - Load wifiupload html page or image data, format html page or image data
+ *    eventualy send data.
+ * Arguments:
+ *  - res: Wifiupload requested ressource. See wu_content.c it contains wifiupload
+ *         ressources (pages and images ...).
+ *  - s: Client socket where wu send data.
+ *  - successinfo: Upload transfert informations and statistics.
+ *  - bytesent: Number of byte wifiupload sent to client.
+ *  - ctxtHandle: Security context handle, used in tls_send().
+ *  - cursorPosition: Console cursor position where wu writes info or errors.
+ * Return value:
+ *  - Not used. 
+ */
 
 int
 https_serv_resource(struct http_resource* res, int s,
