@@ -23,8 +23,8 @@ struct success_info {
 };
 
 errno_t redir404(int s);
-errno_t http_recv_reqline(int s, struct http_reqline* reqline);
-errno_t http_recv_headernv(struct header_nv* nv, int s);
+int http_recv_reqline(int s, struct http_reqline* reqline);
+int http_recv_headernv(int s, struct header_nv* nv);
 int http_match_resource(char* resource);
 int http_serv_resource(struct http_resource* res, int s,
 	struct success_info* successinfo,
