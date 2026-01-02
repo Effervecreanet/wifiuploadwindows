@@ -275,15 +275,7 @@ tls_receive_file(COORD* cursorPosition,
 		WriteFile(hFile, tls_recv_output + MIMElen, tls_recv_output_size - MIMElen - boundarylen - 8, &written, NULL);
 	else
 		WriteFile(hFile, tls_recv_output + MIMElen, tls_recv_output_size - MIMElen, &written, NULL);
-/*
-	while (content_length > 0) {
-		ret = tls_recv_file(hFile, ctxtHandle, s, &txstats.received_size, &content_length, boundarylen, cursorPosition);
-		if (ret == 0)
-			break;
-		
-		print_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
-	}
-	*/
+	
 	while (tls_recv_file(hFile, ctxtHandle, s, &txstats.received_size, &content_length, boundarylen, cursorPosition))
 		print_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
 

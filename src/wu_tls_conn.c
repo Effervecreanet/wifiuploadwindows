@@ -68,6 +68,142 @@ int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int mess
 	return 0;
 }
 
+static int
+tls_recv_add_data_to_extra(int s_clt, int received[10], SecBuffer secBufferIn[4]) {
+	memcpy(decryptBuffer[0], buffer_extra, cb_buffer_extra);
+	received[0] = recv(s_clt, decryptBuffer[0] + cb_buffer_extra, 2000 - cb_buffer_extra, 0);
+
+	if (received[0] <= 0)
+		return -1;
+
+	secBufferIn[0].pvBuffer = decryptBuffer[0];
+	secBufferIn[0].cbBuffer = received[0] + cb_buffer_extra;
+
+	free(buffer_extra);
+	buffer_extra = NULL;
+
+	return 0;
+}
+
+static int
+tls_recv_first_buffer(int s_clt, int received[10], SecBuffer secBufferIn[4]) {
+	received[0] = recv(s_clt, decryptBuffer[0], 2000, 0);
+
+	if (received[0] <= 0)
+		return -1;
+
+	secBufferIn[0].pvBuffer = decryptBuffer[0];
+	secBufferIn[0].cbBuffer = received[0];
+
+	cb_buffer_extra = 0;
+
+	return 0;
+}
+
+static void
+is_extradata_in(SecBuffer secBufferIn[4]) {
+	int i;
+
+	for (i = 0; i < 4; i++) {
+		if (secBufferIn[i].BufferType == SECBUFFER_EXTRA) {
+			buffer_extra = malloc(secBufferIn[i].cbBuffer);
+			memcpy(buffer_extra, secBufferIn[i].pvBuffer, secBufferIn[i].cbBuffer);
+			cb_buffer_extra = secBufferIn[i].cbBuffer;
+			break;
+		}
+	}
+	if (i == 4) {
+		if (buffer_extra != NULL) {
+			free(buffer_extra);
+			buffer_extra = NULL;
+			cb_buffer_extra = 0;
+		}
+	}
+
+	return;
+}
+
+static int
+tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc secBufferDesc, SecBuffer secBufferIn[4], int received[10],
+							char **output, unsigned int *size_output, COORD *cursorPosition) {
+	int total_size, missing_size;
+	int i, j, ret;
+
+	for (i = 1; i < 10; i++) {
+		for (j = 0; j < 4; j++) {
+			if (secBufferIn[j].BufferType == SECBUFFER_MISSING)
+				break;
+		}
+		missing_size = secBufferIn[j].cbBuffer;
+
+		total_size = 0;
+		total_size += cb_buffer_extra;
+		for (j = 0; j < 10 && received[j] != 0; j++)
+			total_size += received[j];
+
+		decryptBuffer[i] = malloc(total_size + missing_size);
+		memcpy(decryptBuffer[i], decryptBuffer[i - 1], total_size);
+		received[i] = recv(s_clt, decryptBuffer[i] + total_size, missing_size, MSG_WAITALL);
+		if (received[i] <= 0)
+			return -1;
+
+		total_size += missing_size;
+
+		secBufferIn[0].BufferType = SECBUFFER_DATA;
+		secBufferIn[0].pvBuffer = decryptBuffer[i];
+		secBufferIn[0].cbBuffer = total_size;
+		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
+		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
+		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
+
+		ret = DecryptMessage(ctxtHandle, &secBufferDesc, 0, NULL);
+		if (ret == SEC_E_OK) {
+			if (buffer_extra != NULL) {
+				free(buffer_extra);
+				buffer_extra = NULL;
+				cb_buffer_extra = 0;
+			}
+			
+			for (j = 0; j < 4; j++)
+				if (secBufferIn[j].BufferType == SECBUFFER_DATA)
+					break;
+			*output = secBufferIn[j].pvBuffer;
+			*size_output = secBufferIn[j].cbBuffer;
+			break;
+		}
+		else if (ret = SEC_E_INCOMPLETE_MESSAGE) {
+			continue;
+		}
+		else {
+
+			INPUT_RECORD inRec;
+			DWORD read;
+
+			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+			write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
+
+			// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+
+			return -1;
+		}
+	}
+	if (i == 10) {
+		INPUT_RECORD inRec;
+		DWORD read;
+
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_CONGESTED_NETWORK, NULL, 0);
+
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+
+		return -1;
+	}
+
+
+
+	return 0;
+}
 
 int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* size_output, COORD* cursorPosition) {
 	SecBufferDesc secBufferDesc;
@@ -100,48 +236,14 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* siz
 
 	ZeroMemory(decryptBuffer[0], 2000);
 
-	if (buffer_extra != NULL) {
-		memcpy(decryptBuffer[0], buffer_extra, cb_buffer_extra);
-		received[0] = recv(s_clt, decryptBuffer[0] + cb_buffer_extra, 2000 - cb_buffer_extra, 0);
-
-		if (received[0] <= 0)
-			return -1;
-
-		secBufferIn[0].pvBuffer = decryptBuffer[0];
-		secBufferIn[0].cbBuffer = received[0] + cb_buffer_extra;
-
-		free(buffer_extra);
-		buffer_extra = NULL;
-	}
-	else {
-		received[0] = recv(s_clt, decryptBuffer[0], 2000, 0);
-
-		if (received[0] <= 0)
-			return -1;
-
-		secBufferIn[0].pvBuffer = decryptBuffer[0];
-		secBufferIn[0].cbBuffer = received[0];
-
-		cb_buffer_extra = 0;
-	}
+	if (buffer_extra != NULL && tls_recv_add_data_to_extra(s_clt, received, secBufferIn) < 0)
+		return -1;
+	else if (tls_recv_first_buffer(s_clt, received, secBufferIn) < 0)
+		return -1;
 
 	ret = DecryptMessage(ctxtHandle, &secBufferDesc, 0, NULL);
 	if (ret == SEC_E_OK) {
-		for (i = 0; i < 4; i++) {
-			if (secBufferIn[i].BufferType == SECBUFFER_EXTRA) {
-				buffer_extra = malloc(secBufferIn[i].cbBuffer);
-				memcpy(buffer_extra, secBufferIn[i].pvBuffer, secBufferIn[i].cbBuffer);
-				cb_buffer_extra = secBufferIn[i].cbBuffer;
-				break;
-			}
-		}
-		if (i == 4) {
-			if (buffer_extra != NULL) {
-				free(buffer_extra);
-				buffer_extra = NULL;
-				cb_buffer_extra = 0;
-			}
-		}
+		is_extradata_in(secBufferIn);
 
 		for (i = 0; i < 4; i++)
 			if (secBufferIn[i].BufferType == SECBUFFER_DATA)
@@ -151,76 +253,9 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* siz
 		*size_output = secBufferIn[i].cbBuffer;
 	}
 	else if (ret == SEC_E_INCOMPLETE_MESSAGE) {
-		for (i = 1; i < 10; i++) {
-			for (j = 0; j < 4; j++) {
-				if (secBufferIn[j].BufferType == SECBUFFER_MISSING)
-					break;
-			}
-			missing_size = secBufferIn[j].cbBuffer;
-
-			total_size = 0;
-			total_size += cb_buffer_extra;
-			for (j = 0; j < 10 && received[j] != 0; j++)
-				total_size += received[j];
-
-			decryptBuffer[i] = malloc(total_size + missing_size);
-			memcpy(decryptBuffer[i], decryptBuffer[i - 1], total_size);
-			received[i] = recv(s_clt, decryptBuffer[i] + total_size, missing_size, MSG_WAITALL);
-			if (received[i] <= 0)
-				return -1;
-
-			total_size += missing_size;
-
-			secBufferIn[0].BufferType = SECBUFFER_DATA;
-			secBufferIn[0].pvBuffer = decryptBuffer[i];
-			secBufferIn[0].cbBuffer = total_size;
-			secBufferIn[1].BufferType = SECBUFFER_EMPTY;
-			secBufferIn[2].BufferType = SECBUFFER_EMPTY;
-			secBufferIn[3].BufferType = SECBUFFER_EMPTY;
-
-			ret = DecryptMessage(ctxtHandle, &secBufferDesc, 0, NULL);
-			if (ret == SEC_E_OK) {
-				if (buffer_extra != NULL) {
-					free(buffer_extra);
-					buffer_extra = NULL;
-					cb_buffer_extra = 0;
-				}
-				/* Fix me (i = j) */
-				for (i = 0; i < 4; i++)
-					if (secBufferIn[i].BufferType == SECBUFFER_DATA)
-						break;
-				*output = secBufferIn[i].pvBuffer;
-				*size_output = secBufferIn[i].cbBuffer;
-				break;
-			}
-			else if (ret = SEC_E_INCOMPLETE_MESSAGE) {
-				continue;
-			}
-			else {
-
-				INPUT_RECORD inRec;
-				DWORD read;
-
-				SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-				write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
-
-				// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
-				return -1;
-			}
-		}
-		if (i == 10) {
-			INPUT_RECORD inRec;
-			DWORD read;
-
-			cursorPosition->Y++;
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(ERR_MSG_CONGESTED_NETWORK, NULL, 0);
-
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
+		if (tls_recv_incomplete_message(ctxtHandle, s_clt, secBufferDesc, secBufferIn, received,
+										output, size_output, cursorPosition) < 0)
 			return -1;
-		}
 	}
 	else {
 		INPUT_RECORD inRec;
