@@ -237,7 +237,7 @@ recv_file(HANDLE hFile, int s_user, u_int64* content_length, unsigned short boun
  * - txstats: Transfer statistics or informations.
  * - coordAverageTX: Position of speed string.
  */
-static void
+void
 print_tx_speed(struct tx_stats* txstats, COORD coordAverageTX) {
 	double averageRateTX;
 	CHAR strAverageRateTX[42];
@@ -283,7 +283,7 @@ print_tx_speed(struct tx_stats* txstats, COORD coordAverageTX) {
  * - cursorPosition: ???
  * - coordPerCent: Position of percentage string.
  */
-static void
+void
 print_upload_info(struct tx_stats* txstats, COORD coordAverageTX, COORD* cursorPosition, COORD coordPerCent) {
 	GetSystemTime(&txstats->current);
 
@@ -316,7 +316,7 @@ print_upload_info(struct tx_stats* txstats, COORD coordAverageTX, COORD* cursorP
  * - tick_start: Start upload time.
  * - sizeNewFile: File size used to compute average speed.
  */
-static void
+void
 chrono(struct success_info* successinfo, DWORD tick_start, u_int64 sizeNewFile) {
 	float average_speed = 0.0;
 	DWORD tick_end, tick_diff;

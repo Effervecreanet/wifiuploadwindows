@@ -101,7 +101,7 @@ get_MIME_filename(struct user_stats* upstats, char* req_buffer, unsigned int req
 	buffer = malloc(req_buffer_size + 1);
 	ZeroMemory(buffer, req_buffer_size + 1);
 	memcpy(buffer, req_buffer, req_buffer_size);
-	
+
 	p_MIMEend = strstr(buffer, "\r\n\r\n");
 	if (p_MIMEend == NULL) {
 		free(buffer);
@@ -144,6 +144,31 @@ get_MIME_filename(struct user_stats* upstats, char* req_buffer, unsigned int req
 
 	return 0;
 }
+
+static int
+tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, int s, u_int64 *received_size, u_int64 *content_length, unsigned short boundarylen, COORD *cursorPosition) {
+	char* tls_recv_output;
+	unsigned int tls_recv_output_size;
+	DWORD written;
+
+	if (tls_recv(s, ctxtHandle, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
+		return -1;
+
+	*content_length -= tls_recv_output_size;
+
+	if (*content_length == 0) {
+		WriteFile(hFile, tls_recv_output, tls_recv_output_size - boundarylen - 8, &written, NULL);
+		return 0;
+	}
+	else
+		WriteFile(hFile, tls_recv_output, tls_recv_output_size, &written, NULL);
+
+	*received_size += tls_recv_output_size;
+
+	return 1;
+}
+
+
 
 int
 tls_receive_file(COORD* cursorPosition,
@@ -250,73 +275,17 @@ tls_receive_file(COORD* cursorPosition,
 		WriteFile(hFile, tls_recv_output + MIMElen, tls_recv_output_size - MIMElen - boundarylen - 8, &written, NULL);
 	else
 		WriteFile(hFile, tls_recv_output + MIMElen, tls_recv_output_size - MIMElen, &written, NULL);
-
+/*
 	while (content_length > 0) {
-		if (tls_recv(s, ctxtHandle, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
-			return -1;
-
-		content_length -= tls_recv_output_size;
-
-		if (content_length == 0) {
-			WriteFile(hFile, tls_recv_output, tls_recv_output_size - boundarylen - 8, &written, NULL);
+		ret = tls_recv_file(hFile, ctxtHandle, s, &txstats.received_size, &content_length, boundarylen, cursorPosition);
+		if (ret == 0)
 			break;
-		}
-		else
-			WriteFile(hFile, tls_recv_output, tls_recv_output_size, &written, NULL);
-
-		txstats.received_size += tls_recv_output_size;
-
-		GetSystemTime(&txstats.current);
-
-		if (txstats.current.wHour > txstats.currentbak.wHour ||
-			txstats.current.wMinute > txstats.currentbak.wMinute ||
-			txstats.current.wSecond > txstats.currentbak.wSecond) {
-			double averageRateTX;
-			CHAR strAverageRateTX[42];
-
-
-			memcpy(&txstats.currentbak, &txstats.current, sizeof(SYSTEMTIME));
-
-			averageRateTX = (txstats.received_size - txstats.received_size_bak) / 1000.000;
-
-			SetConsoleCursorPosition(g_hConsoleOutput, coordAverageTX);
-
-			ZeroMemory(strAverageRateTX, 42);
-
-			if (averageRateTX > 1000) {
-				averageRateTX /= 1000.000;
-				if (averageRateTX > 1000) {
-					averageRateTX /= 1000.000;
-					sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-					write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_GO, strAverageRateTX, 0);
-				}
-				else {
-					sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-					write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_MO, strAverageRateTX, 0);
-				}
-			}
-			else {
-				sprintf_s(strAverageRateTX, 42, "%0.2f", averageRateTX);
-				write_info_in_console(INF_WIFIUPLOAD_TX_SPEED_UI_KO, strAverageRateTX, 0);
-			}
-
-			txstats.received_size_bak = txstats.received_size;
-
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		}
-
-		txstats.curr_percent = (u_char)(((float)txstats.received_size / (float)txstats.total_size) * 100);
-		if (txstats.curr_percent > txstats.curr_percent_bak + 2) {
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(INF_WIFIUPLOAD_ONE_PBAR, NULL, 0);
-			cursorPosition->X++;
-			SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
-			write_info_in_console(INF_WIFIUPLOAD_CURRENT_PERCENT, (void*)txstats.curr_percent, 0);
-			txstats.curr_percent_bak += 2;
-		}
-
+		
+		print_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
 	}
-
+	*/
+	while (tls_recv_file(hFile, ctxtHandle, s, &txstats.received_size, &content_length, boundarylen, cursorPosition))
+		print_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
 
 	if (content_length != 0) {
 		CloseHandle(hFile);
@@ -370,30 +339,7 @@ tls_receive_file(COORD* cursorPosition,
 	sizeNewFile = sizeNewFileDup;
 	average_speed = 0.0;
 
-	tick_end = GetTickCount();
-	tick_diff = tick_end - tick_start;
-
-	if (tick_diff < 1000)
-		sprintf_s(successinfo.elapsedTime, 24, "%u msecs", tick_diff);
-	else if (tick_diff < 1000 * 60)
-		sprintf_s(successinfo.elapsedTime, 24, "%.2f secs",
-			((float)tick_diff / (1000.0)));
-	else if (tick_diff < 1000 * 60 * 60)
-		sprintf_s(successinfo.elapsedTime, 24, "%.2f min",
-			((float)tick_diff / (1000.0 * 60)));
-	else if (tick_diff < 1000 * 60 * 60 * 60)
-		sprintf_s(successinfo.elapsedTime, 24, "%.2f h",
-			((float)tick_diff / (1000.0 * 60 * 60)));
-
-
-	average_speed = ((float)sizeNewFile / ((tick_diff > 1000 ? tick_diff : 1000) / 1000));
-
-	if (average_speed > 99999999.0)
-		sprintf_s(successinfo.averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_GO, average_speed / 1000000000.00);
-	else if (average_speed > 999999.0)
-		sprintf_s(successinfo.averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_MO, average_speed / 1000000.00);
-	else
-		sprintf_s(successinfo.averagespeed, 24, EWU_WIFIUPLOAD_AVERAGE_TX_SPEED_KO, average_speed / 100.00);
+	chrono(&successinfo, tick_start, sizeNewFile);
 
 	ZeroMemory(&httpres, sizeof(struct http_resource));
 	for (ires = 0; http_resources[ires].resource != NULL; ires++) {
