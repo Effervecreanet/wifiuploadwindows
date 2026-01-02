@@ -347,7 +347,6 @@ http_send_status(int s_user, int* bytesent, unsigned int status_code) {
  * Arguments:
  * - hrmn: Hours minutes characters string.
  */
-static
 int get_hours_minutes(char hrmn[6]) {
 	SYSTEMTIME sysTime;
 
@@ -382,7 +381,6 @@ int get_hours_minutes(char hrmn[6]) {
  * - -1: Function failed
  * - 0: Function success.
  */
-static
 int make_htmlpage(struct success_info* successinfo, char* resource, char* pbufferin,
 	char** pbufferout, size_t* pbufferoutlen, DWORD fsize, char hrmn[6]) {
 	char BufferUserName[254];

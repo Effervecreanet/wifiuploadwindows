@@ -219,50 +219,12 @@ https_serv_resource(struct http_resource* res, int s,
 			return err;
 		}
 
-		ZeroMemory(&sysTime, sizeof(SYSTEMTIME));
-		GetLocalTime(&sysTime);
-		ZeroMemory(hrmn, 6);
-		if (sysTime.wHour < 10 && sysTime.wMinute < 10)
-			StringCchPrintf(hrmn, 6, "0%hu:0%hu", sysTime.wHour, sysTime.wMinute);
-		else if (sysTime.wHour < 10)
-			StringCchPrintf(hrmn, 6, "0%hu:%hu", sysTime.wHour, sysTime.wMinute);
-		else if (sysTime.wMinute < 10)
-			StringCchPrintf(hrmn, 6, "%hu:0%hu", sysTime.wHour, sysTime.wMinute);
-		else
-			StringCchPrintf(hrmn, 6, "%hu:%hu", sysTime.wHour, sysTime.wMinute);
+		get_hours_minutes(hrmn);
 
 		plastBS = strrchr(res->resource, '\\') + 1;
-		if (strcmp(plastBS, "index") == 0 || strcmp(plastBS, "erreur_fichier_nul") == 0) {
-			pbufferout = (char*)malloc(fsize + BufferUserNameSize + 6);
-			ZeroMemory(pbufferout, fsize + BufferUserNameSize + 6);
-			StringCchPrintfA(pbufferout, fsize + BufferUserNameSize + 6 - 1, pbufferin, BufferUserName, hrmn);
-			free(pbufferin);
-			pbufferoutlen = strlen(pbufferout);
-		}
-		else if (strcmp(plastBS, "success") == 0) {
-			pbufferout = (char*)malloc(fsize + 254 + 6);
-			ZeroMemory(pbufferout, fsize + 254 + 6);
-			StringCchPrintfA(pbufferout, fsize + 254 + 6,
-				pbufferin,
-				successinfo->filename,
-				successinfo->filenameSize,
-				successinfo->elapsedTime,
-				successinfo->averagespeed,
-				hrmn);
-			free(pbufferin);
-			pbufferoutlen = strlen(pbufferout);
-		}
-		else if (strcmp(plastBS, "credits") == 0 || strcmp(plastBS, "erreur_404") == 0 || strcmp(plastBS, "settings") == 0) {
-			pbufferout = (char*)malloc(fsize + 6);
-			ZeroMemory(pbufferout, fsize + 6);
-			StringCchPrintfA(pbufferout, fsize + 6, pbufferin, hrmn);
-			free(pbufferin);
-			pbufferoutlen = strlen(pbufferout);
-		}
-		else {
-			free(pbufferin);
+		if (make_htmlpage(successinfo, plastBS, pbufferin, &pbufferout,
+			&pbufferoutlen, fsize, hrmn) < 0)
 			goto err;
-		}
 
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 		create_http_header_nv(res, httpnv, pbufferoutlen, -1);
