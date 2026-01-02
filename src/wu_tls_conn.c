@@ -124,7 +124,7 @@ is_extradata_in(SecBuffer secBufferIn[4]) {
 }
 
 static int
-tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc secBufferDesc, SecBuffer secBufferIn[4], int received[10],
+tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc *secBufferDesc, SecBuffer secBufferIn[4], int received[10],
 							char **output, unsigned int *size_output, COORD *cursorPosition) {
 	int total_size, missing_size;
 	int i, j, ret;
@@ -156,7 +156,7 @@ tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc sec
 		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
 		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
 
-		ret = DecryptMessage(ctxtHandle, &secBufferDesc, 0, NULL);
+		ret = DecryptMessage(ctxtHandle, secBufferDesc, 0, NULL);
 		if (ret == SEC_E_OK) {
 			if (buffer_extra != NULL) {
 				free(buffer_extra);
@@ -253,7 +253,7 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* siz
 		*size_output = secBufferIn[i].cbBuffer;
 	}
 	else if (ret == SEC_E_INCOMPLETE_MESSAGE) {
-		if (tls_recv_incomplete_message(ctxtHandle, s_clt, secBufferDesc, secBufferIn, received,
+		if (tls_recv_incomplete_message(ctxtHandle, s_clt, &secBufferDesc, secBufferIn, received,
 										output, size_output, cursorPosition) < 0)
 			return -1;
 	}
