@@ -419,7 +419,7 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 	g_usersocket = &s_user;
 
 	ZeroMemory(&reqline, sizeof(struct http_reqline));
-	if (http_recv_reqline(&reqline, s_user) != 0)
+	if (http_recv_reqline(s_user, &reqline) != 0)
 		goto err;
 
 	ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
