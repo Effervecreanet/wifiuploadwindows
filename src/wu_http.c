@@ -42,65 +42,64 @@ time_to_httpdate(char* http_date)
 
 	return 1;
 }
-
 /*
  * Function description:
  * - Receive HTTP/1.1 request line.
  * Arguments:
- * - reqline: Used to store client request line.
  * - s: Client socket wu receive data from.
+ * - reqline: Used to store client request line.
  * Return value:
  * - -1: Function failure
  * - 0: Success
  */
-errno_t
-http_recv_reqline(struct http_reqline* reqline, int s) {
-	int i;
-	char buffer[254];
-	char* sp;
-	char* spbak;
-	errno_t errn;
+int
+http_recv_reqline(int s, struct http_reqline* reqline) {
+	int i, ret;
+	char c;
 
-	ZeroMemory(buffer, 254);
-	for (i = 0; i < 252; i++) {
-		recv(s, &buffer[i], 1, 0);
-		if (buffer[i] == '\r') {
-			recv(s, &buffer[++i], 1, 0);
-			if (buffer[i] == '\n')
-				break;
-			else
-				return -1;
-		}
-	}
+	i = 0;
 
-	if (i >= 252)
-		return -2;
+	do {
+		ret = recv(s, &c, 1, 0);
+		if (ret < 0)
+			return -1;
+		else if (c == ' ')
+			break;
+		else
+			reqline->method[i] = c;
 
-	if ((sp = strchr(buffer, ' ')) == NULL)
-		return 1;
+	} while (++i < REQUEST_LINE_METHOD_MAX_SIZE);
 
-	spbak = sp + 1;
-	*sp = '\0';
+	if (i == REQUEST_LINE_METHOD_MAX_SIZE || c != ' ')
+		return -1;
 
-	errn = strcpy_s(reqline->method, sizeof(HTTP_METHOD_POST), buffer);
-	if (errn != 0)
-		return EINVAL;
+	i = 0;
 
-	if ((sp = strchr(++sp, ' ')) == NULL)
-		return 3;
+	do {
+		ret = recv(s, &c, 1, 0);
+		if (ret < 0)
+			return -1;
+		else if (c == ' ')
+			break;
+		else
+			reqline->resource[i] = c;
+	} while (++i < HTTP_RESSOURCE_MAX_LENGTH);
 
-	*sp = '\0';
+	if (i == HTTP_RESSOURCE_MAX_LENGTH || c != ' ')
+		return -1;
 
-	errn = strcpy_s(reqline->resource, HTTP_RESSOURCE_MAX_LENGTH, spbak);
-	if (errn != 0)
-		return EINVAL;
+	ret = recv(s, (char*)&reqline->version, sizeof("HTTP/1.1") - 1, 0);
 
-	if (strncmp(++sp, HTTP_VERSION, sizeof(HTTP_VERSION) - 1))
-		return 4;
+	if (ret != (sizeof("HTTP/1.1") - 1))
+		return -1;
 
-	errn = strcpy_s(reqline->version, sizeof(HTTP_VERSION), HTTP_VERSION);
-	if (errn != 0)
-		return EINVAL;
+	ret = recv(s, &c, 1, 0);
+	if (ret < 0 || c != '\r')
+		return -1;
+
+	ret = recv(s, &c, 1, 0);
+	if (ret < 0 || c != '\n')
+		return -1;
 
 	return 0;
 }
@@ -109,62 +108,60 @@ http_recv_reqline(struct http_reqline* reqline, int s) {
  * Function description:
  * - Receive http header request. Receive pairs of name/value split by ": "
  * Arguments:
- * - httpnv: Array to store pairs of name/value.
  * - s: User socket wu receive data from.
+ * - httpnv: Array to store pairs of name/value.
  * Return value:
  * 1: Function failure.
  * 0: Success.
  */
-errno_t
-http_recv_headernv(struct header_nv* httpnv, int s) {
-	CHAR buffer[HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE + 2];
-	char* colon;
-	int i, j;
+int
+http_recv_headernv(int s, struct header_nv* httpnv) {
+	int ret, nb_nv;
+	int idx_name, idx_value;
+	char c;
 
-	for (i = 0; i < HEADER_NV_MAX_SIZE; i++) {
-		ZeroMemory(buffer, HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE + 2);
-		for (j = 0; j < HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE + 2; j++) {
-			if (recv(s, &buffer[j], 1, 0) != 1)
-				return 10;
+	for (nb_nv = 0; nb_nv < HEADER_NV_MAX_SIZE; nb_nv++) {
+		idx_name = 0;
+		do {
+			ret = recv(s, &c, 1, 0);
+			if (ret < 0)
+				return -1;
+			else if (c == ':')
+				break;
+			else if (c == '\r' && recv(s, &c, 1, 0) && c == '\n')
+				return 0;
+			else
+				(httpnv + nb_nv)->name.client[idx_name] = c;
+		} while (++idx_name < HEADER_NAME_MAX_SIZE);
 
-			if (buffer[j] == '\r') {
-				if (recv(s, &buffer[++j], 1, 0) != 1)
-					return 10;
+		if (idx_name == HEADER_NAME_MAX_SIZE || c != ':')
+			return -1;
 
-				if (buffer[j] == '\n')
-					break;
-				else
-					return 1;
-			}
-		}
+		ret = recv(s, &c, 1, 0);
+		if (ret < 0 || c != ' ')
+			return -1;
 
-		if (buffer[0] == '\r' && buffer[1] == '\n')
-			break;
+		idx_value = 0;
+		do {
+			ret = recv(s, &c, 1, 0);
+			if (ret < 0)
+				return -1;
+			else if (c == '\r')
+				break;
+			else
+				(httpnv + nb_nv)->value.v[idx_value] = c;
+		} while (++idx_value < HEADER_VALUE_MAX_SIZE);
 
-		if (j >= HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE + 2 || j <= 1)
-			return 2;
+		if (idx_value == HEADER_VALUE_MAX_SIZE || c != '\r')
+			return -1;
 
-		buffer[j] = '\0';
-		buffer[j - 1] = '\0';
+		ret = recv(s, &c, 1, 0);
+		if (ret < 0 || c != '\n')
+			return -1;
 
-		if ((colon = strchr(buffer, ':')) == NULL || (*(colon + 1) && *(colon + 1) != ' '))
-			return 3;
-
-		*colon = '\0';
-
-
-		if (strcpy_s((httpnv + i)->name.client, HEADER_NAME_MAX_SIZE, buffer) != 0)
-			return EINVAL;
-
-		if (buffer[0])
-
-			colon += 2;
-
-		if (strcpy_s((httpnv + i)->value.v, HEADER_VALUE_MAX_SIZE, colon) != 0)
-			return EINVAL;
 	}
 
-	return 0;
+	return -1;
 }
 
 /*

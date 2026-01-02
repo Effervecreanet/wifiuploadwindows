@@ -2,6 +2,7 @@
 #define HTTP_RESSOURCE_MAX_LENGTH 254 
 #define  HTTP_TYPE_MAX_LENGTH    32
 #define HTTP_STRING_DATE_SIZE sizeof("Mon, 01 Jan 1970 00:00:00 GMT")
+#define REQUEST_LINE_METHOD_MAX_SIZE 5
 
 struct http_reqline {
 	char method[sizeof("POST")];
@@ -22,8 +23,8 @@ struct success_info {
 };
 
 errno_t redir404(int s);
-errno_t http_recv_reqline(struct http_reqline* reqline, int s);
-errno_t http_recv_headernv(struct header_nv* nv, int s);
+int http_recv_reqline(int s, struct http_reqline* reqline);
+int http_recv_headernv(int s, struct header_nv* nv);
 int http_match_resource(char* resource);
 int http_serv_resource(struct http_resource* res, int s,
 	struct success_info* successinfo,
