@@ -236,8 +236,10 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* siz
 
 	ZeroMemory(decryptBuffer[0], 2000);
 
-	if (buffer_extra != NULL && tls_recv_add_data_to_extra(s_clt, received, secBufferIn) < 0)
-		return -1;
+	if (buffer_extra != NULL) {
+		if (tls_recv_add_data_to_extra(s_clt, received, secBufferIn) < 0)
+			return -1;
+	}
 	else if (tls_recv_first_buffer(s_clt, received, secBufferIn) < 0)
 		return -1;
 
