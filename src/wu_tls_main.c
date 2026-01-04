@@ -207,7 +207,13 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		}
 
 		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		header_offset = get_request_line(&reqline, tls_recv_output, tls_recv_output_size);
+		ret = get_request_line(&reqline, tls_recv_output, tls_recv_output_size);
+		if (ret < 0) {
+			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			continue;
+		}
+		else
+			header_offset = ret;
 
 		if (strcmp(reqline.version, HTTP_VERSION) != 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
@@ -216,7 +222,13 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 
-		header_offset += get_header_nv(headernv, tls_recv_output + header_offset, tls_recv_output_size - header_offset);
+		ret += get_header_nv(headernv, tls_recv_output + header_offset, tls_recv_output_size - header_offset);
+		if (ret < 0) {
+			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			continue;
+		}
+		else
+			header_offset += ret;
 
 		i = nv_find_name_client(headernv, "Host");
 		if (i < 0 || strcmp(headernv[i].value.v, inet_ntoa(prThread->inaddr)) != 0) {
