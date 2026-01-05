@@ -124,17 +124,17 @@ is_extradata_in(SecBuffer secBufferIn[4]) {
 }
 
 static int
-tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc *secBufferDesc, SecBuffer secBufferIn[4], int received[10],
+tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc *secBufferDesc, int received[10],
 							char **output, unsigned int *size_output, COORD *cursorPosition) {
 	int total_size, missing_size;
 	int i, j, ret;
 
 	for (i = 1; i < 10; i++) {
 		for (j = 0; j < 4; j++) {
-			if (secBufferIn[j].BufferType == SECBUFFER_MISSING)
+			if (secBufferDesc->pBuffers[j].BufferType == SECBUFFER_MISSING)
 				break;
 		}
-		missing_size = secBufferIn[j].cbBuffer;
+		missing_size = secBufferDesc->pBuffers[j].cbBuffer;
 
 		total_size = 0;
 		total_size += cb_buffer_extra;
@@ -149,12 +149,12 @@ tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc *se
 
 		total_size += missing_size;
 
-		secBufferIn[0].BufferType = SECBUFFER_DATA;
-		secBufferIn[0].pvBuffer = decryptBuffer[i];
-		secBufferIn[0].cbBuffer = total_size;
-		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[2].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[3].BufferType = SECBUFFER_EMPTY;
+		secBufferDesc->pBuffers[0].BufferType = SECBUFFER_DATA;
+		secBufferDesc->pBuffers[0].pvBuffer = decryptBuffer[i];
+		secBufferDesc->pBuffers[0].cbBuffer = total_size;
+		secBufferDesc->pBuffers[1].BufferType = SECBUFFER_EMPTY;
+		secBufferDesc->pBuffers[2].BufferType = SECBUFFER_EMPTY;
+		secBufferDesc->pBuffers[3].BufferType = SECBUFFER_EMPTY;
 
 		ret = DecryptMessage(ctxtHandle, secBufferDesc, 0, NULL);
 		if (ret == SEC_E_OK) {
@@ -165,10 +165,10 @@ tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc *se
 			}
 			
 			for (j = 0; j < 4; j++)
-				if (secBufferIn[j].BufferType == SECBUFFER_DATA)
+				if (secBufferDesc->pBuffers[j].BufferType == SECBUFFER_DATA)
 					break;
-			*output = secBufferIn[j].pvBuffer;
-			*size_output = secBufferIn[j].cbBuffer;
+			*output = secBufferDesc->pBuffers[j].pvBuffer;
+			*size_output = secBufferDesc->pBuffers[j].cbBuffer;
 			break;
 		}
 		else if (ret = SEC_E_INCOMPLETE_MESSAGE) {
@@ -199,8 +199,6 @@ tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc *se
 
 		return -1;
 	}
-
-
 
 	return 0;
 }
@@ -255,8 +253,8 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* siz
 		*size_output = secBufferIn[i].cbBuffer;
 	}
 	else if (ret == SEC_E_INCOMPLETE_MESSAGE) {
-		if (tls_recv_incomplete_message(ctxtHandle, s_clt, &secBufferDesc, secBufferIn, received,
-										output, size_output, cursorPosition) < 0)
+		if (tls_recv_incomplete_message(ctxtHandle, s_clt, &secBufferDesc, received, output,
+			size_output, cursorPosition) < 0)
 			return -1;
 	}
 	else {
