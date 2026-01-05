@@ -57,7 +57,7 @@ wu_https_post_theme_hdr_nv(struct header_nv hdrnv[32], char* cookie)
 	return;
 }
 
-
+/*
 int
 https_apply_theme(int s_clt, CtxtHandle *ctxtHandle, char* cookie)
 {
@@ -109,7 +109,43 @@ https_apply_theme(int s_clt, CtxtHandle *ctxtHandle, char* cookie)
 
 	return 1;
 }
+*/
+int
+https_apply_theme(int s_clt, CtxtHandle *ctxtHandle, char* cookie, COORD cursorPosition)
+{
+	struct header_nv hdrnv[32];
+	char buffer[2048];
+	int i;
 
+	memset(hdrnv, 0, sizeof(struct header_nv) * 32);
+	wu_https_post_theme_hdr_nv(hdrnv, cookie);
+
+	ZeroMemory(buffer, 2048);
+	strcpy_s(buffer, 2048, "HTTP/1.1 301 Moved Permanently\r\n");
+
+	for (i = 0; i < 32; i++) {
+		if (hdrnv[i].name.wsite == NULL)
+			break;
+
+		strcat_s(buffer, 2048 - strlen(buffer), hdrnv[i].name.wsite);
+		strcat_s(buffer, 2048 - strlen(buffer), ": ");
+
+		if (hdrnv[i].value.pv != NULL)
+			strcat_s(buffer, 2048 - strlen(buffer), hdrnv[i].value.pv);
+		else
+			strcat_s(buffer, 2048 - strlen(buffer), hdrnv[i].value.v);
+
+		strcat_s(buffer, 2048 - strlen(buffer), "\r\n");
+
+	}
+
+	strcat_s(buffer, 2048 - strlen(buffer), "\r\n");
+
+	if (tls_send(s_clt, ctxtHandle, buffer, strlen(buffer), cursorPosition) <= 0)
+		return -1;
+
+	return 1;
+}
 int
 get_theme_param(struct header_nv *headernv, char *bufferIn, int *theme) {
 	int idxclen;

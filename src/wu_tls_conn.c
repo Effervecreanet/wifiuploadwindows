@@ -130,10 +130,10 @@ tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc *se
 	int i, j, ret;
 
 	for (i = 1; i < 10; i++) {
-		for (j = 0; j < 4; j++) {
+		for (j = 0; j < 4; j++)
 			if (secBufferDesc->pBuffers[j].BufferType == SECBUFFER_MISSING)
 				break;
-		}
+		
 		missing_size = secBufferDesc->pBuffers[j].cbBuffer;
 
 		total_size = 0;
@@ -175,14 +175,11 @@ tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc *se
 			continue;
 		}
 		else {
-
 			INPUT_RECORD inRec;
 			DWORD read;
 
 			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 			write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
-
-			// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
 			return -1;
 		}
@@ -194,8 +191,6 @@ tls_recv_incomplete_message(CtxtHandle *ctxtHandle, int s_clt, SecBufferDesc *se
 		cursorPosition->Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		write_info_in_console(ERR_MSG_CONGESTED_NETWORK, NULL, 0);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
 		return -1;
 	}
@@ -263,8 +258,6 @@ int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* siz
 
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
-
-		// while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
 		return -1;
 
@@ -403,8 +396,6 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 
 		if (err != SEC_E_OK && err != SEC_I_CONTINUE_NEEDED)
 			continue;
-		// printf("AcceptSecurityContext failed: %x\n", err);
-
 
 		send(s_clt, (char*)secBufferDescOutput.pBuffers[0].pvBuffer, secBufferDescOutput.pBuffers[0].cbBuffer, 0);
 		FreeContextBuffer(secBufferDescOutput.pBuffers[0].pvBuffer);

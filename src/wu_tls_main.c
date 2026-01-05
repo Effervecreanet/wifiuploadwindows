@@ -222,7 +222,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 
-		ret += get_header_nv(headernv, tls_recv_output + header_offset, tls_recv_output_size - header_offset);
+		ret = get_header_nv(headernv, tls_recv_output + header_offset, tls_recv_output_size - header_offset);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
@@ -307,7 +307,9 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				else
 					strcpy_s(cookie, 48, "theme=light");
 
-				https_apply_theme(s_clt, &ctxtHandle, cookie);
+				fprintf(g_fphttpslog, "DDD\n");
+				fflush(g_fphttpslog);
+				https_apply_theme(s_clt, &ctxtHandle, cookie, prThread->cursorPosition);
 			}
 			else if (strcmp(reqline.resource, "/upload") == 0) {
 				struct user_stats upstats;
