@@ -307,8 +307,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				else
 					strcpy_s(cookie, 48, "theme=light");
 
-				fprintf(g_fphttpslog, "DDD\n");
-				fflush(g_fphttpslog);
 				https_apply_theme(s_clt, &ctxtHandle, cookie, prThread->cursorPosition);
 			}
 			else if (strcmp(reqline.resource, "/upload") == 0) {

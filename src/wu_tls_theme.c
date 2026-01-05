@@ -57,59 +57,6 @@ wu_https_post_theme_hdr_nv(struct header_nv hdrnv[32], char* cookie)
 	return;
 }
 
-/*
-int
-https_apply_theme(int s_clt, CtxtHandle *ctxtHandle, char* cookie)
-{
-	struct header_nv hdrnv[32];
-	char buffer[2048];
-	char *encryptbuffer, *message;
-	int i, encryptbuffer_len, message_len;
-	SecPkgContext_StreamSizes Sizes;
-	SecBufferDesc bufferDesc;
-	SecBuffer secBufferOut[4];
-
-	QueryContextAttributes(ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &Sizes);
-	encryptbuffer_len = Sizes.cbHeader + Sizes.cbMaximumMessage + Sizes.cbTrailer;
-
-	encryptbuffer = malloc(encryptbuffer_len);
-	ZeroMemory(encryptbuffer, encryptbuffer_len);
-
-	message = encryptbuffer + Sizes.cbHeader;
-
-	memset(hdrnv, 0, sizeof(struct header_nv) * 32);
-	wu_https_post_theme_hdr_nv(hdrnv, cookie);
-
-	ZeroMemory(buffer, 2048);
-	strcpy_s(buffer, 2048, "HTTP/1.1 301 Moved Permanently\r\n");
-
-	for (i = 0; i < 32; i++) {
-		if (hdrnv[i].name.wsite == NULL)
-			break;
-
-		strcat_s(buffer, 2048 - strlen(buffer), hdrnv[i].name.wsite);
-		strcat_s(buffer, 2048 - strlen(buffer), ": ");
-
-		if (hdrnv[i].value.pv != NULL)
-			strcat_s(buffer, 2048 - strlen(buffer), hdrnv[i].value.pv);
-		else
-			strcat_s(buffer, 2048 - strlen(buffer), hdrnv[i].value.v);
-
-		strcat_s(buffer, 2048 - strlen(buffer), "\r\n");
-
-	}
-
-	strcat_s(buffer, 2048 - strlen(buffer), "\r\n");
-
-	strcpy_s(message, Sizes.cbMaximumMessage, buffer);
-	message_len = strlen(message);
-
-	if (tls_send(s_clt, ctxtHandle, message, message_len) <= 0)
-		return -1;
-
-	return 1;
-}
-*/
 int
 https_apply_theme(int s_clt, CtxtHandle *ctxtHandle, char* cookie, COORD cursorPosition)
 {
@@ -141,10 +88,10 @@ https_apply_theme(int s_clt, CtxtHandle *ctxtHandle, char* cookie, COORD cursorP
 
 	strcat_s(buffer, 2048 - strlen(buffer), "\r\n");
 
-	if (tls_send(s_clt, ctxtHandle, buffer, strlen(buffer), cursorPosition) <= 0)
+	if (tls_send(s_clt, ctxtHandle, buffer, strlen(buffer), cursorPosition) < 0)
 		return -1;
 
-	return 1;
+	return 0;
 }
 int
 get_theme_param(struct header_nv *headernv, char *bufferIn, int *theme) {
