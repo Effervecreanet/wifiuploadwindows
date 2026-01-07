@@ -69,9 +69,12 @@ int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 		reqline->version[i++] = *p_bufferin++;
 		if (*p_bufferin == '\r')
 			break;
-	} while (i <= sizeof("HTTP/1.1") - 1);
+	} while (i <= sizeof(HTTP_VERSION) - 1);
 
 	if (*p_bufferin != '\r')
+		return -1;
+
+	if (strcmp(reqline->version, HTTP_VERSION) != 0)
 		return -1;
 
 	count += i;
@@ -93,7 +96,7 @@ int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
  *  -1: Function failure. NAME or VALUE size out of bounds. Or invalid characters.
  *   0: Number of byte parsed.
  */
-int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength)
+int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength, struct in_addr inaddr)
 {
 	int count_hdr_nv = 0;
 	int headerlen = 0;
@@ -151,6 +154,10 @@ crlfcrlf:
 	headerlen += 2;
 
 	if (headerlen >= HEADER_MAX_SIZE)
+		return -1;
+
+	i = nv_find_name_client(headernv, "Host");
+	if (i < 0 || strcmp(headernv[i].value.v, inet_ntoa(inaddr)) != 0)
 		return -1;
 
 	return headerlen;

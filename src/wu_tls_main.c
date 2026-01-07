@@ -215,26 +215,14 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		else
 			header_offset = ret;
 
-		if (strcmp(reqline.version, HTTP_VERSION) != 0) {
-			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-			continue;
-		}
-
 		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
-
-		ret = get_header_nv(headernv, tls_recv_output + header_offset, tls_recv_output_size - header_offset);
+		ret = get_header_nv(headernv, tls_recv_output + header_offset, tls_recv_output_size - header_offset, prThread->inaddr);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			continue;
 		}
 		else
 			header_offset += ret;
-
-		i = nv_find_name_client(headernv, "Host");
-		if (i < 0 || strcmp(headernv[i].value.v, inet_ntoa(prThread->inaddr)) != 0) {
-			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-			continue;
-		}
 
 		if (strcmp(reqline.method, "GET") == 0) {
 			int ires;
