@@ -92,7 +92,7 @@ create_userfile_tmp(COORD* cursorPosition,
  * - -1: Fail.
  * - EINVAL: Fail.
  */
-static errno_t
+static int
 receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen)
 {
 	int ret;
@@ -126,27 +126,30 @@ receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen)
 	}
 
 	if (i >= 2043)
-		return EINVAL;
+		return -1;
 
 	*MIMElen = i;
 
 	p_MIME_filename = strstr(buffer, "filename=\"");
 	if (p_MIME_filename == NULL)
-		return EINVAL;
+		return -1;
 
 	p_MIME_filename += (sizeof("filename=\"") - 1);
 
 	p_quote = strchr(p_MIME_filename, '"');
 	if (p_quote == NULL)
-		return EINVAL;
+		return -1;
 
 	*p_quote = '\0';
 
+	if (strlen(p_MIME_filename) == 0)
+		return -1;
+
 	if (strcpy_s(upstats->filename, FILENAME_MAX_SIZE, p_MIME_filename) != 0)
-		return EINVAL;
+		return -1;
 
 	if (strchr(upstats->filename, '\\') != NULL)
-		return EINVAL;
+		return -1;
 
 	return 0;
 }
@@ -352,6 +355,61 @@ chrono(struct success_info* successinfo, DWORD tick_start, u_int64 sizeNewFile) 
 
 /*
  * Function description:
+ * - Initialize transfert statistics.
+ */
+static void
+init_stats(struct tx_stats* txstats, long long content_length) {
+	ZeroMemory(txstats, sizeof(struct tx_stats));
+	GetSystemTime(&txstats->start);
+
+	/* Initialize statistics and upload informations. */
+	txstats->total_size = content_length;
+	txstats->one_percent = (long long)txstats->total_size / 100;
+	txstats->curr_percent = txstats->curr_percent_bak = 0;
+	txstats->received_size = txstats->received_size_bak = 0;
+}
+
+/*
+ * Function description:
+ * - Show download start and download informations in console
+ */
+static void
+write_download_info_in_console(COORD *cursorPosition, char *filename) {
+	DWORD written;
+
+	/* Print first progress bar character. */
+	SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
+	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	SetConsoleTextAttribute(g_hConsoleOutput, 0);
+	cursorPosition->X++;
+
+	/* Print download ui string. */
+	cursorPosition->Y += 2;
+	cursorPosition->X--;
+	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+	write_info_in_console(INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL);
+	WriteConsoleA(g_hConsoleOutput, filename, (DWORD)strlen(filename), &written, NULL);
+	cursorPosition->Y -= 2;
+	cursorPosition->X++;
+
+	return;
+}
+
+static int
+set_content_length(struct header_nv *httpnv, u_int64* content_length) {
+	int ret;
+
+	ret = nv_find_name_client(httpnv, "Content-Length");
+	if (ret < 0)
+		return -1;
+
+	*content_length = _atoi64((httpnv + ret)->value.v);
+
+	return 0;
+}
+
+/*
+ * Function description:
  * - Upload file.
  * Arguments:
  * - cursorPosition: Localize the cursor at progress bar.
@@ -397,12 +455,8 @@ receive_file(COORD* cursorPosition,
 
 	ZeroMemory(&httpres, sizeof(struct http_resource));
 
-
-	ret = nv_find_name_client(httpnv, "Content-Length");
-	if (ret < 0)
+	if (set_content_length(httpnv, &content_length) < 0)
 		return -1;
-
-	content_length = _atoi64((httpnv + ret)->value.v);
 
 	if (get_MIMEboundary(httpnv, boundary, &boundarylen) < 0)
 		return -1;
@@ -410,41 +464,20 @@ receive_file(COORD* cursorPosition,
 	if (receive_MIME_header(upstats, s, &MIMElen) != 0)
 		return -1;
 
-	if (strlen(upstats->filename) == 0)
-		return -1;
-
 	clear_txrx_pane(cursorPosition);
 
-	/* Print first progress bar character. */
 	coordAverageTX.X = cursorPosition->X;
 	coordAverageTX.Y = cursorPosition->Y + 1;
-	SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
-	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
-	SetConsoleTextAttribute(g_hConsoleOutput, 0);
-	cursorPosition->X++;
+
+	write_download_info_in_console(cursorPosition, upstats->filename);
 
 	/* Create or open temporary file. This file will be rename after. */
 	hFile = create_userfile_tmp(cursorPosition, upstats->filename, userfile_tmp);
 
-	ZeroMemory(&txstats, sizeof(struct tx_stats));
-	GetSystemTime(&txstats.start);
-	tick_start = GetTickCount();
-
-	/* Print download ui string. */
-	cursorPosition->Y += 2;
-	cursorPosition->X--;
-	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-	write_info_in_console(INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL);
-	WriteConsoleA(g_hConsoleOutput, upstats->filename, (DWORD)strlen(upstats->filename), &written, NULL);
-	cursorPosition->Y -= 2;
-	cursorPosition->X++;
-
-	/* Initialize statistics and upload informations. */
 	content_length -= (MIMElen + 1);
-	txstats.total_size = content_length;
-	txstats.one_percent = (long long)txstats.total_size / 100;
-	txstats.curr_percent = txstats.curr_percent_bak = 0;
-	txstats.received_size = txstats.received_size_bak = 0;
+	init_stats(&txstats, content_length);
+
+	tick_start = GetTickCount();
 
 	coordPerCent.X = cursorPosition->X + 52;
 	coordPerCent.Y = cursorPosition->Y;
@@ -453,6 +486,7 @@ receive_file(COORD* cursorPosition,
 		 * write zero per cent string. */
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
 	write_info_in_console(INF_ZERO_PERCENT, NULL);
+
 
 	/* Core upload loop: receive file and show receive progress. */
 	while (content_length > 0) {
@@ -480,8 +514,6 @@ receive_file(COORD* cursorPosition,
 	/* No errors occured: print cent per cent string. */
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
 	write_info_in_console(INF_CENT_PERCENT, NULL);
-
-	GetSystemTime(&txstats.end);
 
 	/* Print last progress bar character just left befor the cent per cent string. */
 	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
