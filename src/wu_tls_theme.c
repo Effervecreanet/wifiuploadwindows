@@ -108,7 +108,7 @@ get_theme_param(struct header_nv *headernv, char *bufferIn, int *theme) {
 	if (strncmp(bufferIn, "theme=light", clen) == 0)
 		*theme = 1;
 	else if (strncmp(bufferIn, "theme=dark", clen) == 0)
-			*theme = 0;
+		*theme = 0;
 	else
 		return -1;
 

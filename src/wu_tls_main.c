@@ -147,7 +147,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 	ZeroMemory(&credHandle, sizeof(CredHandle));
 	if (get_credantials_handle(&credHandle, pCertContext) < 0) {
-		CertFreeCertificateContext(pCertContext); LocalFree(pbEncodedName); NCryptFreeObject(phProvider); NCryptFreeObject(hKey);
+		CertFreeCertificateContext(pCertContext); NCryptFreeObject(phProvider); NCryptFreeObject(hKey);
 		err = GetLastError();
 		write_info_in_console(ERR_MSG_ACQUIRECREDANTIALSHANDLE, NULL, err);
 		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
@@ -336,7 +336,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	}
 
 	CertFreeCertificateContext(pCertContext);
-	LocalFree(pbEncodedName);
 	NCryptFreeObject(phProvider);
 	NCryptFreeObject(hKey);
 

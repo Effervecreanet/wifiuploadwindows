@@ -1,6 +1,7 @@
 #include <WinSock2.h>
 #include <Windows.h>
 #include <strsafe.h>
+#include <stdlib.h>
 
 #include "wu_msg.h"
 #include "wu_main.h"
@@ -316,14 +317,14 @@ tls_receive_file(COORD* cursorPosition,
 	newFile = _strdup(userfile_tmp);
 	*(strrchr(newFile, '.')) = '\0';
 	MoveFileExA(userfile_tmp, newFile, MOVEFILE_REPLACE_EXISTING);
-	LocalFree(newFile);
+	free(newFile);
 
 	ZeroMemory(&successinfo, sizeof(struct success_info));
 	strcpy_s(successinfo.filename, FILENAME_MAX_SIZE, upstats->filename);
 
 	for (idxunit = 0; sizeNewFile > 1024; sizeNewFile /= 999, ++idxunit);
 
-	StringCchPrintfA(successinfo.filenameSize, 24, "%u", sizeNewFile);
+	StringCchPrintfA(successinfo.filenameSize, 24, "%l64u", sizeNewFile);
 
 	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), " ");
 	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), units[idxunit]);
