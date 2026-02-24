@@ -313,6 +313,13 @@ struct wu_msg wumsg[] = {
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{
+		ERR_MSG_MEMORY_ALLOC,
+		"Impossible d'alouer de la m" "\xE9" "moire.",
+		sizeof("Impossible d'alouer de la m" "\xE9" "moire.") - 1,
+		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+
+	},
+	{
 		INF_ERR_END,
 		"",
 		1,
@@ -622,7 +629,13 @@ struct wu_msg wumsg[] = {
 	{
 		ERR_MSG_CONGESTED_NETWORK,
 		"Error because the network is congested.",
-		sizeof("Error because the network is congested."),
+		sizeof("Error because the network is congested.") - 1,
+		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
+	},
+	{
+		ERR_MSG_MEMORY_ALLOC,
+		"Cannot allocate memory.",
+		sizeof("Cannot allocate memory.") - 1,
 		{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, 0}
 	},
 	{

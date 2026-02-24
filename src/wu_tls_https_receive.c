@@ -90,7 +90,7 @@ create_userfile_tmp(COORD* cursorPosition,
 
 
 static errno_t
-get_MIME_filename(struct user_stats* upstats, char* req_buffer, unsigned int req_buffer_size, unsigned short* MIMElen)
+get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int req_buffer_size, unsigned short* MIMElen)
 {
 	int ret;
 	unsigned short i;
@@ -99,9 +99,13 @@ get_MIME_filename(struct user_stats* upstats, char* req_buffer, unsigned int req
 	char* p_MIMEend;
 	char* buffer;
 
+	fprintf(g_fphttpslog, "AAA req_buffer: %s\n", *req_buffer);
+	fflush(g_fphttpslog);
 	buffer = malloc(req_buffer_size + 1);
 	ZeroMemory(buffer, req_buffer_size + 1);
-	memcpy(buffer, req_buffer, req_buffer_size);
+	memcpy(buffer, *req_buffer, req_buffer_size);
+	fprintf(g_fphttpslog, "BBB\n");
+	fflush(g_fphttpslog);
 
 	p_MIMEend = strstr(buffer, "\r\n\r\n");
 	if (p_MIMEend == NULL) {
@@ -152,7 +156,7 @@ tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, int s, u_int64 *received_siz
 	unsigned int tls_recv_output_size;
 	DWORD written;
 
-	if (tls_recv(s, ctxtHandle, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
+	if (tls_recv(ctxtHandle, s, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
 		return -1;
 
 	*content_length -= tls_recv_output_size;
@@ -165,6 +169,8 @@ tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, int s, u_int64 *received_siz
 		WriteFile(hFile, tls_recv_output, tls_recv_output_size, &written, NULL);
 
 	*received_size += tls_recv_output_size;
+
+	free(tls_recv_output);
 
 	return 1;
 }
@@ -228,10 +234,13 @@ tls_receive_file(COORD* cursorPosition,
 
 	content_length = _atoi64((httpnv + ret)->value.v);
 
-	if (tls_recv(s, ctxtHandle, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
+	if (tls_recv(ctxtHandle, s, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
 		return -1;
 
-	if (get_MIME_filename(upstats, tls_recv_output, tls_recv_output_size, &MIMElen) != 0)
+	fprintf(g_fphttpslog, "CCC tls_recv_output: %s\n", tls_recv_output);
+	fflush(g_fphttpslog);
+
+	if (get_MIME_filename(upstats, &tls_recv_output, tls_recv_output_size, &MIMElen) != 0)
 		return -1;
 
 	if (strlen(upstats->filename) == 0)
@@ -277,6 +286,8 @@ tls_receive_file(COORD* cursorPosition,
 	else
 		WriteFile(hFile, tls_recv_output + MIMElen, tls_recv_output_size - MIMElen, &written, NULL);
 	
+	free(tls_recv_output);
+
 	while (tls_recv_file(hFile, ctxtHandle, s, &txstats.received_size, &content_length, boundarylen, cursorPosition))
 		print_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
 
@@ -324,7 +335,7 @@ tls_receive_file(COORD* cursorPosition,
 
 	for (idxunit = 0; sizeNewFile > 1024; sizeNewFile /= 999, ++idxunit);
 
-	StringCchPrintfA(successinfo.filenameSize, 24, "%l64u", sizeNewFile);
+	StringCchPrintfA(successinfo.filenameSize, 24, "%llu", sizeNewFile);
 
 	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), " ");
 	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), units[idxunit]);

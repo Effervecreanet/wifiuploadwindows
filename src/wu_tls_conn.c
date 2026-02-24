@@ -68,13 +68,234 @@ int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int mess
 	return 0;
 }
 
-int tls_recv(int s_clt, CtxtHandle* ctxtHandle, char** output, unsigned int* size_output, COORD* cursorPosition) {
+int tls_recv_start(int s, SecBuffer secBuffers[4], char *read_buf, int *bytes_read) {
+	int ret;
+
+	ret = recv(s, read_buf, 2048, 0);
+	if (ret <= 0) {
+		free(read_buf);
+		return -1;
+	}
+
+	secBuffers[0].BufferType = SECBUFFER_DATA;
+	secBuffers[0].pvBuffer = read_buf;
+	secBuffers[0].cbBuffer = ret;
+	secBuffers[1].BufferType = SECBUFFER_EMPTY;
+	secBuffers[2].BufferType = SECBUFFER_EMPTY;
+	secBuffers[3].BufferType = SECBUFFER_EMPTY;
+
+	*bytes_read = ret;
+
+	return 0;
+}
+
+int tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char *read_buf, int* bytes_read) {
+	int ret;
+	ret = recv(s, read_buf + *bytes_read, 4096 - *bytes_read, 0);
+	if (ret <= 0) {
+		free(read_buf);
+		return -1;
+	}
+	secBuffers[0].BufferType = SECBUFFER_DATA;
+	secBuffers[0].pvBuffer = read_buf;
+	secBuffers[0].cbBuffer = *bytes_read + ret;
+	secBuffers[1].BufferType = SECBUFFER_EMPTY;
+	secBuffers[2].BufferType = SECBUFFER_EMPTY;
+	secBuffers[3].BufferType = SECBUFFER_EMPTY;
+
+	*bytes_read += ret;
+
+	fprintf(g_fphttpslog, "ret: %i\n", ret);
+	fflush(g_fphttpslog);
+	return 0;
+}
+
+int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen, COORD* cursorPosition) {
+	SECURITY_STATUS secStatus;
+	SecBufferDesc secBufferDesc;
+	SecBuffer secBuffers[4];
+
+	static char* extra_buf = NULL;
+	static int extra_len = 0;
+
+	char* read_buf = NULL;
+	int bytes_read = 0;
+	int total_len = 0;
+	int try_count = 0;
+	int ret = 0;
+
+	read_buf = (char*)malloc(4096);
+	if (read_buf == NULL) {
+		INPUT_RECORD inRec;
+		DWORD read;
+		cursorPosition->Y++;
+		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+		write_info_in_console(ERR_MSG_MEMORY_ALLOC, NULL, 0);
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		return -1;
+	}
+	
+	ZeroMemory(&secBufferDesc, sizeof(SecBufferDesc));
+	ZeroMemory(&secBuffers, sizeof(SecBuffer) * 4);
+
+	secBufferDesc.ulVersion = SECBUFFER_VERSION;
+	secBufferDesc.cBuffers = 4;
+	secBufferDesc.pBuffers = secBuffers;
+
+	if (extra_buf != NULL && extra_len > 0 && extra_len < 4096) {
+		fprintf(g_fphttpslog, "CCC extra_len: %i\n", extra_len);
+		fflush(g_fphttpslog);
+		memcpy(read_buf, extra_buf, extra_len);
+		bytes_read = extra_len;
+		tls_recv_add_data_to_extra(s, secBuffers, read_buf, &bytes_read);
+		free(extra_buf);
+		extra_buf = NULL;
+		extra_len = 0;
+	} else if(tls_recv_start(s, secBuffers, read_buf, &bytes_read) < 0)
+		return -1;
+
+
+	secStatus = DecryptMessage(ctxtHandle, &secBufferDesc, 0, NULL);
+	if (secStatus == SEC_E_OK) {
+		int i;
+		int data_index = -1;
+		int extra_index = -1;
+
+		fprintf(g_fphttpslog, "DDD\n");
+		fflush(g_fphttpslog);
+		for (i = 0; i < 4; i++) {
+			if (secBuffers[i].BufferType == SECBUFFER_DATA) {
+				data_index = i;
+			}
+			else if (secBuffers[i].BufferType == SECBUFFER_EXTRA) {
+				extra_index = i;
+			}
+		}
+
+		if (data_index == -1) {
+			free(read_buf);
+			return -1;
+		}
+
+		*outlen = secBuffers[data_index].cbBuffer;
+		*output = (char*)malloc(*outlen);
+		if (*output == NULL) {
+			INPUT_RECORD inRec;
+			DWORD read;
+			cursorPosition->Y++;
+			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+			write_info_in_console(ERR_MSG_MEMORY_ALLOC, NULL, 0);
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+			return -1;
+		}
+
+		memcpy(*output, secBuffers[data_index].pvBuffer, *outlen);
+		free(read_buf);
+
+		if (extra_index > 0) {
+			fprintf(g_fphttpslog, "EEE\n");
+			fflush(g_fphttpslog);
+
+			if (extra_buf != NULL) {
+				free(extra_buf);
+				extra_buf = NULL;
+				extra_len = 0;
+			}
+
+			extra_buf = (char*)malloc(secBuffers[extra_index].cbBuffer);
+			extra_len = secBuffers[extra_index].cbBuffer;
+			memcpy(extra_buf, secBuffers[extra_index].pvBuffer, extra_len);
+
+		}
+	} else if (secStatus == SEC_E_INCOMPLETE_MESSAGE) {
+		int i;
+		int missing_req;
+		int missing_index = -1;
+		int data_index = -1;
+
+retry_decrypt:
+		for (i = 0; i < 4; i++) {
+			if (secBuffers[i].BufferType == SECBUFFER_MISSING) {
+				missing_index = i;
+			}
+		}
+
+		if (missing_index == -1) {
+			free(read_buf);
+			return -1;
+		}
+
+		missing_req = secBuffers[missing_index].cbBuffer;
+		read_buf = (char*)realloc(read_buf, bytes_read + missing_req);
+		if (read_buf == NULL) {
+			INPUT_RECORD inRec;
+			DWORD read;
+			cursorPosition->Y++;
+			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+			write_info_in_console(ERR_MSG_MEMORY_ALLOC, NULL, 0);
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+			return -1;
+		}
+
+		ret = recv(s, read_buf + bytes_read, missing_req, MSG_WAITALL);
+		if (ret <= 0) {
+			free(read_buf);
+			return -1;
+		}
+
+		bytes_read += ret;
+
+		secBuffers[0].BufferType = SECBUFFER_DATA;
+		secBuffers[0].pvBuffer = read_buf;
+		secBuffers[0].cbBuffer = bytes_read;
+		secBuffers[1].BufferType = SECBUFFER_EMPTY;
+		secBuffers[2].BufferType = SECBUFFER_EMPTY;
+		secBuffers[3].BufferType = SECBUFFER_EMPTY;
+
+		secStatus = DecryptMessage(ctxtHandle, &secBufferDesc, 0, NULL);
+		if (secStatus == SEC_E_OK) {
+			for (i = 0; i < 4; i++) {
+				if (secBuffers[i].BufferType == SECBUFFER_DATA) {
+					data_index = i;
+				}
+			}
+
+			if (data_index == -1) {
+				free(read_buf);
+				return -1;
+			}
+
+			*outlen = secBuffers[data_index].cbBuffer;
+			*output = (char*)malloc(*outlen);
+			if (*output == NULL) {
+				INPUT_RECORD inRec;
+				DWORD read;
+				cursorPosition->Y++;
+				SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+				write_info_in_console(ERR_MSG_MEMORY_ALLOC, NULL, 0);
+				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+				return -1;
+			}
+
+			memcpy(*output, secBuffers[data_index].pvBuffer, *outlen);
+			free(read_buf);
+			return 0;
+		}
+		else if (secStatus == SEC_E_INCOMPLETE_MESSAGE) {
+			if (++try_count > 16) {
+				free(read_buf);
+				return -1;
+			}
+			goto retry_decrypt;
+		}
+	}
 	else {
 		INPUT_RECORD inRec;
 		DWORD read;
 
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
+		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 
 		return -1;
 
@@ -156,9 +377,9 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 	CtxtHandle ctxNewHandle, ctxNewHandle2;
 	ULONG fContextAttr = ASC_REQ_ALLOCATE_MEMORY | ASC_REQ_STREAM | ASC_REQ_EXTENDED_ERROR | ASC_REQ_REPLAY_DETECT | ASC_REQ_CONFIDENTIALITY;
 	ULONG contextAttr = 0;
-	char BufferIn1[2048];
-	char BufferIn2[2048];
-	char BufferOut1[2048];
+	char BufferIn1[4096];
+	char BufferIn2[4096];
+	char BufferOut1[4096];
 	SecBufferDesc secBufferDescInput;
 	SecBufferDesc secBufferDescInput2;
 	SecBufferDesc secBufferDescOutput;
@@ -169,8 +390,8 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 	ZeroMemory(&ctxNewHandle, sizeof(CtxtHandle));
 	ZeroMemory(&ctxNewHandle2, sizeof(CtxtHandle));
 
-	ZeroMemory(BufferIn1, 2048);
-	ZeroMemory(BufferIn2, 2048);
+	ZeroMemory(BufferIn1, 4096);
+	ZeroMemory(BufferIn2, 4096);
 
 	ZeroMemory(secBufferIn, sizeof(SecBuffer) * 2);
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
@@ -179,7 +400,7 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 
 	secBufferIn[0].BufferType = SECBUFFER_TOKEN;
 	secBufferIn[0].pvBuffer = BufferIn1;
-	secBufferIn[1].cbBuffer = 2048;
+	secBufferIn[1].cbBuffer = 4096;
 	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[1].pvBuffer = BufferIn2;
 
@@ -194,8 +415,8 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 	ZeroMemory(&secBufferOut, sizeof(SecBuffer) * 3);
 
 	for (;;) {
-		ZeroMemory(BufferIn1, 2048);
-		ZeroMemory(BufferIn2, 2048);
+		ZeroMemory(BufferIn1, 4096);
+		ZeroMemory(BufferIn2, 4096);
 		ZeroMemory(&sin_clt, sizeof(struct sockaddr_in));
 
 		sinclt_len = sizeof(struct sockaddr_in);
@@ -203,7 +424,7 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 
 		strcpy_s(ipaddr_httpsclt, 16, inet_ntoa(sin_clt.sin_addr));
 
-		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn1, 2048, 0);
+		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn1, 4096, 0);
 
 		if (secBufferIn[0].cbBuffer <= 0)
 			continue;
@@ -217,7 +438,7 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 		send(s_clt, (char*)secBufferDescOutput.pBuffers[0].pvBuffer, secBufferDescOutput.pBuffers[0].cbBuffer, 0);
 		FreeContextBuffer(secBufferDescOutput.pBuffers[0].pvBuffer);
 
-		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn1, 2048, 0);
+		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn1, 4096, 0);
 		if (secBufferIn[0].cbBuffer <= 0)
 			continue;
 
