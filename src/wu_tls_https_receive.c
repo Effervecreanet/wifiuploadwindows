@@ -233,9 +233,6 @@ tls_receive_file(COORD* cursorPosition,
 	if (tls_recv(ctxtHandle, s, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
 		return -1;
 	
-	fprintf(g_fphttpslog, "tls_receive_file: %s\n", tls_recv_output);
-	fflush(g_fphttpslog);
-
 	if (get_MIME_filename(upstats, &tls_recv_output, tls_recv_output_size, &MIMElen) != 0)
 		return -1;
 

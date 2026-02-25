@@ -118,7 +118,7 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 	int total_len = 0;
 	int try_count = 0;
 	int ret = 0;
-
+	
 	read_buf = (char*)malloc(2000);
 	if (read_buf == NULL) {
 		INPUT_RECORD inRec;
@@ -131,20 +131,16 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 	}
 	
 	ZeroMemory(&secBufferDesc, sizeof(SecBufferDesc));
-	ZeroMemory(&secBuffers, sizeof(SecBuffer) * 4);
+	ZeroMemory(secBuffers, sizeof(SecBuffer) * 4);
 
 	secBufferDesc.ulVersion = SECBUFFER_VERSION;
 	secBufferDesc.cBuffers = 4;
 	secBufferDesc.pBuffers = secBuffers;
 
 	if (extra_buf != NULL && extra_len > 0 && extra_len < 4096) {
-		fprintf(g_fphttpslog, "extra data in extra_len: %i\n", extra_len);
-		fflush(g_fphttpslog);
 		memcpy(read_buf, extra_buf, extra_len);
 		bytes_read = extra_len;
 		tls_recv_add_data_to_extra(s, secBuffers, read_buf, &bytes_read);
-		fprintf(g_fphttpslog, "bytes_read after adding data to extra: %i\n", bytes_read);
-		fflush(g_fphttpslog);
 		free(extra_buf);
 		extra_buf = NULL;
 		extra_len = 0;
@@ -158,8 +154,6 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		int data_index = -1;
 		int extra_index = -1;
 
-		fprintf(g_fphttpslog, "message decrypted\n");
-		fflush(g_fphttpslog);
 
 		for (i = 0; i < 4; i++) {
 			if (secBuffers[i].BufferType == SECBUFFER_DATA) {
@@ -170,8 +164,6 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 			}
 		}
 
-		fprintf(g_fphttpslog, "extra_index: %i\n", extra_index);
-		fflush(g_fphttpslog);
 
 		if (data_index == -1) {
 			free(read_buf);
@@ -191,17 +183,14 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		}
 
 		memcpy(*output, secBuffers[data_index].pvBuffer, *outlen);
-		free(read_buf);
 
-		if (extra_index > 0) {
-			fprintf(g_fphttpslog, "SEC_E_OK extra_index > 0 %i\n", secBuffers[extra_index].cbBuffer);
-			fflush(g_fphttpslog);
-
+		if (extra_index >= 0) {
 			extra_buf = (char*)malloc(secBuffers[extra_index].cbBuffer);
 			extra_len = secBuffers[extra_index].cbBuffer;
 			memcpy(extra_buf, secBuffers[extra_index].pvBuffer, extra_len);
-
 		}
+
+		free(read_buf);
 	} else if (secStatus == SEC_E_INCOMPLETE_MESSAGE) {
 		int i;
 		int missing_req;
@@ -209,15 +198,11 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		int data_index = -1;
 		char* tmp;
 
-		fprintf(g_fphttpslog, "incomplete message\n");
-		fflush(g_fphttpslog);
 
 retry_decrypt:
 		for (i = 0; i < 4; i++) {
 			if (secBuffers[i].BufferType == SECBUFFER_MISSING) {
 				missing_index = i;
-				fprintf(g_fphttpslog, "inc mes i: %i cbBuffermissing: %i\n", i, secBuffers[i].cbBuffer);
-				fflush(g_fphttpslog);
 			}
 		}
 
@@ -227,10 +212,8 @@ retry_decrypt:
 		}
 
 		missing_req = secBuffers[missing_index].cbBuffer;
-		fprintf(g_fphttpslog, "incomp bytes_read: %i missing_req: %i missing_index: %i\n", bytes_read, missing_req, missing_index);
-		fflush(g_fphttpslog);
 		tmp = (char*)realloc(read_buf, bytes_read + missing_req);
-		if (read_buf == NULL) {
+		if (tmp == NULL) {
 			INPUT_RECORD inRec;
 			DWORD read;
 			cursorPosition->Y++;
@@ -249,11 +232,9 @@ retry_decrypt:
 
 		bytes_read += ret;
 
-		fprintf(g_fphttpslog, "bytes_read after recv: %i ret: %i\n", bytes_read, ret);
-		fflush(g_fphttpslog);
 
 		ZeroMemory(&secBufferDesc, sizeof(SecBufferDesc));
-		ZeroMemory(&secBuffers, sizeof(SecBuffer) * 4);
+		ZeroMemory(secBuffers, sizeof(SecBuffer) * 4);
 
 		secBufferDesc.ulVersion = SECBUFFER_VERSION;
 		secBufferDesc.cBuffers = 4;
@@ -302,8 +283,13 @@ retry_decrypt:
 			goto retry_decrypt;
 		}
 		else {
-			fprintf(g_fphttpslog, "DecryptMessage error after retry: %x\n", secStatus);
-			fflush(g_fphttpslog);
+			INPUT_RECORD inRec;
+			DWORD read;
+
+			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+			write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
+			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+			return -1;
 		}
 	}
 	else {
