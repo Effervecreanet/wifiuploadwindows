@@ -115,7 +115,6 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 
 	char* read_buf = NULL;
 	int bytes_read = 0;
-	int total_len = 0;
 	int try_count = 0;
 	int ret = 0;
 	
@@ -137,7 +136,7 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 	secBufferDesc.cBuffers = 4;
 	secBufferDesc.pBuffers = secBuffers;
 
-	if (extra_buf != NULL && extra_len > 0 && extra_len < 4096) {
+	if (extra_buf != NULL && extra_len > 0 && extra_len < 2000) {
 		memcpy(read_buf, extra_buf, extra_len);
 		bytes_read = extra_len;
 		tls_recv_add_data_to_extra(s, secBuffers, read_buf, &bytes_read);
