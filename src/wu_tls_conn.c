@@ -20,9 +20,6 @@ extern FILE* g_fphttpslog;
 extern HANDLE g_hConsoleOutput;
 extern SecPkgContext_StreamSizes context_sizes;
 extern char* encryptBuffer;
-extern char* decryptBuffer[10];
-extern unsigned int cb_buffer_extra;
-extern char* buffer_extra;
 
 int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int message_size, COORD cursorPosition) {
 	SecBufferDesc bufferDesc;
@@ -71,7 +68,7 @@ int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int mess
 int tls_recv_start(int s, SecBuffer secBuffers[4], char *read_buf, int *bytes_read) {
 	int ret;
 
-	ret = recv(s, read_buf, 2048, 0);
+	ret = recv(s, read_buf, 2000, 0);
 	if (ret <= 0) {
 		free(read_buf);
 		return -1;
@@ -91,7 +88,7 @@ int tls_recv_start(int s, SecBuffer secBuffers[4], char *read_buf, int *bytes_re
 
 int tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char *read_buf, int* bytes_read) {
 	int ret;
-	ret = recv(s, read_buf + *bytes_read, 4096 - *bytes_read, 0);
+	ret = recv(s, read_buf + *bytes_read, 2000 - *bytes_read, 0);
 	if (ret <= 0) {
 		free(read_buf);
 		return -1;
@@ -105,8 +102,6 @@ int tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char *read_buf, i
 
 	*bytes_read += ret;
 
-	fprintf(g_fphttpslog, "ret: %i\n", ret);
-	fflush(g_fphttpslog);
 	return 0;
 }
 
@@ -124,7 +119,7 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 	int try_count = 0;
 	int ret = 0;
 
-	read_buf = (char*)malloc(4096);
+	read_buf = (char*)malloc(2000);
 	if (read_buf == NULL) {
 		INPUT_RECORD inRec;
 		DWORD read;
@@ -143,11 +138,13 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 	secBufferDesc.pBuffers = secBuffers;
 
 	if (extra_buf != NULL && extra_len > 0 && extra_len < 4096) {
-		fprintf(g_fphttpslog, "CCC extra_len: %i\n", extra_len);
+		fprintf(g_fphttpslog, "extra data in extra_len: %i\n", extra_len);
 		fflush(g_fphttpslog);
 		memcpy(read_buf, extra_buf, extra_len);
 		bytes_read = extra_len;
 		tls_recv_add_data_to_extra(s, secBuffers, read_buf, &bytes_read);
+		fprintf(g_fphttpslog, "bytes_read after adding data to extra: %i\n", bytes_read);
+		fflush(g_fphttpslog);
 		free(extra_buf);
 		extra_buf = NULL;
 		extra_len = 0;
@@ -161,8 +158,9 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		int data_index = -1;
 		int extra_index = -1;
 
-		fprintf(g_fphttpslog, "DDD\n");
+		fprintf(g_fphttpslog, "message decrypted\n");
 		fflush(g_fphttpslog);
+
 		for (i = 0; i < 4; i++) {
 			if (secBuffers[i].BufferType == SECBUFFER_DATA) {
 				data_index = i;
@@ -171,6 +169,9 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 				extra_index = i;
 			}
 		}
+
+		fprintf(g_fphttpslog, "extra_index: %i\n", extra_index);
+		fflush(g_fphttpslog);
 
 		if (data_index == -1) {
 			free(read_buf);
@@ -193,14 +194,8 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		free(read_buf);
 
 		if (extra_index > 0) {
-			fprintf(g_fphttpslog, "EEE\n");
+			fprintf(g_fphttpslog, "SEC_E_OK extra_index > 0 %i\n", secBuffers[extra_index].cbBuffer);
 			fflush(g_fphttpslog);
-
-			if (extra_buf != NULL) {
-				free(extra_buf);
-				extra_buf = NULL;
-				extra_len = 0;
-			}
 
 			extra_buf = (char*)malloc(secBuffers[extra_index].cbBuffer);
 			extra_len = secBuffers[extra_index].cbBuffer;
@@ -212,11 +207,17 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		int missing_req;
 		int missing_index = -1;
 		int data_index = -1;
+		char* tmp;
+
+		fprintf(g_fphttpslog, "incomplete message\n");
+		fflush(g_fphttpslog);
 
 retry_decrypt:
 		for (i = 0; i < 4; i++) {
 			if (secBuffers[i].BufferType == SECBUFFER_MISSING) {
 				missing_index = i;
+				fprintf(g_fphttpslog, "inc mes i: %i cbBuffermissing: %i\n", i, secBuffers[i].cbBuffer);
+				fflush(g_fphttpslog);
 			}
 		}
 
@@ -226,7 +227,9 @@ retry_decrypt:
 		}
 
 		missing_req = secBuffers[missing_index].cbBuffer;
-		read_buf = (char*)realloc(read_buf, bytes_read + missing_req);
+		fprintf(g_fphttpslog, "incomp bytes_read: %i missing_req: %i missing_index: %i\n", bytes_read, missing_req, missing_index);
+		fflush(g_fphttpslog);
+		tmp = (char*)realloc(read_buf, bytes_read + missing_req);
 		if (read_buf == NULL) {
 			INPUT_RECORD inRec;
 			DWORD read;
@@ -236,6 +239,7 @@ retry_decrypt:
 			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
 			return -1;
 		}
+		read_buf = tmp;
 
 		ret = recv(s, read_buf + bytes_read, missing_req, MSG_WAITALL);
 		if (ret <= 0) {
@@ -244,6 +248,16 @@ retry_decrypt:
 		}
 
 		bytes_read += ret;
+
+		fprintf(g_fphttpslog, "bytes_read after recv: %i ret: %i\n", bytes_read, ret);
+		fflush(g_fphttpslog);
+
+		ZeroMemory(&secBufferDesc, sizeof(SecBufferDesc));
+		ZeroMemory(&secBuffers, sizeof(SecBuffer) * 4);
+
+		secBufferDesc.ulVersion = SECBUFFER_VERSION;
+		secBufferDesc.cBuffers = 4;
+		secBufferDesc.pBuffers = secBuffers;
 
 		secBuffers[0].BufferType = SECBUFFER_DATA;
 		secBuffers[0].pvBuffer = read_buf;
@@ -279,7 +293,6 @@ retry_decrypt:
 
 			memcpy(*output, secBuffers[data_index].pvBuffer, *outlen);
 			free(read_buf);
-			return 0;
 		}
 		else if (secStatus == SEC_E_INCOMPLETE_MESSAGE) {
 			if (++try_count > 16) {
@@ -287,6 +300,10 @@ retry_decrypt:
 				return -1;
 			}
 			goto retry_decrypt;
+		}
+		else {
+			fprintf(g_fphttpslog, "DecryptMessage error after retry: %x\n", secStatus);
+			fflush(g_fphttpslog);
 		}
 	}
 	else {
@@ -353,7 +370,7 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 
 	AcceptSecurityContext(credHandle, ctxtHandle, &secBufferDescInput, fContextAttr, 0,
 		ctxtHandle, &secBufferDescOutput, &contextAttr, NULL);
-	for (i = 4; i < 4; i++)
+	for (i = 0; i < 4; i++)
 		if (secBufferOutput[i].BufferType == SECBUFFER_DATA)
 			break;
 

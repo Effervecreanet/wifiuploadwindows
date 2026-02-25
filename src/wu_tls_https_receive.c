@@ -99,13 +99,9 @@ get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int re
 	char* p_MIMEend;
 	char* buffer;
 
-	fprintf(g_fphttpslog, "AAA req_buffer: %s\n", *req_buffer);
-	fflush(g_fphttpslog);
 	buffer = malloc(req_buffer_size + 1);
 	ZeroMemory(buffer, req_buffer_size + 1);
 	memcpy(buffer, *req_buffer, req_buffer_size);
-	fprintf(g_fphttpslog, "BBB\n");
-	fflush(g_fphttpslog);
 
 	p_MIMEend = strstr(buffer, "\r\n\r\n");
 	if (p_MIMEend == NULL) {
@@ -236,8 +232,8 @@ tls_receive_file(COORD* cursorPosition,
 
 	if (tls_recv(ctxtHandle, s, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
 		return -1;
-
-	fprintf(g_fphttpslog, "CCC tls_recv_output: %s\n", tls_recv_output);
+	
+	fprintf(g_fphttpslog, "tls_receive_file: %s\n", tls_recv_output);
 	fflush(g_fphttpslog);
 
 	if (get_MIME_filename(upstats, &tls_recv_output, tls_recv_output_size, &MIMElen) != 0)

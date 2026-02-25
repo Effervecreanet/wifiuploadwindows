@@ -184,6 +184,9 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		bytesent = 0;
 
 
+		fprintf(g_fphttpslog, "next_req\n");
+		fflush(g_fphttpslog);
+
 		ret = tls_recv(&ctxtHandle, s_clt, &tls_recv_output, &tls_recv_output_size, &prThread->cursorPosition[0]);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
@@ -194,6 +197,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		ret = get_request_line(&reqline, tls_recv_output, tls_recv_output_size);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			free(tls_recv_output);
 			continue;
 		}
 		else
@@ -203,13 +207,18 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		ret = get_header_nv(headernv, tls_recv_output + header_offset, tls_recv_output_size - header_offset, prThread->inaddr);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			free(tls_recv_output);
 			continue;
 		}
 		else
 			header_offset += ret;
 
-		free(tls_recv_output);
 
+		fprintf(g_fphttpslog, "XXX\n");
+		fflush(g_fphttpslog);
+
+		fprintf(g_fphttpslog, "reqline.resource: %s\n", reqline.resource);
+		fflush(g_fphttpslog);
 		if (strcmp(reqline.method, "GET") == 0) {
 			int ires;
 			struct http_resource httplocalres;
@@ -272,6 +281,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				ret = get_theme_param(headernv, tls_recv_output + header_offset, &theme);
 				if (ret != 0) {
 					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+					free(tls_recv_output);
 					continue;
 				}
 
@@ -298,6 +308,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 				if (ret < 0) {
 					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+					free(tls_recv_output);
 					continue;
 				}
 				else {
@@ -305,6 +316,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				}
 			}
 		}
+		fprintf(g_fphttpslog, "YYY\n");
+		fflush(g_fphttpslog);
 		ZeroMemory(https_logentry, 256);
 		ZeroMemory(log_timestr, 42);
 
@@ -317,6 +330,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		sprintf_s(https_logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddr_httpsclt, log_timestr, reqline.method, reqline.resource, reqline.version, bytesent);
 		fprintf(g_fphttpslog, https_logentry);
 		fflush(g_fphttpslog);
+
+		free(tls_recv_output);
 
 		goto next_req;
 	}
