@@ -30,9 +30,8 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 	ret = _stat(logpath, &statbuff);
 	if (ret) {
 		if (_mkdir(logpath)) {
-			INPUT_RECORD inRec;
 			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+			for(;;) Sleep(10000);
 		}
 		else {
 		logyear:	char wYearStr[5];
@@ -45,9 +44,8 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 			strcat_s(logpath, 512, wYearStr);
 
 			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
-				INPUT_RECORD inRec;
 				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+				for (;;) Sleep(10000);
 			}
 			else {
 				char wMonthStr[3];
@@ -65,9 +63,8 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 					strcat_s(logpath, 512, wMonthStr);
 				}
 				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
-					INPUT_RECORD inRec;
 					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+					for (;;) Sleep(10000);
 				}
 				else {
 					char wDayStr[3];
@@ -113,9 +110,8 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 					}
 
 					if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
-						INPUT_RECORD inRec;
 						write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
-						while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+						for (;;) Sleep(10000);
 					}
 				}
 			}

@@ -53,21 +53,11 @@ create_userfile_tmp(COORD* cursorPosition,
 		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH,
 		NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		INPUT_RECORD inRec;
 		DWORD err;
-		DWORD read;
 
-		cursorPosition->Y += 3;
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-
+		cursorPosition->Y += 2;
 		err = GetLastError();
-		write_info_in_console(ERR_MSG_CANNOT_CREATE_FILE, (void*)&err, 0);
-
-		cursorPosition->Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
+		show_error_wait_close(cursorPosition, ERR_MSG_CANNOT_CREATE_FILE, NULL, err);
 	}
 
 	g_hNewFile_tmp = hFile;
@@ -472,9 +462,7 @@ receive_file(COORD* cursorPosition,
 		cursorPosition->Y += 3;
 		cursorPosition->X = (cursorPosition + 1)->X;
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		write_info_in_console(ERR_MSG_FAIL_TX, NULL, 0);
-		cursorPosition->Y++;
-		return -1;
+		show_error_wait_close(cursorPosition, ERR_MSG_FAIL_TX, NULL, 0);
 	}
 
 	/* No errors occured: print cent per cent string. */

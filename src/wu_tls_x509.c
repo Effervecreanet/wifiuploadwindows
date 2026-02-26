@@ -225,7 +225,7 @@ create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT*
 		NCryptFreeObject(*phProvider);
 		NCryptFreeObject(*hKey);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		for (;;) Sleep(10000);
 	}
 
 	*pCertContext = (CERT_CONTEXT*)create_cert_self_sign(cursorPosition, ipAddr, &SubjectBlob, *phProvider, *hKey);
@@ -236,7 +236,7 @@ create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT*
 		err = GetLastError();
 		write_info_in_console(ERR_MSG_ADDCERT, NULL, err);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		for (;;) Sleep(10000);
 	}
 
 	return;

@@ -289,10 +289,7 @@ tls_receive_file(COORD* cursorPosition,
 		DeleteFileA(userfile_tmp);
 		cursorPosition->Y += 3;
 		cursorPosition->X = (cursorPosition + 1)->X;
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		write_info_in_console(ERR_MSG_FAIL_TX, NULL, 0);
-		cursorPosition->Y++;
-		return -1;
+		show_error_wait_close(cursorPosition, ERR_MSG_FAIL_TX, NULL, 0);
 	}
 
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);

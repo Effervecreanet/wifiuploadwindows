@@ -140,8 +140,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	if (get_credantials_handle(&credHandle, pCertContext) < 0) {
 		CertFreeCertificateContext(pCertContext); NCryptFreeObject(phProvider); NCryptFreeObject(hKey);
 		err = GetLastError();
-		write_info_in_console(ERR_MSG_ACQUIRECREDANTIALSHANDLE, NULL, err);
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		show_error_wait_close(&prThread->cursorPosition[0], ERR_MSG_ACQUIRECREDANTIALSHANDLE, NULL, err);
 	}
 
 
@@ -222,16 +221,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
 
 				ZeroMemory(&httplocalres, sizeof(struct http_resource));
-				if (create_local_resource(&httplocalres, ires, theme) != 0) {
-					INPUT_RECORD inRec;
-					DWORD read;
-
-					prThread->cursorPosition[0].Y++;
-					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
-					write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-				}
+				if (create_local_resource(&httplocalres, ires, theme) != 0)
+					show_error_wait_close(&prThread->cursorPosition[0], ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition[0]);
 
@@ -252,16 +243,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				check_cookie_theme(headernv, &theme);
 
 				ZeroMemory(&httplocalres, sizeof(struct http_resource));
-				if (create_local_resource(&httplocalres, ires, theme) != 0) {
-					INPUT_RECORD inRec;
-					DWORD read;
-
-					prThread->cursorPosition[0].Y++;
-					SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
-					write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-					while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-				}
+				if (create_local_resource(&httplocalres, ires, theme) != 0)
+					show_error_wait_close(&prThread->cursorPosition[0], ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition[0]);
 			}

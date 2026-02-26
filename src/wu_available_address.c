@@ -175,33 +175,14 @@ DWORD available_address_ui(COORD cursorPosition[2], struct in_addr* inaddr) {
 	ZeroMemory(&ipAddrTable, sizeIpAddrTable);
 	ret = GetIpAddrTable((PMIB_IPADDRTABLE)&ipAddrTable, &sizeIpAddrTable, TRUE);
 
-	if (ret != NO_ERROR || ipAddrTable[0].dwNumEntries < 2) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
-		cursorPosition[0].Y += 2;
-		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-		write_info_in_console(ERR_MSG_CONNECTIVITY, NULL);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
-	}
-	else if (ipAddrTable[0].dwNumEntries == 2) {
+	if (ret != NO_ERROR || ipAddrTable[0].dwNumEntries < 2)
+		show_error_wait_close(&cursorPosition[0], ERR_MSG_CONNECTIVITY, NULL, 0);
+	else if (ipAddrTable[0].dwNumEntries == 2)
 		write_info_one_available_addr(cursorPosition, inaddr, ipAddrTable);
-	}
-	else if (ipAddrTable[0].dwNumEntries == 3) {
+	else if (ipAddrTable[0].dwNumEntries == 3)
 		ui_two_available_addr(cursorPosition, inaddr, ipAddrTable);
-	}
-	else {
-		INPUT_RECORD inRec;
-		cursorPosition[0].Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-		write_info_in_console(ERR_MSG_TOO_MANY_ADDR, NULL);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
-		ExitProcess(4);
-	}
+	else
+		show_error_wait_close(&cursorPosition[0], ERR_MSG_TOO_MANY_ADDR, NULL, 0);
 
 
 	return ipAddrTable->dwNumEntries;

@@ -150,16 +150,8 @@ wu_404_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, i
 	for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
 
 	ZeroMemory(&httplocalres, sizeof(struct http_resource));
-	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
-		cursorPosition->Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-	}
+	if (create_local_resource(&httplocalres, ires, *theme) != 0)
+		show_error_wait_close(cursorPosition, ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 404);
 
@@ -186,16 +178,8 @@ wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, 
 	for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
 
 	ZeroMemory(&httplocalres, sizeof(struct http_resource));
-	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
-		cursorPosition->Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-	}
+	if (create_local_resource(&httplocalres, ires, *theme) != 0)
+		show_error_wait_close(cursorPosition, ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);
 
@@ -282,28 +266,12 @@ create_send_resource(struct header_nv* httpnv, int s_user, int* bytesent, int th
 	check_cookie_theme(httpnv, &theme);
 
 	ZeroMemory(&httplocalres, sizeof(struct http_resource));
-	if (create_local_resource(&httplocalres, resource_index, theme) != 0) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
-		cursorPosition->Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-	}
+	if (create_local_resource(&httplocalres, resource_index, theme) != 0)
+		show_error_wait_close(cursorPosition, ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 	err = http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);
-	if (err > 1) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
-		cursorPosition->Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		write_info_in_console(ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err, 0);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-	}
+	if (err > 1)
+		show_error_wait_close(cursorPosition, ERR_FMT_MSG_CANNOT_SERV_RESOURCE, (void*)&err, err);
 	else if (err == 0) {
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);

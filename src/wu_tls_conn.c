@@ -48,16 +48,8 @@ int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int mess
 	secBufferOut[2].cbBuffer = context_sizes.cbTrailer;
 
 	ret = EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
-	if (ret != 0) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
-		cursorPosition.Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition);
-		write_info_in_console(ERR_MSG_ENCRYPTMESSAGE, NULL, ret);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-	}
+	if (ret != 0)
+		show_error_wait_close(cursorPosition, ERR_MSG_ENCRYPTMESSAGE, NULL, 0);
 
 	if (send(s_clt, encryptBuffer, secBufferOut[0].cbBuffer + secBufferOut[1].cbBuffer + secBufferOut[2].cbBuffer, 0) < 0)
 		return -1;
@@ -119,15 +111,8 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 	int ret = 0;
 	
 	read_buf = (char*)malloc(2000);
-	if (read_buf == NULL) {
-		INPUT_RECORD inRec;
-		DWORD read;
-		cursorPosition->Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		write_info_in_console(ERR_MSG_MEMORY_ALLOC, NULL, 0);
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-		return -1;
-	}
+	if (read_buf == NULL)
+		show_error_wait_close(cursorPosition, ERR_MSG_MEMORY_ALLOC, NULL, 0);
 	
 	ZeroMemory(&secBufferDesc, sizeof(SecBufferDesc));
 	ZeroMemory(secBuffers, sizeof(SecBuffer) * 4);
@@ -153,7 +138,6 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		int data_index = -1;
 		int extra_index = -1;
 
-
 		for (i = 0; i < 4; i++) {
 			if (secBuffers[i].BufferType == SECBUFFER_DATA) {
 				data_index = i;
@@ -163,7 +147,6 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 			}
 		}
 
-
 		if (data_index == -1) {
 			free(read_buf);
 			return -1;
@@ -171,15 +154,8 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 
 		*outlen = secBuffers[data_index].cbBuffer;
 		*output = (char*)malloc(*outlen);
-		if (*output == NULL) {
-			INPUT_RECORD inRec;
-			DWORD read;
-			cursorPosition->Y++;
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(ERR_MSG_MEMORY_ALLOC, NULL, 0);
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-			return -1;
-		}
+		if (*output == NULL)
+			show_error_wait_close(cursorPosition, ERR_MSG_MEMORY_ALLOC, NULL, 0);
 
 		memcpy(*output, secBuffers[data_index].pvBuffer, *outlen);
 
@@ -212,15 +188,9 @@ retry_decrypt:
 
 		missing_req = secBuffers[missing_index].cbBuffer;
 		tmp = (char*)realloc(read_buf, bytes_read + missing_req);
-		if (tmp == NULL) {
-			INPUT_RECORD inRec;
-			DWORD read;
-			cursorPosition->Y++;
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(ERR_MSG_MEMORY_ALLOC, NULL, 0);
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-			return -1;
-		}
+		if (tmp == NULL)
+			show_error_wait_close(cursorPosition, ERR_MSG_MEMORY_ALLOC, NULL, 0);
+		
 		read_buf = tmp;
 
 		ret = recv(s, read_buf + bytes_read, missing_req, MSG_WAITALL);
@@ -261,15 +231,8 @@ retry_decrypt:
 
 			*outlen = secBuffers[data_index].cbBuffer;
 			*output = (char*)malloc(*outlen);
-			if (*output == NULL) {
-				INPUT_RECORD inRec;
-				DWORD read;
-				cursorPosition->Y++;
-				SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-				write_info_in_console(ERR_MSG_MEMORY_ALLOC, NULL, 0);
-				while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-				return -1;
-			}
+			if (*output == NULL)
+				show_error_wait_close(cursorPosition, ERR_MSG_MEMORY_ALLOC, NULL, 0);
 
 			memcpy(*output, secBuffers[data_index].pvBuffer, *outlen);
 			free(read_buf);
@@ -281,27 +244,11 @@ retry_decrypt:
 			}
 			goto retry_decrypt;
 		}
-		else {
-			INPUT_RECORD inRec;
-			DWORD read;
-
-			SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-			write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
-			while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-			return -1;
-		}
+		else
+			show_error_wait_close(cursorPosition, ERR_MSG_DECRYPTMESSAGE, NULL, 0);
 	}
-	else {
-		INPUT_RECORD inRec;
-		DWORD read;
-
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		write_info_in_console(ERR_MSG_DECRYPTMESSAGE, NULL, ret);
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
-		return -1;
-
-	}
+	else
+		show_error_wait_close(cursorPosition, ERR_MSG_DECRYPTMESSAGE, NULL, 0);
 
 	return 0;
 }

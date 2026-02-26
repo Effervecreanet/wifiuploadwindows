@@ -135,7 +135,20 @@ write_info_in_console(enum idmsg id, void* p, DWORD err) {
 	}
 
 	return;
-};
+}
+
+void
+show_error_wait_close(COORD *cursorPosition, enum idmsg id, const void* p, DWORD err) {
+	/* Show text error in console */
+	cursorPosition->Y++;
+	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+	write_info_in_console(id, (void*)p, err);
+
+	/* Wait user close */
+	for (;;) Sleep(10000);
+
+	return;
+}
 
 void
 clear_txrx_pane(COORD* cursorPosition) {
@@ -365,15 +378,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
 
 	if (fopen_s(&g_fplog, logpath, "a+")) {
 		write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath, 0);
-		Sleep(5000);
-		WSACleanup();
-		return 3;
+		for (;;) Sleep(10000);
 	}
 
 	if (fopen_s(&g_fphttpslog, logpath_https, "a+")) {
 		write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_FILE, logpath_https, 0);
-		WSACleanup();
-		return 3;
+		for (;;) Sleep(10000);
 	}
 
 	ZeroMemory(&prThread, sizeof(struct paramThread));
