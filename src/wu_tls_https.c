@@ -163,6 +163,33 @@ crlfcrlf:
 	return headerlen;
 }
 
+int
+get_https_request(CtxtHandle* ctxtHandle, int s_clt, char** tls_recv_output, unsigned int* tls_recv_output_size, COORD* cursorPosition,
+	struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE], struct in_addr inaddr) {
+	int  header_offset;
+	int ret;
+
+	ret = tls_recv(ctxtHandle, s_clt, tls_recv_output, tls_recv_output_size, cursorPosition);
+	if (ret < 0)
+		return -1;
+
+	ZeroMemory(reqline, sizeof(struct http_reqline));
+	ret = get_request_line(reqline, *tls_recv_output, *tls_recv_output_size);
+	if (ret < 0)
+		return -1;
+	else
+		header_offset = ret;
+
+	ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
+	ret = get_header_nv(headernv, *tls_recv_output + header_offset, *tls_recv_output_size - header_offset, inaddr);
+	if (ret < 0)
+		return -1;
+	else
+		header_offset += ret;
+
+	return header_offset;
+}
+
 /*
  * Function description:
  *  - Load wifiupload html page or image data, format html page or image data

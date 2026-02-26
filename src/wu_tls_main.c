@@ -52,16 +52,8 @@ https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* t
 	for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
 
 	ZeroMemory(&httplocalres, sizeof(struct http_resource));
-	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
-		cursorPosition->Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-	}
+	if (create_local_resource(&httplocalres, ires, *theme) != 0)
+		show_error_wait_close(&cursorPosition[0], ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 	https_serv_resource(&httplocalres, s_user, NULL, bytesent, g_ctxtHandle, *cursorPosition);
 
@@ -182,33 +174,18 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	next_req:
 		bytesent = 0;
 
+		tls_recv_output = NULL;
 
-		ret = tls_recv(&ctxtHandle, s_clt, &tls_recv_output, &tls_recv_output_size, &prThread->cursorPosition[0]);
+		ret = get_https_request(&ctxtHandle, s_clt, &tls_recv_output, &tls_recv_output_size, &prThread->cursorPosition[0],
+								&reqline, headernv, prThread->inaddr);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			if (tls_recv_output != NULL)
+				free(tls_recv_output);
 			continue;
 		}
 
-		ZeroMemory(&reqline, sizeof(struct http_reqline));
-		ret = get_request_line(&reqline, tls_recv_output, tls_recv_output_size);
-		if (ret < 0) {
-			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-			free(tls_recv_output);
-			continue;
-		}
-		else
-			header_offset = ret;
-
-		ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
-		ret = get_header_nv(headernv, tls_recv_output + header_offset, tls_recv_output_size - header_offset, prThread->inaddr);
-		if (ret < 0) {
-			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-			free(tls_recv_output);
-			continue;
-		}
-		else
-			header_offset += ret;
-
+		header_offset = ret;
 
 		if (strcmp(reqline.method, "GET") == 0) {
 			int ires;
