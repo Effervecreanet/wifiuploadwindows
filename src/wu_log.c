@@ -1,10 +1,38 @@
 #include <Windows.h>
 #include <stdio.h>
+#include <time.h>
 #include <sys\stat.h>
 
 #include "wu_msg.h"
 #include "wu_log.h"
+#include "wu_tls_https_receive.h"
+#include "wu_http.h"
 
+extern FILE* g_fphttpslog;
+
+void
+log_https_request(char *ipaddr_httpsclt, struct http_reqline *reqline, int bytesent) {
+	time_t wutime;
+	char https_logentry[256];
+	char log_timestr[42];
+	struct tm tmval;
+
+	ZeroMemory(https_logentry, 256);
+	ZeroMemory(log_timestr, 42);
+
+	time(&wutime);
+
+	ZeroMemory(&tmval, sizeof(struct tm));
+	localtime_s(&tmval, &wutime);
+
+	strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval);
+	sprintf_s(https_logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddr_httpsclt, log_timestr, reqline->method, reqline->resource, reqline->version, bytesent);
+
+	fprintf(g_fphttpslog, https_logentry);
+	fflush(g_fphttpslog);
+
+	return;
+}
 /*
  * Function description:
  * Build log path. Log path is with the form of "year\month\day\log_19700101.txt". So

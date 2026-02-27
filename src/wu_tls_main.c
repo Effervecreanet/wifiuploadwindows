@@ -173,7 +173,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 	next_req:
 		bytesent = 0;
-
 		tls_recv_output = NULL;
 
 		ret = get_https_request(&ctxtHandle, s_clt, &tls_recv_output, &tls_recv_output_size, &prThread->cursorPosition[0],
@@ -203,19 +202,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 				continue;
 			}
 		}
-		ZeroMemory(https_logentry, 256);
-		ZeroMemory(log_timestr, 42);
 
-		time(&wutime);
-
-		ZeroMemory(&tmval, sizeof(struct tm));
-		localtime_s(&tmval, &wutime);
-
-		strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval);
-		sprintf_s(https_logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddr_httpsclt, log_timestr, reqline.method, reqline.resource, reqline.version, bytesent);
-		fprintf(g_fphttpslog, https_logentry);
-		fflush(g_fphttpslog);
-
+		log_https_request(ipaddr_httpsclt, &reqline, bytesent);
 		free(tls_recv_output);
 
 		goto next_req;
