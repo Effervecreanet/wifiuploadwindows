@@ -237,17 +237,22 @@ after_openrep:
 }
 
 int handle_post_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
-					int* bytesent, COORD* cursorPosition) {
+					int* bytesent, char *https_body, COORD* cursorPosition) {
 	int theme;
 	int ret;
 
 	if (strcmp(reqline->resource, "/theme") == 0) {
 		char cookie[48];
-		check_cookie_theme(headernv, &theme);
+
+		ret = get_theme_param(headernv, https_body, &theme);
+		if (ret < 0)
+			return -1;
+
 		if (theme == 0)
 			strcpy_s(cookie, 48, "theme=dark");
 		else
 			strcpy_s(cookie, 48, "theme=light");
+
 		https_apply_theme(s_clt, ctxtHandle, cookie, *cursorPosition);
 	}
 	else if (strcmp(reqline->resource, "/upload") == 0) {
@@ -255,10 +260,13 @@ int handle_post_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* 
 
 		clear_txrx_pane(cursorPosition);
 		check_cookie_theme(headernv, &theme);
+
 		ZeroMemory(&upstats, sizeof(struct user_stats));
+
 		ret = tls_receive_file(cursorPosition, headernv, s_clt, &upstats, theme, bytesent, ctxtHandle);
 		if (ret < 0)
 			return -1;
+
 		cursorPosition->X = (cursorPosition + 1)->X;
 		cursorPosition->Y++;
 	}

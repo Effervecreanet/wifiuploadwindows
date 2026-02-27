@@ -88,6 +88,34 @@ https_quit_wu(int s_clt) {
 
 	return;
 }
+
+void
+accept_sec_conn(CtxtHandle *ctxtHandle, CredHandle *credHandle, int s, int *s_clt,
+				char *ipaddr_httpsclt, COORD cursorPosition[2]) {
+	*s_clt = acceptSecure(s, credHandle, ctxtHandle, ipaddr_httpsclt);
+	if (cursorPosition[0].Y > cursorPosition[1].Y + 5) {
+		cursorPosition[0] = cursorPosition[1];
+		clear_txrx_pane(&cursorPosition[0]);
+	}
+
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);
+	cursorPosition[0].Y++;
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+
+	g_credHandle = credHandle;
+	g_ctxtHandle = ctxtHandle;
+	g_tls_sclt = s_clt;
+
+	if (encryptBuffer != NULL)
+		free(encryptBuffer);
+
+	QueryContextAttributes(ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &context_sizes);
+	encryptBuffer = malloc(context_sizes.cbHeader + context_sizes.cbMaximumMessage + context_sizes.cbTrailer);
+
+	return;
+}
+
 DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {
 	BYTE pbEncodedName[128];
@@ -147,36 +175,14 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		g_tls_sclt = NULL;
 
 		ZeroMemory(ipaddr_httpsclt, 16);
-
-		Sleep(333);
-
-		s_clt = acceptSecure(s, &credHandle, &ctxtHandle, ipaddr_httpsclt);
-		if (prThread->cursorPosition[0].Y > prThread->cursorPosition[1].Y + 5) {
-			prThread->cursorPosition[0] = prThread->cursorPosition[1];
-			clear_txrx_pane(&prThread->cursorPosition[0]);
-		}
-
-		SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
-		write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);
-		prThread->cursorPosition[0].Y++;
-		SetConsoleCursorPosition(g_hConsoleOutput, prThread->cursorPosition[0]);
-
-		g_credHandle = &credHandle;
-		g_ctxtHandle = &ctxtHandle;
-		g_tls_sclt = &s_clt;
-
-		if (encryptBuffer != NULL)
-			free(encryptBuffer);
-
-		QueryContextAttributes(&ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &context_sizes);
-		encryptBuffer = malloc(context_sizes.cbHeader + context_sizes.cbMaximumMessage + context_sizes.cbTrailer);
+		accept_sec_conn(&ctxtHandle, &credHandle, s, &s_clt, ipaddr_httpsclt,  prThread->cursorPosition);
 
 	next_req:
 		bytesent = 0;
 		tls_recv_output = NULL;
 
 		ret = get_https_request(&ctxtHandle, s_clt, &tls_recv_output, &tls_recv_output_size, &prThread->cursorPosition[0],
-								&reqline, headernv, prThread->inaddr);
+			&reqline, headernv, prThread->inaddr);
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			if (tls_recv_output != NULL)
@@ -187,7 +193,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		header_offset = ret;
 
 		if (strcmp(reqline.method, "GET") == 0) {
-			ret = handle_get_request(&ctxtHandle, s_clt, &reqline,  headernv, &bytesent, &prThread->cursorPosition[0]);
+			ret = handle_get_request(&ctxtHandle, s_clt, &reqline, headernv, &bytesent, &prThread->cursorPosition[0]);
 			if (ret < 0) {
 				tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 				free(tls_recv_output);
@@ -195,7 +201,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 			}
 		}
 		else if (strcmp(reqline.method, "POST") == 0) {
-			ret = handle_post_request(&ctxtHandle, s_clt, &reqline, headernv, &bytesent, &prThread->cursorPosition);
+			ret = handle_post_request(&ctxtHandle, s_clt, &reqline, headernv, &bytesent, tls_recv_output + header_offset,
+				&prThread->cursorPosition);
 			if (ret < 0) {
 				tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 				free(tls_recv_output);
