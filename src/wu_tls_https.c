@@ -32,7 +32,7 @@ extern const struct _http_resources http_resources[];
  *  - length: Length of BufferIn.
  * Return value:
  *  - -1: Failure
- *  - 0: Number of data characters parsed. 
+ *  - 0: Number of data characters parsed.
  */
 int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 {
@@ -194,8 +194,8 @@ get_https_request(CtxtHandle* ctxtHandle, int s_clt, char** tls_recv_output, uns
 }
 
 int
-handle_get_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline *reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
-					int* bytesent, COORD *cursorPosition) {
+handle_get_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
+	int* bytesent, COORD* cursorPosition) {
 	struct http_resource httplocalres;
 	int theme;
 	int ires;
@@ -223,7 +223,7 @@ handle_get_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline *reqli
 		goto after_openrep;
 	}
 	else {
-after_openrep:
+	after_openrep:
 		check_cookie_theme(headernv, &theme);
 
 		ZeroMemory(&httplocalres, sizeof(struct http_resource));
@@ -237,7 +237,7 @@ after_openrep:
 }
 
 int handle_post_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
-					int* bytesent, char *https_body, COORD* cursorPosition) {
+	int* bytesent, char* https_body, COORD* cursorPosition) {
 	int theme;
 	int ret;
 
@@ -273,6 +273,94 @@ int handle_post_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* 
 
 	return 0;
 }
+
+int
+https_serv_texthtml(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
+	DWORD BufferUserNameSize = 254;
+	char BufferUserName[254];
+	DWORD read, err;
+	char* pbufferin = NULL, * pbufferout = NULL;
+	char hrmn[6];
+	char* plastBS;
+	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
+	size_t pbufferoutlen = 0;
+	int messageLen;
+	int i;
+
+	ZeroMemory(BufferUserName, 254);
+	GetUserNameA(BufferUserName, &BufferUserNameSize);
+
+	pbufferin = (char*)malloc(fsize + 1);
+
+	ZeroMemory(pbufferin, fsize + 1);
+	ReadFile(hFile, pbufferin, fsize, &read, NULL);
+	if (read != fsize) {
+		err = GetLastError();
+		free(pbufferin);
+		CloseHandle(hFile);
+		return err;
+	}
+
+	get_hours_minutes(hrmn);
+
+	plastBS = strrchr(res->resource, '\\') + 1;
+	if (make_htmlpage(successinfo, plastBS, pbufferin, &pbufferout,
+		&pbufferoutlen, fsize, hrmn) < 0)
+		goto err;
+
+	ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
+	create_http_header_nv(res, httpnv, pbufferoutlen, -1);
+
+	for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
+		messageLen = strlen(message);
+		sprintf_s(message + messageLen, 8192 - messageLen,
+			"%s: %s\r\n", httpnv[i].name.wsite,
+			httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
+	}
+
+	messageLen = strlen(message);
+	strcat_s(message, 8192 - messageLen, "\r\n");
+	strcat_s(message, 8192 - messageLen - 2, pbufferout);
+
+	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
+
+	*bytesent += messageLen;
+
+	free(pbufferout);
+err:
+	CloseHandle(hFile);
+
+
+	return 0;
+}
+
+int
+https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
+	DWORD read, err;
+	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
+	size_t messageLen;
+	int i;
+	ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
+	create_http_header_nv(res, httpnv, fsize, -1);
+	for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
+		messageLen = strlen(message);
+		sprintf_s(message + messageLen, 8192 - messageLen,
+			"%s: %s\r\n", httpnv[i].name.wsite,
+			httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
+	}
+	messageLen = strlen(message);
+	strcat_s(message, 8192 - messageLen, "\r\n");
+	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
+	while (ReadFile(hFile, message, 2048, &read, NULL) != 0 && read) {
+		tls_send(s, ctxtHandle, message, read, cursorPosition);
+		*bytesent += read;
+	}
+	CloseHandle(hFile);
+	return 0;
+}
+
 /*
  * Function description:
  *  - Load wifiupload html page or image data, format html page or image data
@@ -286,7 +374,7 @@ int handle_post_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* 
  *  - ctxtHandle: Security context handle, used in tls_send().
  *  - cursorPosition: Console cursor position where wu writes info or errors.
  * Return value:
- *  - Not used. 
+ *  - Not used.
  */
 
 int
@@ -295,22 +383,9 @@ https_serv_resource(struct http_resource* res, int s,
 	int* bytesent, CtxtHandle* ctxtHandle,
 	COORD cursorPosition) {
 	HANDLE hFile;
-	DWORD fsize, read, err;
-	DWORD BufferUserNameSize = 254;
-	SYSTEMTIME sysTime;
-	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
-	char* pbufferin = NULL, * pbufferout = NULL;
-	char BufferUserName[254];
-	size_t pbufferoutlen = 0;
-	char hrmn[6];
-	char* plastBS;
-	int ret;
-	SecBufferDesc bufferDesc;
-	SecBuffer secBufferOut[4];
-	int i;
 	char message[8192];
-	int encryptBufferLen;
-	int messageLen;
+	DWORD fsize;
+	int ret;
 
 	ZeroMemory(message, 8192);
 	sprintf_s(message, 8192, "%s %s %s\r\n", HTTP_VERSION, HTTP_CODE_STATUS_OK_STR, HTTP_STRING_STATUS_OK);
@@ -322,79 +397,16 @@ https_serv_resource(struct http_resource* res, int s,
 	fsize = GetFileSize(hFile, NULL);
 
 	if (strcmp(res->type, "text/html") == 0) {
-		ZeroMemory(BufferUserName, 254);
-		GetUserNameA(BufferUserName, &BufferUserNameSize);
-
-		pbufferin = (char*)malloc(fsize + 1);
-
-		ZeroMemory(pbufferin, fsize + 1);
-		ReadFile(hFile, pbufferin, fsize, &read, NULL);
-		if (read != fsize) {
-			err = GetLastError();
-			free(pbufferin);
-			CloseHandle(hFile);
-			return err;
-		}
-
-		get_hours_minutes(hrmn);
-
-		plastBS = strrchr(res->resource, '\\') + 1;
-		if (make_htmlpage(successinfo, plastBS, pbufferin, &pbufferout,
-			&pbufferoutlen, fsize, hrmn) < 0)
-			goto err;
-
-		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
-		create_http_header_nv(res, httpnv, pbufferoutlen, -1);
-
-		for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
-			messageLen = strlen(message);
-			sprintf_s(message + messageLen, 8192 - messageLen,
-				"%s: %s\r\n", httpnv[i].name.wsite,
-				httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
-		}
-
-		messageLen = strlen(message);
-		strcat_s(message, 8192 - messageLen, "\r\n");
-		strcat_s(message, 8192 - messageLen - 2, pbufferout);
-
-		tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
-
-		*bytesent += messageLen;
-
-		ret = 0;
-		free(pbufferout);
-	err:
-		CloseHandle(hFile);
+		ret = https_serv_texthtml(ctxtHandle, s, hFile, fsize, res, message,
+									successinfo, bytesent, cursorPosition);
+		if (ret < 0)
+			return -1;
 	}
 	else if (strcmp(res->type, "image/png") == 0 || strcmp(res->type, "image/x-icon") == 0) {
-		char buffer[1024];
-
-		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
-		create_http_header_nv(res, httpnv, fsize, -1);
-
-		for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
-			messageLen = strlen(message);
-			sprintf_s(message + messageLen, 8192 - messageLen, "%s: %s\r\n", httpnv[i].name.wsite,
-				httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
-		}
-
-		messageLen = strlen(message);
-		strcat_s(message, 8192 - messageLen, "\r\n");
-
-		messageLen = strlen(message);
-
-		*bytesent += strlen(message);
-
-		tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
-
-		while (ReadFile(hFile, message, 2048, &read, NULL) != 0 && read) {
-			tls_send(s, ctxtHandle, message, read, cursorPosition);
-
-			*bytesent += read;
-		}
-
-		CloseHandle(hFile);
-		ret = 1;
+		ret = https_serv_image(ctxtHandle, s, hFile, fsize, res, message,
+			successinfo, bytesent, cursorPosition);
+		if (ret < 0)
+			return -1;
 	}
 
 	return ret;

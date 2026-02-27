@@ -128,16 +128,10 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	HCERTSTORE hCertStore;
 	int i;
 	struct http_reqline reqline;
-	INPUT_RECORD inRec;
-	DWORD read;
 	struct header_nv headernv[HEADER_NV_MAX_SIZE];
 	int bytesent = 0;
 	int theme = 0;
-	char https_logentry[256];
 	char ipaddr_httpsclt[16];
-	char log_timestr[42];
-	time_t wutime;
-	struct tm tmval;
 	NCRYPT_KEY_HANDLE hKey;
 	NCRYPT_PROV_HANDLE phProvider;
 	int header_offset;

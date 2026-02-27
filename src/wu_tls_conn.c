@@ -169,12 +169,14 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 	} else if (secStatus == SEC_E_INCOMPLETE_MESSAGE) {
 		int i;
 		int missing_req;
-		int missing_index = -1;
-		int data_index = -1;
+		int missing_index;
+		int data_index;
 		char* tmp;
 
-
 retry_decrypt:
+		missing_index = -1;
+		data_index = -1;
+
 		for (i = 0; i < 4; i++) {
 			if (secBuffers[i].BufferType == SECBUFFER_MISSING) {
 				missing_index = i;
@@ -200,7 +202,6 @@ retry_decrypt:
 		}
 
 		bytes_read += ret;
-
 
 		ZeroMemory(&secBufferDesc, sizeof(SecBufferDesc));
 		ZeroMemory(secBuffers, sizeof(SecBuffer) * 4);
