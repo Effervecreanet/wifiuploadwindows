@@ -194,7 +194,8 @@ get_https_request(CtxtHandle* ctxtHandle, int s_clt, char** tls_recv_output, uns
 }
 
 int
-handle_get_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline *reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE], int* bytesent, COORD *cursorPosition) {
+handle_get_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline *reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
+					int* bytesent, COORD *cursorPosition) {
 	struct http_resource httplocalres;
 	int theme;
 	int ires;
@@ -230,6 +231,36 @@ after_openrep:
 			show_error_wait_close(cursorPosition, ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
 		https_serv_resource(&httplocalres, s_clt, NULL, bytesent, ctxtHandle, cursorPosition);
+	}
+
+	return 0;
+}
+
+int handle_post_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
+					int* bytesent, COORD* cursorPosition) {
+	int theme;
+	int ret;
+
+	if (strcmp(reqline->resource, "/theme") == 0) {
+		char cookie[48];
+		check_cookie_theme(headernv, &theme);
+		if (theme == 0)
+			strcpy_s(cookie, 48, "theme=dark");
+		else
+			strcpy_s(cookie, 48, "theme=light");
+		https_apply_theme(s_clt, ctxtHandle, cookie, *cursorPosition);
+	}
+	else if (strcmp(reqline->resource, "/upload") == 0) {
+		struct user_stats upstats;
+
+		clear_txrx_pane(cursorPosition);
+		check_cookie_theme(headernv, &theme);
+		ZeroMemory(&upstats, sizeof(struct user_stats));
+		ret = tls_receive_file(cursorPosition, headernv, s_clt, &upstats, theme, bytesent, ctxtHandle);
+		if (ret < 0)
+			return -1;
+		cursorPosition->X = (cursorPosition + 1)->X;
+		cursorPosition->Y++;
 	}
 
 	return 0;

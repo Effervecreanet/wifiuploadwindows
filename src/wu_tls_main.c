@@ -185,8 +185,6 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 			continue;
 		}
 
-		fprintf(g_fphttpslog, "Received request: %s %s %s\n", reqline.method, reqline.resource, reqline.version);
-		fflush(g_fphttpslog);
 		header_offset = ret;
 
 		if (strcmp(reqline.method, "GET") == 0) {
@@ -198,45 +196,11 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 			}
 		}
 		else if (strcmp(reqline.method, "POST") == 0) {
-			if (strcmp(reqline.resource, "/theme") == 0) {
-				char cookie[48];
-
-				ret = get_theme_param(headernv, tls_recv_output + header_offset, &theme);
-				if (ret != 0) {
-					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-					free(tls_recv_output);
-					continue;
-				}
-
-				ZeroMemory(cookie, 48);
-				if (theme == 0)
-					strcpy_s(cookie, 48, "theme=dark");
-				else
-					strcpy_s(cookie, 48, "theme=light");
-
-				https_apply_theme(s_clt, &ctxtHandle, cookie, prThread->cursorPosition);
-			}
-			else if (strcmp(reqline.resource, "/upload") == 0) {
-				struct user_stats upstats;
-
-				clear_txrx_pane(&prThread->cursorPosition[0]);
-
-				check_cookie_theme(headernv, &theme);
-
-				ZeroMemory(&upstats, sizeof(struct user_stats));
-
-				ret = tls_receive_file(&prThread->cursorPosition, headernv, s_clt, &upstats, theme, &bytesent, &ctxtHandle);
-
-				prThread->cursorPosition[0].X = prThread->cursorPosition[1].X;
-
-				if (ret < 0) {
-					tls_shutdown(&ctxtHandle, &credHandle, s_clt);
-					free(tls_recv_output);
-					continue;
-				}
-				else {
-					prThread->cursorPosition[0].Y++;
-				}
+			ret = handle_post_request(&ctxtHandle, s_clt, &reqline, headernv, &bytesent, &prThread->cursorPosition);
+			if (ret < 0) {
+				tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+				free(tls_recv_output);
+				continue;
 			}
 		}
 		ZeroMemory(https_logentry, 256);
