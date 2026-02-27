@@ -6,6 +6,8 @@
 #include "wu_http.h"
 #include "wu_tls_https.h"
 #include "wu_http_nv.h"
+#include "wu_msg.h"
+#include "wu_content.h"
 
 #define SCHANNEL_USE_BLACKLIST
 
@@ -17,6 +19,7 @@
 
 extern FILE* g_fphttpslog;
 extern int g_tls_firstsend;
+extern const struct _http_resources http_resources[];
 
 
 /*
@@ -190,6 +193,47 @@ get_https_request(CtxtHandle* ctxtHandle, int s_clt, char** tls_recv_output, uns
 	return header_offset;
 }
 
+int
+handle_get_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline *reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE], int* bytesent, COORD *cursorPosition) {
+	struct http_resource httplocalres;
+	int theme;
+	int ires;
+
+	ires = http_match_resource((char*)&reqline->resource);
+	if (ires < 0) {
+		check_cookie_theme(headernv, &theme);
+
+		for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
+
+		ZeroMemory(&httplocalres, sizeof(struct http_resource));
+		if (create_local_resource(&httplocalres, ires, theme) != 0)
+			show_error_wait_close(cursorPosition, ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+
+		https_serv_resource(&httplocalres, s_clt, NULL, bytesent, ctxtHandle, cursorPosition);
+	}
+	else if (strcmp(reqline->resource + 1, "quit") == 0) {
+		https_wu_quit_response(cursorPosition, headernv, &theme, s_clt, bytesent);
+		https_quit_wu(s_clt);
+	}
+	else if (strcmp(reqline->resource + 1, "openRep") == 0) {
+		show_download_directory();
+		strcpy_s(reqline->resource, HTTP_RESSOURCE_MAX_LENGTH, "/index");
+		ires = 0;
+		goto after_openrep;
+	}
+	else {
+after_openrep:
+		check_cookie_theme(headernv, &theme);
+
+		ZeroMemory(&httplocalres, sizeof(struct http_resource));
+		if (create_local_resource(&httplocalres, ires, theme) != 0)
+			show_error_wait_close(cursorPosition, ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
+
+		https_serv_resource(&httplocalres, s_clt, NULL, bytesent, ctxtHandle, cursorPosition);
+	}
+
+	return 0;
+}
 /*
  * Function description:
  *  - Load wifiupload html page or image data, format html page or image data

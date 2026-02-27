@@ -42,7 +42,7 @@ extern int* g_tls_sclt;
 SecPkgContext_StreamSizes context_sizes;
 char* encryptBuffer = NULL;
 
-static void
+void
 https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
 	int ires;
 	struct http_resource httplocalres;
@@ -60,7 +60,7 @@ https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* t
 	return;
 }
 
-static void
+void
 https_quit_wu(int s_clt) {
 	int i;
 
@@ -185,45 +185,16 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 			continue;
 		}
 
+		fprintf(g_fphttpslog, "Received request: %s %s %s\n", reqline.method, reqline.resource, reqline.version);
+		fflush(g_fphttpslog);
 		header_offset = ret;
 
 		if (strcmp(reqline.method, "GET") == 0) {
-			int ires;
-			struct http_resource httplocalres;
-
-			ires = http_match_resource(reqline.resource);
-			if (ires < 0) {
-				check_cookie_theme(headernv, &theme);
-
-				for (ires = 0; strcmp(http_resources[ires].resource, "erreur_404") != 0; ires++);
-
-				ZeroMemory(&httplocalres, sizeof(struct http_resource));
-				if (create_local_resource(&httplocalres, ires, theme) != 0)
-					show_error_wait_close(&prThread->cursorPosition[0], ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition[0]);
-
-				// goto err;
-			}
-			else if (strcmp(reqline.resource + 1, "quit") == 0) {
-				https_wu_quit_response(&prThread->cursorPosition[0], headernv, &theme, s_clt, &bytesent);
-				https_quit_wu(s_clt);
-			}
-			else if (strcmp(reqline.resource + 1, "openRep") == 0) {
-				show_download_directory();
-				strcpy_s(reqline.resource, HTTP_RESSOURCE_MAX_LENGTH, "/index");
-				ires = 0;
-				goto after_openrep;
-			}
-			else {
-			after_openrep:
-				check_cookie_theme(headernv, &theme);
-
-				ZeroMemory(&httplocalres, sizeof(struct http_resource));
-				if (create_local_resource(&httplocalres, ires, theme) != 0)
-					show_error_wait_close(&prThread->cursorPosition[0], ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
-
-				https_serv_resource(&httplocalres, s_clt, NULL, &bytesent, &ctxtHandle, prThread->cursorPosition[0]);
+			ret = handle_get_request(&ctxtHandle, s_clt, &reqline,  headernv, &bytesent, &prThread->cursorPosition[0]);
+			if (ret < 0) {
+				tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+				free(tls_recv_output);
+				continue;
 			}
 		}
 		else if (strcmp(reqline.method, "POST") == 0) {
