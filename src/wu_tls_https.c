@@ -331,7 +331,6 @@ https_serv_texthtml(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, st
 err:
 	CloseHandle(hFile);
 
-
 	return 0;
 }
 
@@ -342,22 +341,28 @@ https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struc
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
 	size_t messageLen;
 	int i;
+
 	ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 	create_http_header_nv(res, httpnv, fsize, -1);
+	
 	for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
 		messageLen = strlen(message);
 		sprintf_s(message + messageLen, 8192 - messageLen,
 			"%s: %s\r\n", httpnv[i].name.wsite,
 			httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
 	}
+	
 	messageLen = strlen(message);
 	strcat_s(message, 8192 - messageLen, "\r\n");
 	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
+
 	while (ReadFile(hFile, message, 2048, &read, NULL) != 0 && read) {
 		tls_send(s, ctxtHandle, message, read, cursorPosition);
 		*bytesent += read;
 	}
+
 	CloseHandle(hFile);
+
 	return 0;
 }
 

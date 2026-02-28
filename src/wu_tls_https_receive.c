@@ -88,6 +88,28 @@ create_userfile_tmp(COORD* cursorPosition,
 	return hFile;
 }
 
+int
+get_MIME_boundarylen(struct header_nv* httpnv, unsigned short* boundarylen)
+{
+	int ret;
+	char* pboundary;
+
+	ret = nv_find_name_client(httpnv, "Content-Type");
+	if (ret < 0)
+		return -1;
+
+	pboundary = strstr((httpnv + ret)->value.v, "boundary=");
+	if (pboundary == NULL)
+		return -1;
+
+	pboundary += (sizeof("boundary=") - 1);
+	*boundarylen = (unsigned short)strlen(pboundary);
+
+	if (*pboundary == '\0' || *boundarylen < 7 || *boundarylen > 63)
+		return -1;
+
+	return 0;
+}
 
 static errno_t
 get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int req_buffer_size, unsigned short* MIMElen)
@@ -206,22 +228,8 @@ tls_receive_file(COORD* cursorPosition,
 	char* tls_recv_output;
 	unsigned int tls_recv_output_size;
 
-	ZeroMemory(&httpres, sizeof(struct http_resource));
-	ret = nv_find_name_client(httpnv, "Content-Type");
+	ret = get_MIME_boundarylen(httpnv, &boundarylen);
 	if (ret < 0)
-		return -1;
-
-	pboundary = strstr((httpnv + ret)->value.v, "boundary=");
-	if (pboundary == NULL)
-		return -1;
-
-	pboundary += (sizeof("boundary=") - 1);
-	boundarylen = (unsigned short)strlen(pboundary);
-	if (*pboundary == '\0' || boundarylen < 7 || boundarylen > 63)
-		return -1;
-
-	ZeroMemory(boundary, 64);
-	if (strcpy_s(boundary, 64, pboundary) != 0)
 		return -1;
 
 	ret = nv_find_name_client(httpnv, "Content-Length");
