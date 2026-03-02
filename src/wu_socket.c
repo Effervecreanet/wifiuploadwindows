@@ -88,7 +88,7 @@ accept_conn(COORD* cursorPosition, int s, char ipaddrstr[16]) {
 	for (;;) {
 		s_user = (int)accept(s, (struct sockaddr*)&sainUser, &sainLen);
 
-		if (s_user == INVALID_SOCKET)
+		if (s_user == INVALID_SOCKET) {
 			socket_show_error_wait_close(cursorPosition, ERROR_MESSAGE_SOCKET_3);
 		}
 		else {

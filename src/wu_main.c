@@ -71,6 +71,8 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 			closesocket(*g_usersocket);
 		if (g_listensocket != NULL)
 			closesocket(*g_listensocket);
+		if (g_listenhttpssocket != NULL)
+			closesocket(*g_listenhttpssocket);
 		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
 			CloseHandle(g_hConsoleOutput);
 		if (g_hNewFile_tmp != INVALID_HANDLE_VALUE) {
