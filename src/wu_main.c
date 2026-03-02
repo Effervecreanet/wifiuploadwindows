@@ -83,7 +83,6 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 		if (encryptBuffer != NULL)
 			free(encryptBuffer);
 		WSACleanup();
-		ExitProcess(TRUE);
 	default:
 		break;
 	}

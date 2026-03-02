@@ -184,6 +184,18 @@ wcons_pbar_first_char(COORD* cursorPosition) {
 }
 
 static void
+wcons_pbar_last_char(COORD* cursorPosition) {
+	DWORD written;
+
+	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+	SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_RVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
+	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_INTENSITY);
+
+	return;
+}
+
+static void
 wcons_ui_file_line(COORD* cursorPosition, char* filename) {
 	DWORD written;
 
@@ -221,6 +233,13 @@ wcons_zero_percent(COORD* cursorPosition, COORD *coordPerCent) {
 	SetConsoleCursorPosition(g_hConsoleOutput, *coordPerCent);
 	write_info_in_console(INF_ZERO_PERCENT, NULL, 0);
 
+	return;
+}
+
+static void
+wcons_cent_percent(COORD coordPerCent) {
+	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
+	write_info_in_console(INF_CENT_PERCENT, NULL, 0);
 	return;
 }
 
@@ -336,15 +355,12 @@ tls_receive_file(COORD* cursorPosition,
 		show_error_wait_close(cursorPosition, ERR_MSG_FAIL_TX, NULL, 0);
 	}
 
-	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
-	write_info_in_console(INF_CENT_PERCENT, NULL, 0);
+	wcons_cent_percent(coordPerCent);
 
 	GetSystemTime(&txstats.end);
 
-	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-	SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_RVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
-	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
-	SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_INTENSITY);
+	wcons_pbar_last_char(cursorPosition);
+
 	GetFileSizeEx(hFile, &len_li);
 
 	if (len_li.HighPart != 0)
@@ -355,6 +371,7 @@ tls_receive_file(COORD* cursorPosition,
 	sizeNewFileDup = sizeNewFile;
 
 	CloseHandle(hFile);
+	g_hNewFile_tmp = INVALID_HANDLE_VALUE;
 
 	cursorPosition->Y += 2;
 	cursorPosition->X = (cursorPosition + 1)->X;
