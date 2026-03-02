@@ -156,6 +156,9 @@ get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int re
 		return EINVAL;
 	}
 
+	if (strlen(upstats->filename) == 0)
+		return -1;
+
 	if (strchr(upstats->filename, '\\') != NULL) {
 		free(buffer);
 		return EINVAL;
@@ -166,6 +169,59 @@ get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int re
 	free(buffer);
 
 	return 0;
+}
+
+static void
+wcons_pbar_first_char(COORD* cursorPosition) {
+	DWORD written;
+
+	SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
+	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
+	SetConsoleTextAttribute(g_hConsoleOutput, 0);
+	cursorPosition->X++;
+
+	return;
+}
+
+static void
+wcons_ui_file_line(COORD* cursorPosition, char* filename) {
+	DWORD written;
+
+	cursorPosition->Y += 2;
+	cursorPosition->X--;
+
+	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
+	write_info_in_console(INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL, 0);
+	WriteConsoleA(g_hConsoleOutput, filename, (DWORD)strlen(filename), &written, NULL);
+
+	cursorPosition->Y -= 2;
+	cursorPosition->X++;
+
+	return;
+}
+
+static void
+init_tx_stats(struct tx_stats* txstats, u_int64 content_length) {
+	ZeroMemory(txstats, sizeof(struct tx_stats));
+	GetSystemTime(&txstats->start);
+
+	txstats->total_size = content_length;
+	txstats->one_percent = (long long)txstats->total_size / 100;
+	txstats->curr_percent = txstats->curr_percent_bak = 0;
+	txstats->received_size = txstats->received_size_bak = 0;
+
+	return;
+}
+
+static void
+wcons_zero_percent(COORD* cursorPosition, COORD *coordPerCent) {
+	coordPerCent->X = cursorPosition->X + 52;
+	coordPerCent->Y = cursorPosition->Y;
+
+	SetConsoleCursorPosition(g_hConsoleOutput, *coordPerCent);
+	write_info_in_console(INF_ZERO_PERCENT, NULL, 0);
+
+	return;
 }
 
 static int
@@ -244,43 +300,23 @@ tls_receive_file(COORD* cursorPosition,
 	if (get_MIME_filename(upstats, &tls_recv_output, tls_recv_output_size, &MIMElen) != 0)
 		return -1;
 
-	if (strlen(upstats->filename) == 0)
-		return -1;
-
 	clear_txrx_pane(cursorPosition);
 
 	coordAverageTX.X = cursorPosition->X;
 	coordAverageTX.Y = cursorPosition->Y + 1;
-	SetConsoleTextAttribute(g_hConsoleOutput, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | COMMON_LVB_GRID_LVERTICAL | COMMON_LVB_GRID_HORIZONTAL | COMMON_LVB_UNDERSCORE);
-	WriteConsoleA(g_hConsoleOutput, " ", 1, &written, NULL);
-	SetConsoleTextAttribute(g_hConsoleOutput, 0);
-	cursorPosition->X++;
+
+	wcons_pbar_first_char(cursorPosition);
 
 	hFile = create_userfile_tmp(cursorPosition, upstats->filename, userfile_tmp);
 
-	ZeroMemory(&txstats, sizeof(struct tx_stats));
-	GetSystemTime(&txstats.start);
+	wcons_ui_file_line(cursorPosition, upstats->filename);
+
 	tick_start = GetTickCount();
-
-	cursorPosition->Y += 2;
-	cursorPosition->X--;
-	SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
-	write_info_in_console(INF_WIFIUPLOAD_UI_FILE_DOWNLOAD, NULL, 0);
-	WriteConsoleA(g_hConsoleOutput, upstats->filename, (DWORD)strlen(upstats->filename), &written, NULL);
-	cursorPosition->Y -= 2;
-	cursorPosition->X++;
-
 	content_length -= tls_recv_output_size;
-	txstats.total_size = content_length;
-	txstats.one_percent = (long long)txstats.total_size / 100;
-	txstats.curr_percent = txstats.curr_percent_bak = 0;
-	txstats.received_size = txstats.received_size_bak = 0;
 
-	coordPerCent.X = cursorPosition->X + 52;
-	coordPerCent.Y = cursorPosition->Y;
+	init_tx_stats(&txstats, content_length);
 
-	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
-	write_info_in_console(INF_ZERO_PERCENT, NULL, 0);
+	wcons_zero_percent(cursorPosition, &coordPerCent);
 
 	if (content_length == 0)
 		WriteFile(hFile, tls_recv_output + MIMElen, tls_recv_output_size - MIMElen - boundarylen - 8, &written, NULL);
