@@ -31,13 +31,17 @@ extern char g_sNewFile_tmp[1024];
 extern FILE* g_fphttpslog;
 
 
-static HANDLE
-create_userfile_tmp(COORD* cursorPosition,
-	char* filename,
-	char* userfile_tmp);
-static errno_t
-receive_MIME_header(struct user_stats* upstats,
-	int s, unsigned short* MIMELen);
+static HANDLE create_userfile_tmp(COORD* cursorPosition, char* filename, char* userfile_tmp);
+static errno_t receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMELen);
+static int get_MIME_boundarylen(struct header_nv* httpnv, unsigned short* boundarylen);
+static errno_t get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int req_buffer_size, unsigned short* MIMElen);
+static void wcons_pbar_first_char(COORD* cursorPosition);
+static void wcons_pbar_last_char(COORD* cursorPosition);
+static void wcons_ui_file_line(COORD* cursorPosition, char* filename);
+static void init_tx_stats(struct tx_stats* txstats, u_int64 content_length);
+static void wcons_zero_percent(COORD* cursorPosition, COORD *coordPerCent);
+static void wcons_cent_percent(COORD coordPerCent);
+static int tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, int s, u_int64 *received_size, u_int64 *content_length, unsigned short boundarylen, COORD *cursorPosition);
 
 
 
@@ -73,7 +77,7 @@ create_userfile_tmp(COORD* cursorPosition,
 	return hFile;
 }
 
-int
+static int
 get_MIME_boundarylen(struct header_nv* httpnv, unsigned short* boundarylen)
 {
 	int ret;
@@ -256,10 +260,7 @@ tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, int s, u_int64 *received_siz
 
 
 int
-tls_receive_file(COORD* cursorPosition,
-	struct header_nv* httpnv, int s,
-	struct user_stats* upstats, int theme,
-	int* bytesent, CtxtHandle* ctxtHandle) {
+tls_receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct user_stats* upstats, int theme, int* bytesent, CtxtHandle* ctxtHandle) {
 	unsigned short MIMElen, boundarylen;
 	HANDLE hFile;
 	DWORD written, tick_start, tick_end, tick_diff;

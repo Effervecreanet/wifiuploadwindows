@@ -23,9 +23,10 @@ struct success_info {
 };
 
 errno_t redir404(int s);
+int time_to_httpdate(char* http_date);
 int http_recv_reqline(int s, struct http_reqline* reqline);
 int http_recv_headernv(int s, struct header_nv* nv);
-int http_match_resource(char* resource);
-int http_serv_resource(struct http_resource* res, int s,
-	struct success_info* successinfo,
-	int* bytesent, unsigned int status_code);
+void create_http_header_nv(struct http_resource* res, struct header_nv* nv, size_t fsize, char connection);
+int get_hours_minutes(char hrmn[6]);
+int make_htmlpage(struct success_info* successinfo, char* resource, char* pbufferin, char** pbufferout, size_t* pbufferoutlen, DWORD fsize, char hrmn[6]);
+int http_serv_resource(struct http_resource* res, int s, struct success_info* successinfo, int* bytesent, unsigned int status_code);

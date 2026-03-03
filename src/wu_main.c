@@ -54,6 +54,9 @@ int *g_tls_sclt = NULL;
 extern char* encryptBuffer;
 extern char* decryptBuffer[10];
 
+static DWORD wu_user_interface_part1(COORD cursorPosition[2], struct in_addr* inaddr);
+static void draw_rectangle_in_console(COORD cursPosStart);
+
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
 {
@@ -109,6 +112,7 @@ build_download_directory(char dd[1024]) {
 
 	return;
 }
+
 void
 write_info_in_console(enum idmsg id, void* p, DWORD err) {
 	DWORD written;

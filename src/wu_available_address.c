@@ -5,6 +5,9 @@
 
 extern HANDLE g_hConsoleOutput;
 
+static void write_info_one_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADDRTABLE ipAddrTable[4]);
+static void ui_two_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADDRTABLE ipAddrTable[4]);
+
 /*
  * Function description;
  * - If only one IP address is available for the server socket wu print user

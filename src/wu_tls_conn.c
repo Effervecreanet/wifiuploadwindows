@@ -21,6 +21,11 @@ extern HANDLE g_hConsoleOutput;
 extern SecPkgContext_StreamSizes context_sizes;
 extern char* encryptBuffer;
 
+static int tls_recv_start(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
+static int tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
+static int tls_handshake(CredHandle *credHandle, int s_clt, SecBufferDesc *secBufferDescInput, SecBuffer secBufferIn[2], unsigned long *fContextAttr,
+							CtxtHandle *ctxNewHandle, SecBufferDesc *secBufferDescOutput);
+
 int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int message_size, COORD cursorPosition) {
 	SecBufferDesc bufferDesc;
 	SecBuffer secBufferOut[3];
@@ -57,7 +62,8 @@ int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int mess
 	return 0;
 }
 
-int tls_recv_start(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
+static int
+tls_recv_start(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
 
 	ret = recv(s, read_buf, 2000, 0);
@@ -78,7 +84,8 @@ int tls_recv_start(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_re
 	return 0;
 }
 
-int tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
+static int
+tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
 	ret = recv(s, read_buf + *bytes_read, 2000 - *bytes_read, 0);
 	if (ret <= 0) {

@@ -22,6 +22,13 @@ extern int g_tls_firstsend;
 extern const struct _http_resources http_resources[];
 
 
+static int get_request_line(struct http_reqline* reqline, char* BufferIn, int length);
+static int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength, struct in_addr inaddr);
+static int https_serv_texthtml(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+								char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition);
+static int https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+							char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition);
+
 /*
  * Function description:
  *  - Parse client request line. Get http method, http ressource and http
@@ -34,7 +41,8 @@ extern const struct _http_resources http_resources[];
  *  - -1: Failure
  *  - 0: Number of data characters parsed.
  */
-int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
+static int
+get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 {
 	char* p_bufferin = BufferIn;
 	int i = 0, count = 0;
@@ -99,7 +107,8 @@ int get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
  *  -1: Function failure. NAME or VALUE size out of bounds. Or invalid characters.
  *   0: Number of byte parsed.
  */
-int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength, struct in_addr inaddr)
+static int
+get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength, struct in_addr inaddr)
 {
 	int count_hdr_nv = 0;
 	int headerlen = 0;
@@ -166,6 +175,97 @@ crlfcrlf:
 	return headerlen;
 }
 
+static int
+https_serv_texthtml(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
+	DWORD BufferUserNameSize = 254;
+	char BufferUserName[254];
+	DWORD read, err;
+	char* pbufferin = NULL, * pbufferout = NULL;
+	char hrmn[6];
+	char* plastBS;
+	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
+	size_t pbufferoutlen = 0;
+	int messageLen;
+	int i;
+
+	ZeroMemory(BufferUserName, 254);
+	GetUserNameA(BufferUserName, &BufferUserNameSize);
+
+	pbufferin = (char*)malloc(fsize + 1);
+
+	ZeroMemory(pbufferin, fsize + 1);
+	ReadFile(hFile, pbufferin, fsize, &read, NULL);
+	if (read != fsize) {
+		err = GetLastError();
+		free(pbufferin);
+		CloseHandle(hFile);
+		return err;
+	}
+
+	get_hours_minutes(hrmn);
+
+	plastBS = strrchr(res->resource, '\\') + 1;
+	if (make_htmlpage(successinfo, plastBS, pbufferin, &pbufferout,
+		&pbufferoutlen, fsize, hrmn) < 0)
+		goto err;
+
+	ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
+	create_http_header_nv(res, httpnv, pbufferoutlen, -1);
+
+	for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
+		messageLen = strlen(message);
+		sprintf_s(message + messageLen, 8192 - messageLen,
+			"%s: %s\r\n", httpnv[i].name.wsite,
+			httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
+	}
+
+	messageLen = strlen(message);
+	strcat_s(message, 8192 - messageLen, "\r\n");
+	strcat_s(message, 8192 - messageLen - 2, pbufferout);
+
+	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
+
+	*bytesent += messageLen;
+
+	free(pbufferout);
+err:
+	CloseHandle(hFile);
+
+	return 0;
+}
+
+static int
+https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
+	DWORD read, err;
+	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
+	size_t messageLen;
+	int i;
+
+	ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
+	create_http_header_nv(res, httpnv, fsize, -1);
+	
+	for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
+		messageLen = strlen(message);
+		sprintf_s(message + messageLen, 8192 - messageLen,
+			"%s: %s\r\n", httpnv[i].name.wsite,
+			httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
+	}
+	
+	messageLen = strlen(message);
+	strcat_s(message, 8192 - messageLen, "\r\n");
+	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
+
+	while (ReadFile(hFile, message, 2048, &read, NULL) != 0 && read) {
+		tls_send(s, ctxtHandle, message, read, cursorPosition);
+		*bytesent += read;
+	}
+
+	CloseHandle(hFile);
+
+	return 0;
+}
 int
 get_https_request(CtxtHandle* ctxtHandle, int s_clt, char** tls_recv_output, unsigned int* tls_recv_output_size, COORD* cursorPosition,
 	struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE], struct in_addr inaddr) {
@@ -274,97 +374,7 @@ int handle_post_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* 
 	return 0;
 }
 
-int
-https_serv_texthtml(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
-					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
-	DWORD BufferUserNameSize = 254;
-	char BufferUserName[254];
-	DWORD read, err;
-	char* pbufferin = NULL, * pbufferout = NULL;
-	char hrmn[6];
-	char* plastBS;
-	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
-	size_t pbufferoutlen = 0;
-	int messageLen;
-	int i;
 
-	ZeroMemory(BufferUserName, 254);
-	GetUserNameA(BufferUserName, &BufferUserNameSize);
-
-	pbufferin = (char*)malloc(fsize + 1);
-
-	ZeroMemory(pbufferin, fsize + 1);
-	ReadFile(hFile, pbufferin, fsize, &read, NULL);
-	if (read != fsize) {
-		err = GetLastError();
-		free(pbufferin);
-		CloseHandle(hFile);
-		return err;
-	}
-
-	get_hours_minutes(hrmn);
-
-	plastBS = strrchr(res->resource, '\\') + 1;
-	if (make_htmlpage(successinfo, plastBS, pbufferin, &pbufferout,
-		&pbufferoutlen, fsize, hrmn) < 0)
-		goto err;
-
-	ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
-	create_http_header_nv(res, httpnv, pbufferoutlen, -1);
-
-	for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
-		messageLen = strlen(message);
-		sprintf_s(message + messageLen, 8192 - messageLen,
-			"%s: %s\r\n", httpnv[i].name.wsite,
-			httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
-	}
-
-	messageLen = strlen(message);
-	strcat_s(message, 8192 - messageLen, "\r\n");
-	strcat_s(message, 8192 - messageLen - 2, pbufferout);
-
-	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
-
-	*bytesent += messageLen;
-
-	free(pbufferout);
-err:
-	CloseHandle(hFile);
-
-	return 0;
-}
-
-int
-https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
-					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
-	DWORD read, err;
-	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
-	size_t messageLen;
-	int i;
-
-	ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
-	create_http_header_nv(res, httpnv, fsize, -1);
-	
-	for (i = 0; i < HEADER_NV_MAX_SIZE && httpnv[i].name.wsite != NULL; i++) {
-		messageLen = strlen(message);
-		sprintf_s(message + messageLen, 8192 - messageLen,
-			"%s: %s\r\n", httpnv[i].name.wsite,
-			httpnv[i].value.pv == NULL ? httpnv[i].value.v : httpnv[i].value.pv);
-	}
-	
-	messageLen = strlen(message);
-	strcat_s(message, 8192 - messageLen, "\r\n");
-	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
-
-	while (ReadFile(hFile, message, 2048, &read, NULL) != 0 && read) {
-		tls_send(s, ctxtHandle, message, read, cursorPosition);
-		*bytesent += read;
-	}
-
-	CloseHandle(hFile);
-
-	return 0;
-}
 
 /*
  * Function description:
@@ -383,10 +393,7 @@ https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struc
  */
 
 int
-https_serv_resource(struct http_resource* res, int s,
-	struct success_info* successinfo,
-	int* bytesent, CtxtHandle* ctxtHandle,
-	COORD cursorPosition) {
+https_serv_resource(struct http_resource* res, int s, struct success_info* successinfo, int* bytesent, CtxtHandle* ctxtHandle, COORD cursorPosition) {
 	HANDLE hFile;
 	char message[8192];
 	DWORD fsize;

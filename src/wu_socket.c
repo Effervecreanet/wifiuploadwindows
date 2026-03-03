@@ -9,6 +9,8 @@ extern int* g_listensocket;
 extern int* g_listenhttpssocket;
 extern HANDLE g_hConsoleOutput;
 
+static void socket_show_error_wait_close(COORD *cusorPosition, const char* message);
+
 static void
 socket_show_error_wait_close(COORD *cusorPosition, const char* message) {
 	CHAR Buffer[1024];

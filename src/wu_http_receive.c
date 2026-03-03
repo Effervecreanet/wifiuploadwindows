@@ -20,6 +20,12 @@ extern HANDLE g_hNewFile_tmp;
 extern char g_sNewFile_tmp[1024];
 
 
+static HANDLE create_userfile_tmp(COORD* cursorPosition, char* filename, char* userfile_tmp);
+static errno_t receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen);
+static int get_MIMEboundary(struct header_nv* httpnv, char boundary[64], unsigned short* boundarylen);
+static int recv_file(HANDLE hFile, int s_user, u_int64* content_length, unsigned short boundarylen);
+static void print_tx_speed(struct tx_stats* txstats, COORD coordAverageTX);
+
 /*
  * Function description:
  * - Open or create a temporary file that is the upload file.
@@ -31,10 +37,7 @@ extern char g_sNewFile_tmp[1024];
  * hFile: File handle.
  */
 static HANDLE
-create_userfile_tmp(COORD* cursorPosition,
-	char* filename,
-	char* userfile_tmp)
-{
+create_userfile_tmp(COORD* cursorPosition, char* filename, char* userfile_tmp) {
 	char download_dir[1024];
 	HANDLE hFile;
 
@@ -227,7 +230,7 @@ recv_file(HANDLE hFile, int s_user, u_int64* content_length, unsigned short boun
  * - txstats: Transfer statistics or informations.
  * - coordAverageTX: Position of speed string.
  */
-void
+static void
 print_tx_speed(struct tx_stats* txstats, COORD coordAverageTX) {
 	double averageRateTX;
 	CHAR strAverageRateTX[42];
@@ -355,10 +358,7 @@ chrono(struct success_info* successinfo, DWORD tick_start, u_int64 sizeNewFile) 
  * - 0: Function success.
  */
 int
-receive_file(COORD* cursorPosition,
-	struct header_nv* httpnv, int s,
-	struct user_stats* upstats, int theme,
-	int* bytesent) {
+receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct user_stats* upstats, int theme, int* bytesent) {
 	unsigned short MIMElen, boundarylen;
 	HANDLE hFile;
 	DWORD written, tick_start, tick_end, tick_diff;

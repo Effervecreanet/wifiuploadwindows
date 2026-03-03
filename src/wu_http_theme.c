@@ -7,6 +7,9 @@
 #include "wu_http.h"
 
 
+static void wu_change_theme_hdr_nv_reply(struct header_nv hdrnv[32], char* cookie);
+static void wu_change_theme_send_hdr(int susr, struct header_nv hdrnv[32]);
+
 /*
  * Function description:
  * Build header pairs name/value with "Set-Cookie" which contains theme
@@ -60,6 +63,32 @@ wu_change_theme_hdr_nv_reply(struct header_nv hdrnv[32], char* cookie)
 
 /*
  * Function description:
+ * - Send back header pairs of name/value.
+ * Arguments:
+ * - susr: User socket where the header is sent.
+ * - hdrnv: Heador pair array
+ */
+static void
+wu_change_theme_send_hdr(int susr, struct header_nv hdrnv[32])
+{
+	int cnt = 0;
+
+	for (cnt = 0; hdrnv[cnt].name.wsite != NULL; cnt++) {
+		send(susr, hdrnv[cnt].name.wsite, (int)strlen(hdrnv[cnt].name.wsite), 0);
+		send(susr, ": ", 2, 0);
+		if (hdrnv[cnt].value.pv && *hdrnv[cnt].value.pv)
+			send(susr, hdrnv[cnt].value.pv, (int)strlen(hdrnv[cnt].value.pv), 0);
+		else
+			send(susr, hdrnv[cnt].value.v, (int)strlen(hdrnv[cnt].value.v), 0);
+		send(susr, "\r\n", 2, 0);
+	}
+
+	send(susr, "\r\n", 2, 0);
+
+	return;
+}
+/*
+ * Function description:
  * Receive body data after a user POST request that change the theme.
  * Arguments:
  * - httpnv: Header pairs where wu search "Content-Length"
@@ -100,32 +129,6 @@ wu_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int* them
 	return 0;
 }
 
-/*
- * Function description:
- * - Send back header pairs of name/value.
- * Arguments:
- * - susr: User socket where the header is sent.
- * - hdrnv: Heador pair array
- */
-static void
-wu_change_theme_send_hdr(int susr, struct header_nv hdrnv[32])
-{
-	int cnt = 0;
-
-	for (cnt = 0; hdrnv[cnt].name.wsite != NULL; cnt++) {
-		send(susr, hdrnv[cnt].name.wsite, (int)strlen(hdrnv[cnt].name.wsite), 0);
-		send(susr, ": ", 2, 0);
-		if (hdrnv[cnt].value.pv && *hdrnv[cnt].value.pv)
-			send(susr, hdrnv[cnt].value.pv, (int)strlen(hdrnv[cnt].value.pv), 0);
-		else
-			send(susr, hdrnv[cnt].value.v, (int)strlen(hdrnv[cnt].value.v), 0);
-		send(susr, "\r\n", 2, 0);
-	}
-
-	send(susr, "\r\n", 2, 0);
-
-	return;
-}
 
 /*
  * Function description:

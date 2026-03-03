@@ -17,7 +17,9 @@
 
 extern FILE *g_fphttpslog;
 
-void
+static void wu_https_post_theme_hdr_nv(struct header_nv hdrnv[32], char* cookie);
+
+static void
 wu_https_post_theme_hdr_nv(struct header_nv hdrnv[32], char* cookie)
 {
 	int cnt = 0;

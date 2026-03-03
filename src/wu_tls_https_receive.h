@@ -7,8 +7,6 @@ struct user_stats {
   char elapsedtime[32];
   char averagespeed[32];
 };
-int tls_receive_file(COORD *cursorPosition,
-                struct header_nv *httpnv, int s,
-                struct user_stats *upstats, int theme, int *bytesent,
-				CtxtHandle *ctxtHandle);
 */
+
+// int tls_receive_file(COORD *cursorPosition, struct header_nv *httpnv, int s, struct user_stats *upstats, int theme, int *bytesent, CtxtHandle *ctxtHandle);

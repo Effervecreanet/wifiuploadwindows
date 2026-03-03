@@ -23,41 +23,38 @@
 extern FILE* fp_log;
 extern FILE* g_fphttpslog;
 
-void generate_key(NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey) {
+static void generate_key(NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey);
+static int get_cert_name(CERT_NAME_BLOB* SubjectBlob, BYTE pbEncodedName[128], DWORD* cbEncodedName);
+static PCCERT_CONTEXT create_cert_self_sign(COORD* cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey);
+static void inaddr2octaddr(BYTE ipAddr[4], struct in_addr inaddr2oct);
+
+static void
+generate_key(NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey) {
 	LPCWSTR strkeyname = L"wifiupload_key";
-	DWORD err;
-	INPUT_RECORD inRec;
-	DWORD read;
 
 	if (NCryptOpenStorageProvider(phProvider, MS_KEY_STORAGE_PROVIDER, 0) != ERROR_SUCCESS) {
-		err = GetLastError();
-		write_info_in_console(ERR_MSG_NCRYPTOPENSTORAGEPROVIDER, NULL, err);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		write_info_in_console(ERR_MSG_NCRYPTOPENSTORAGEPROVIDER, NULL, GetLastError());
+		for (;;) Sleep(10000);
 	}
 	/*
 	NCryptOpenKey(*phProvider, hKey, L"wifiupload_key", 0,0);
 	NCryptDeleteKey(*hKey,0);
 */
 	if (NCryptCreatePersistedKey(*phProvider, hKey, BCRYPT_RSA_ALGORITHM, strkeyname, AT_KEYEXCHANGE, NCRYPT_OVERWRITE_KEY_FLAG) != ERROR_SUCCESS) {
-		err = GetLastError();
-		write_info_in_console(ERR_MSG_NCRYPTCREATEPERSISTEDKEY, NULL, err);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		write_info_in_console(ERR_MSG_NCRYPTCREATEPERSISTEDKEY, NULL, GetLastError());
+		for (;;) Sleep(10000);
 	}
 
 	if (NCryptFinalizeKey(*hKey, 0) != ERROR_SUCCESS) {
-		err = GetLastError();
-		write_info_in_console(ERR_MSG_NCRYPTFINALIZEKEY, NULL, err);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		write_info_in_console(ERR_MSG_NCRYPTFINALIZEKEY, NULL, GetLastError());
+		for (;;) Sleep(10000);
 	}
-
 
 	return;
 }
 
-int get_cert_name(CERT_NAME_BLOB* SubjectBlob, BYTE pbEncodedName[128], DWORD* cbEncodedName) {
+static int
+get_cert_name(CERT_NAME_BLOB* SubjectBlob, BYTE pbEncodedName[128], DWORD* cbEncodedName) {
 
 	if (!CertStrToNameA(X509_ASN_ENCODING, CERT_SUBJECT, CERT_X500_NAME_STR, NULL, pbEncodedName, cbEncodedName, NULL))
 		return -1;
@@ -72,16 +69,11 @@ PCCERT_CONTEXT
 find_mycert_in_store(HCERTSTORE* hCertStore) {
 	PCCERT_CONTEXT pCertContext = NULL;
 	char namestr[128];
-	INPUT_RECORD inRec;
-	DWORD read;
-	ULONG err;
 
 	*hCertStore = CertOpenSystemStore(0, "MY");
 	if (hCertStore == NULL) {
-		err = GetLastError();
-		write_info_in_console(ERR_MSG_CANNOTOPENCERTSTORE, NULL, err);
-
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		write_info_in_console(ERR_MSG_CANNOTOPENCERTSTORE, NULL, GetLastError());
+		for (;;) Sleep(10000);
 	}
 
 	while (pCertContext = CertEnumCertificatesInStore(*hCertStore, pCertContext)) {
@@ -93,7 +85,8 @@ find_mycert_in_store(HCERTSTORE* hCertStore) {
 	return NULL;
 }
 
-PCCERT_CONTEXT create_cert_self_sign(COORD* cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey) {
+static PCCERT_CONTEXT
+create_cert_self_sign(COORD* cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey) {
 	CERT_EXTENSION Extensions[1];
 	CERT_EXTENSIONS CertExtensions;
 	PCCERT_CONTEXT pCertContext;
@@ -102,9 +95,6 @@ PCCERT_CONTEXT create_cert_self_sign(COORD* cursorPosition, BYTE ipAddr[4], CERT
 	DWORD cbEncodedAltName;
 	CERT_ALT_NAME_INFO AltNameInfo = { 0 };
 	CERT_ALT_NAME_ENTRY AltNameEntries[1];
-	DWORD err;
-	INPUT_RECORD inRec;
-	DWORD read;
 
 	AltNameEntries[0].dwAltNameChoice = CERT_ALT_NAME_IP_ADDRESS;
 	AltNameEntries[0].IPAddress.cbData = 4;
@@ -116,13 +106,12 @@ PCCERT_CONTEXT create_cert_self_sign(COORD* cursorPosition, BYTE ipAddr[4], CERT
 	if (!CryptEncodeObjectEx(X509_ASN_ENCODING, szOID_SUBJECT_ALT_NAME2, &AltNameInfo, CRYPT_ENCODE_ALLOC_FLAG, NULL,
 		&pbEncodedAltName,
 		&cbEncodedAltName)) {
-		err = GetLastError();
-		write_info_in_console(ERR_MSG_CRYPTENCODEOBJECTEX, NULL, err);
+		write_info_in_console(ERR_MSG_CRYPTENCODEOBJECTEX, NULL, GetLastError());
 
 		CryptDestroyKey(hKey);
 		CryptReleaseContext(hProv, 0);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		for (;;) Sleep(10000);
 	}
 
 	Extensions[0].pszObjId = szOID_SUBJECT_ALT_NAME2;
@@ -142,13 +131,12 @@ PCCERT_CONTEXT create_cert_self_sign(COORD* cursorPosition, BYTE ipAddr[4], CERT
 
 	pCertContext = CertCreateSelfSignCertificate(hKey, SubjectBlob, 0, NULL, NULL, &startTime, &endTime, &CertExtensions);
 	if (pCertContext == NULL) {
-		err = GetLastError();
-		write_info_in_console(ERR_MSG_CREATECERT, NULL, err);
+		write_info_in_console(ERR_MSG_CREATECERT, NULL, GetLastError());
 
 		CryptDestroyKey(hKey);
 		CryptReleaseContext(hProv, 0);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		for (;;) Sleep(10000);
 	}
 
 	LocalFree(pbEncodedAltName);
@@ -206,8 +194,6 @@ create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT*
 	time_t wutime;
 	struct tm *tmval;
 	char log_timestr[64];
-	DWORD err, read;
-	INPUT_RECORD inRec;
 	BYTE ipAddr[4];
 
 	inaddr2octaddr(ipAddr, inaddr);
@@ -220,8 +206,7 @@ create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT*
 	fflush(g_fphttpslog);
 	generate_key(phProvider, hKey);
 	if (get_cert_name(&SubjectBlob, pbEncodedName, &cbEncodedName) < 0) {
-		err = GetLastError();
-		write_info_in_console(ERR_MSG_CERTSTRTONAMEA, NULL, err);
+		write_info_in_console(ERR_MSG_CERTSTRTONAMEA, NULL, GetLastError());
 		NCryptFreeObject(*phProvider);
 		NCryptFreeObject(*hKey);
 
@@ -233,8 +218,7 @@ create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT*
 	if (FALSE == CertAddCertificateContextToStore(hCertStore, *pCertContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL)) {
 		NCryptFreeObject(*phProvider);
 		NCryptFreeObject(*hKey);
-		err = GetLastError();
-		write_info_in_console(ERR_MSG_ADDCERT, NULL, err);
+		write_info_in_console(ERR_MSG_ADDCERT, NULL, GetLastError());
 
 		for (;;) Sleep(10000);
 	}

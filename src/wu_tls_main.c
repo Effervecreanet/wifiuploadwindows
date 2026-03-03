@@ -42,6 +42,34 @@ extern int* g_tls_sclt;
 SecPkgContext_StreamSizes context_sizes;
 char* encryptBuffer = NULL;
 
+static void accept_sec_conn(CtxtHandle *ctxtHandle, CredHandle *credHandle, int s, int *s_clt, char *ipaddr_httpsclt, COORD cursorPosition[2]);
+
+static void
+accept_sec_conn(CtxtHandle *ctxtHandle, CredHandle *credHandle, int s, int *s_clt,
+				char *ipaddr_httpsclt, COORD cursorPosition[2]) {
+	*s_clt = acceptSecure(s, credHandle, ctxtHandle, ipaddr_httpsclt);
+	if (cursorPosition[0].Y > cursorPosition[1].Y + 5) {
+		cursorPosition[0] = cursorPosition[1];
+		clear_txrx_pane(&cursorPosition[0]);
+	}
+
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+	write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);
+	cursorPosition[0].Y++;
+	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
+
+	g_credHandle = credHandle;
+	g_ctxtHandle = ctxtHandle;
+	g_tls_sclt = s_clt;
+
+	if (encryptBuffer != NULL)
+		free(encryptBuffer);
+
+	QueryContextAttributes(ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &context_sizes);
+	encryptBuffer = malloc(context_sizes.cbHeader + context_sizes.cbMaximumMessage + context_sizes.cbTrailer);
+
+	return;
+}
 void
 https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
 	int ires;
@@ -89,32 +117,6 @@ https_quit_wu(int s_clt) {
 	return;
 }
 
-void
-accept_sec_conn(CtxtHandle *ctxtHandle, CredHandle *credHandle, int s, int *s_clt,
-				char *ipaddr_httpsclt, COORD cursorPosition[2]) {
-	*s_clt = acceptSecure(s, credHandle, ctxtHandle, ipaddr_httpsclt);
-	if (cursorPosition[0].Y > cursorPosition[1].Y + 5) {
-		cursorPosition[0] = cursorPosition[1];
-		clear_txrx_pane(&cursorPosition[0]);
-	}
-
-	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_MSG_INCOMING_CONNECTION, NULL, 0);
-	cursorPosition[0].Y++;
-	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-
-	g_credHandle = credHandle;
-	g_ctxtHandle = ctxtHandle;
-	g_tls_sclt = s_clt;
-
-	if (encryptBuffer != NULL)
-		free(encryptBuffer);
-
-	QueryContextAttributes(ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &context_sizes);
-	encryptBuffer = malloc(context_sizes.cbHeader + context_sizes.cbMaximumMessage + context_sizes.cbTrailer);
-
-	return;
-}
 
 DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {

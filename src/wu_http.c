@@ -15,6 +15,223 @@ extern struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 extern FILE* g_fplog;
 
+static int send_http_header_nv(struct header_nv* nv, int s, int* bytesent);
+static int http_send_status(int s_user, int* bytesent, unsigned int status_code);
+static int send_http_header_html_content(int s_user, struct header_nv* httpnv, int* bytesent, char* pbufferout, size_t pbufferoutlen, HANDLE hFile);
+static int send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, int* bytesent);
+
+/*
+ * Function description:
+ * - Walk through nv array that contains pair of name value which shape
+ *  http header.
+ * Arguments:
+ * - nv: Name value array.
+ * - s: Socket.
+ * - bytesent: Total byte sent.
+ * Return value:
+ * - 0: Success.
+ * - 1: Failure.
+ */
+static int
+send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
+	int i;
+	int ret = 0;
+
+	for (i = 0; i < HEADER_NV_MAX_SIZE && (nv + i)->name.wsite != NULL; i++) {
+		ret = send(s, (nv + i)->name.wsite, (int)strlen((nv + i)->name.wsite), 0);
+		if (ret < 1)
+			return 1;
+
+		*bytesent += ret;
+
+		ret = send(s, ": ", 2, 0);
+		if (ret != 2)
+			return 1;
+
+		*bytesent += ret;
+
+		if ((nv + i)->value.pv != NULL) {
+			ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
+			if (ret < 1)
+				return 1;
+
+			*bytesent += ret;
+		}
+		else {
+			ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
+			if (ret < 1)
+				return 1;
+
+			*bytesent += ret;
+		}
+
+		ret = send(s, "\r\n", 2, 0);
+
+		*bytesent += ret;
+
+		if (ret != 2)
+			return 1;
+	}
+
+	send(s, "\r\n", 2, 0);
+
+	*bytesent += ret;
+
+	return 0;
+}
+
+/*
+ * Function description:
+ * - Send HTTP/1.1 reply status code. It can be 200 Ok or 404 Bad Request.
+ * Arguments:
+ * - s_user: User socket to send data to.
+ * - bytesent: Total byte sent.
+ * - status_code: Ok status or Bad Request status.
+ * Return value:
+ * - 0: Success.
+ * - -1: Failure.
+ */
+static int
+http_send_status(int s_user, int* bytesent, unsigned int status_code) {
+	int ret;
+
+	ret = send(s_user, HTTP_VERSION, sizeof(HTTP_VERSION) - 1, 0);
+	if (ret != sizeof(HTTP_VERSION) - 1)
+		return -1;
+
+	*bytesent += ret;
+
+	if (send(s_user, " ", 1, 0) != 1)
+		return -1;
+
+	*bytesent += ret;
+
+	if (status_code == 404) {
+		ret = send(s_user, HTTP_CODE_STATUS_BAD_REQUEST_STR,
+			sizeof(HTTP_CODE_STATUS_BAD_REQUEST_STR) - 1, 0);
+		if (ret != sizeof(HTTP_CODE_STATUS_BAD_REQUEST_STR) - 1)
+			return -1;
+
+		*bytesent += ret;
+
+		if (send(s_user, " ", 1, 0) != 1)
+			return -1;
+
+		*bytesent += ret;
+
+		ret = send(s_user, HTTP_STRING_STATUS_BAD_REQUEST,
+			sizeof(HTTP_STRING_STATUS_BAD_REQUEST) - 1, 0);
+
+		*bytesent += ret;
+	}
+	else {
+		ret = send(s_user, HTTP_CODE_STATUS_OK_STR, sizeof(HTTP_CODE_STATUS_OK_STR) - 1, 0);
+		if (ret != sizeof(HTTP_CODE_STATUS_OK_STR) - 1)
+			return -1;
+
+		*bytesent += ret;
+
+		if (send(s_user, " ", 1, 0) != 1)
+			return -1;
+
+		*bytesent += ret;
+
+		ret = send(s_user, HTTP_STRING_STATUS_OK, sizeof(HTTP_STRING_STATUS_OK) - 1, 0);
+		if (ret != sizeof(HTTP_STRING_STATUS_OK) - 1)
+			return -1;
+
+		*bytesent += ret;
+	}
+
+	ret = send(s_user, "\r\n", 2, 0);
+	if (ret != 2)
+		return -1;
+
+	*bytesent += ret;
+
+	return 0;
+}
+
+/*
+ * Function description:
+ * - Send http header and send html body content.
+ * Arguments:
+ * - s_user: User socket.
+ * - httpnv: Prepared http header names values.
+ * - bytesent: Total byte sent.
+ * - pbufferout: Formated html content.
+ * - pbufferoutlen: Formated html content length.
+ * - hFile: Handle to be closed if an error occurs.
+ * Return value:
+ * - 0: Success.
+ * - 1: send_http_header_nv failed.
+ * - 2: Send body failed
+ */
+static int
+send_http_header_html_content(int s_user, struct header_nv* httpnv, int* bytesent,
+	char* pbufferout, size_t pbufferoutlen, HANDLE hFile) {
+	int ret = 0;
+
+	ret = send_http_header_nv(httpnv, s_user, bytesent);
+	if (ret > 0) {
+		if (pbufferout)
+			free(pbufferout);
+		CloseHandle(hFile);
+		return 1;
+	}
+
+	ret = send(s_user, pbufferout, (int)pbufferoutlen, 0);
+	if (ret <= 0) {
+		free(pbufferout);
+		CloseHandle(hFile);
+		return 2;
+	}
+
+
+	*bytesent += ret;
+
+	return 0;
+}
+
+/*
+ * Function description:
+ * - Send http header names values ("Content-Length" "Content-Type" ...) next
+ *   send image http body data.
+ * Arguments:
+ * - hFile: Handle that contains the file to read and send to user socket.
+ * - s_user: User socket.
+ * - httpnv: Header names values to send.
+ * - bytesent: Total byte sent.
+ * Return value:
+ * - 0: Success
+ * - 1: Failure
+ */
+static int
+send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, int* bytesent) {
+	int ret = 0;
+	char buffer[1024];
+	DWORD read;
+
+	ret = send_http_header_nv(httpnv, s_user, bytesent);
+	if (ret > 0) {
+		CloseHandle(hFile);
+		return 1;
+	}
+
+	*bytesent += ret;
+
+	while (ReadFile(hFile, buffer, 1024, &read, NULL)) {
+		ret = send(s_user, buffer, read, 0);
+
+		*bytesent += ret;
+
+		if (read < 1024)
+			break;
+	}
+
+	return 0;
+}
+
 /*
  * Function description:
  * - Format date to GMT format.
@@ -209,137 +426,7 @@ create_http_header_nv(struct http_resource* res, struct header_nv* nv, size_t fs
 	return;
 }
 
-/*
- * Function description:
- * - Walk through nv array that contains pair of name value which shape
- *  http header.
- * Arguments:
- * - nv: Name value array.
- * - s: Socket.
- * - bytesent: Total byte sent.
- * Return value:
- * - 0: Success.
- * - 1: Failure.
- */
-static int
-send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
-	int i;
-	int ret = 0;
 
-	for (i = 0; i < HEADER_NV_MAX_SIZE && (nv + i)->name.wsite != NULL; i++) {
-		ret = send(s, (nv + i)->name.wsite, (int)strlen((nv + i)->name.wsite), 0);
-		if (ret < 1)
-			return 1;
-
-		*bytesent += ret;
-
-		ret = send(s, ": ", 2, 0);
-		if (ret != 2)
-			return 1;
-
-		*bytesent += ret;
-
-		if ((nv + i)->value.pv != NULL) {
-			ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
-			if (ret < 1)
-				return 1;
-
-			*bytesent += ret;
-		}
-		else {
-			ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
-			if (ret < 1)
-				return 1;
-
-			*bytesent += ret;
-		}
-
-		ret = send(s, "\r\n", 2, 0);
-
-		*bytesent += ret;
-
-		if (ret != 2)
-			return 1;
-	}
-
-	send(s, "\r\n", 2, 0);
-
-	*bytesent += ret;
-
-	return 0;
-}
-
-/*
- * Function description:
- * - Send HTTP/1.1 reply status code. It can be 200 Ok or 404 Bad Request.
- * Arguments:
- * - s_user: User socket to send data to.
- * - bytesent: Total byte sent.
- * - status_code: Ok status or Bad Request status.
- * Return value:
- * - 0: Success.
- * - -1: Failure.
- */
-static int
-http_send_status(int s_user, int* bytesent, unsigned int status_code) {
-	int ret;
-
-	ret = send(s_user, HTTP_VERSION, sizeof(HTTP_VERSION) - 1, 0);
-	if (ret != sizeof(HTTP_VERSION) - 1)
-		return -1;
-
-	*bytesent += ret;
-
-	if (send(s_user, " ", 1, 0) != 1)
-		return -1;
-
-	*bytesent += ret;
-
-	if (status_code == 404) {
-		ret = send(s_user, HTTP_CODE_STATUS_BAD_REQUEST_STR,
-			sizeof(HTTP_CODE_STATUS_BAD_REQUEST_STR) - 1, 0);
-		if (ret != sizeof(HTTP_CODE_STATUS_BAD_REQUEST_STR) - 1)
-			return -1;
-
-		*bytesent += ret;
-
-		if (send(s_user, " ", 1, 0) != 1)
-			return -1;
-
-		*bytesent += ret;
-
-		ret = send(s_user, HTTP_STRING_STATUS_BAD_REQUEST,
-			sizeof(HTTP_STRING_STATUS_BAD_REQUEST) - 1, 0);
-
-		*bytesent += ret;
-	}
-	else {
-		ret = send(s_user, HTTP_CODE_STATUS_OK_STR, sizeof(HTTP_CODE_STATUS_OK_STR) - 1, 0);
-		if (ret != sizeof(HTTP_CODE_STATUS_OK_STR) - 1)
-			return -1;
-
-		*bytesent += ret;
-
-		if (send(s_user, " ", 1, 0) != 1)
-			return -1;
-
-		*bytesent += ret;
-
-		ret = send(s_user, HTTP_STRING_STATUS_OK, sizeof(HTTP_STRING_STATUS_OK) - 1, 0);
-		if (ret != sizeof(HTTP_STRING_STATUS_OK) - 1)
-			return -1;
-
-		*bytesent += ret;
-	}
-
-	ret = send(s_user, "\r\n", 2, 0);
-	if (ret != 2)
-		return -1;
-
-	*bytesent += ret;
-
-	return 0;
-}
 
 /*
  * Function description:
@@ -424,85 +511,7 @@ int make_htmlpage(struct success_info* successinfo, char* resource, char* pbuffe
 	return 0;
 }
 
-/*
- * Function description:
- * - Send http header and send html body content.
- * Arguments:
- * - s_user: User socket.
- * - httpnv: Prepared http header names values.
- * - bytesent: Total byte sent.
- * - pbufferout: Formated html content.
- * - pbufferoutlen: Formated html content length.
- * - hFile: Handle to be closed if an error occurs.
- * Return value:
- * - 0: Success.
- * - 1: send_http_header_nv failed.
- * - 2: Send body failed
- */
-static int
-send_http_header_html_content(int s_user, struct header_nv* httpnv, int* bytesent,
-	char* pbufferout, size_t pbufferoutlen, HANDLE hFile) {
-	int ret = 0;
 
-	ret = send_http_header_nv(httpnv, s_user, bytesent);
-	if (ret > 0) {
-		if (pbufferout)
-			free(pbufferout);
-		CloseHandle(hFile);
-		return 1;
-	}
-
-	ret = send(s_user, pbufferout, (int)pbufferoutlen, 0);
-	if (ret <= 0) {
-		free(pbufferout);
-		CloseHandle(hFile);
-		return 2;
-	}
-
-
-	*bytesent += ret;
-
-	return 0;
-}
-
-/*
- * Function description:
- * - Send http header names values ("Content-Length" "Content-Type" ...) next
- *   send image http body data.
- * Arguments:
- * - hFile: Handle that contains the file to read and send to user socket.
- * - s_user: User socket.
- * - httpnv: Header names values to send.
- * - bytesent: Total byte sent.
- * Return value:
- * - 0: Success
- * - 1: Failure
- */
-static int
-send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, int* bytesent) {
-	int ret = 0;
-	char buffer[1024];
-	DWORD read;
-
-	ret = send_http_header_nv(httpnv, s_user, bytesent);
-	if (ret > 0) {
-		CloseHandle(hFile);
-		return 1;
-	}
-
-	*bytesent += ret;
-
-	while (ReadFile(hFile, buffer, 1024, &read, NULL)) {
-		ret = send(s_user, buffer, read, 0);
-
-		*bytesent += ret;
-
-		if (read < 1024)
-			break;
-	}
-
-	return 0;
-}
 
 
 /*
