@@ -57,7 +57,7 @@ int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int mess
 	return 0;
 }
 
-int tls_recv_start(int s, SecBuffer secBuffers[4], char *read_buf, int *bytes_read) {
+int tls_recv_start(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
 
 	ret = recv(s, read_buf, 2000, 0);
@@ -78,7 +78,7 @@ int tls_recv_start(int s, SecBuffer secBuffers[4], char *read_buf, int *bytes_re
 	return 0;
 }
 
-int tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char *read_buf, int* bytes_read) {
+int tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
 	ret = recv(s, read_buf + *bytes_read, 2000 - *bytes_read, 0);
 	if (ret <= 0) {
@@ -109,11 +109,11 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 	int bytes_read = 0;
 	int try_count = 0;
 	int ret = 0;
-	
+
 	read_buf = (char*)malloc(2000);
 	if (read_buf == NULL)
 		show_error_wait_close(cursorPosition, ERR_MSG_MEMORY_ALLOC, NULL, 0);
-	
+
 	ZeroMemory(&secBufferDesc, sizeof(SecBufferDesc));
 	ZeroMemory(secBuffers, sizeof(SecBuffer) * 4);
 
@@ -128,7 +128,8 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		free(extra_buf);
 		extra_buf = NULL;
 		extra_len = 0;
-	} else if(tls_recv_start(s, secBuffers, read_buf, &bytes_read) < 0)
+	}
+	else if (tls_recv_start(s, secBuffers, read_buf, &bytes_read) < 0)
 		return -1;
 
 
@@ -166,14 +167,15 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		}
 
 		free(read_buf);
-	} else if (secStatus == SEC_E_INCOMPLETE_MESSAGE) {
+	}
+	else if (secStatus == SEC_E_INCOMPLETE_MESSAGE) {
 		int i;
 		int missing_req;
 		int missing_index;
 		int data_index;
 		char* tmp;
 
-retry_decrypt:
+	retry_decrypt:
 		missing_index = -1;
 		data_index = -1;
 
@@ -190,9 +192,11 @@ retry_decrypt:
 
 		missing_req = secBuffers[missing_index].cbBuffer;
 		tmp = (char*)realloc(read_buf, bytes_read + missing_req);
-		if (tmp == NULL)
+		if (tmp == NULL) {
+			free(read_buf);
 			show_error_wait_close(cursorPosition, ERR_MSG_MEMORY_ALLOC, NULL, 0);
-		
+		}
+
 		read_buf = tmp;
 
 		ret = recv(s, read_buf + bytes_read, missing_req, MSG_WAITALL);
@@ -318,6 +322,35 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 	return;
 }
 
+static int
+tls_handshake(CredHandle *credHandle, int s_clt, SecBufferDesc *secBufferDescInput, SecBuffer secBufferIn[2], unsigned long *fContextAttr,
+	CtxtHandle *ctxNewHandle, SecBufferDesc *secBufferDescOutput) {
+	DWORD err;
+
+	err = AcceptSecurityContext(credHandle, NULL, secBufferDescInput, *fContextAttr, 0,
+		ctxNewHandle, secBufferDescOutput, fContextAttr, NULL);
+
+	if (err != SEC_E_OK && err != SEC_I_CONTINUE_NEEDED)
+		return -1;
+
+	send(s_clt, (char*)secBufferDescOutput->pBuffers[0].pvBuffer, secBufferDescOutput->pBuffers[0].cbBuffer, 0);
+	FreeContextBuffer(secBufferDescOutput->pBuffers[0].pvBuffer);
+
+	secBufferIn[0].cbBuffer = recv(s_clt, secBufferIn[0].pvBuffer, 4096, 0);
+	if (secBufferIn[0].cbBuffer <= 0)
+		return -1;
+
+	err = AcceptSecurityContext(credHandle, ctxNewHandle, secBufferDescInput, *fContextAttr, 0, ctxNewHandle, secBufferDescOutput, fContextAttr, NULL);
+	if (err == SEC_E_OK) {
+		send(s_clt, (char*)secBufferDescOutput->pBuffers[0].pvBuffer, secBufferDescOutput->pBuffers[0].cbBuffer, 0);
+		FreeContextBuffer(secBufferDescOutput->pBuffers[0].pvBuffer);
+	}
+	else {
+		return -1;
+	}
+
+	return 0;
+}
 
 int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipaddr_httpsclt[16]) {
 	int s_clt;
@@ -379,29 +412,12 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 		if (secBufferIn[0].cbBuffer <= 0)
 			continue;
 
-		err = AcceptSecurityContext(credHandle, NULL, &secBufferDescInput, fContextAttr, 0,
-			&ctxNewHandle, &secBufferDescOutput, &contextAttr, NULL);
-
-		if (err != SEC_E_OK && err != SEC_I_CONTINUE_NEEDED)
+		if (tls_handshake(credHandle, s_clt, &secBufferDescInput, secBufferIn, &fContextAttr, &ctxNewHandle, &secBufferDescOutput) < 0) {
+			closesocket(s_clt);
 			continue;
-
-		send(s_clt, (char*)secBufferDescOutput.pBuffers[0].pvBuffer, secBufferDescOutput.pBuffers[0].cbBuffer, 0);
-		FreeContextBuffer(secBufferDescOutput.pBuffers[0].pvBuffer);
-
-		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn1, 4096, 0);
-		if (secBufferIn[0].cbBuffer <= 0)
-			continue;
-
-		err = AcceptSecurityContext(credHandle, &ctxNewHandle, &secBufferDescInput, fContextAttr, 0, &ctxNewHandle, &secBufferDescOutput, &contextAttr, NULL);
-		if (err == SEC_E_OK) {
-			send(s_clt, (char*)secBufferDescOutput.pBuffers[0].pvBuffer, secBufferDescOutput.pBuffers[0].cbBuffer, 0);
-			FreeContextBuffer(secBufferDescOutput.pBuffers[0].pvBuffer);
+		}
+		else
 			break;
-		}
-		else {
-			continue;
-		}
-
 
 	}
 
