@@ -1,5 +1,6 @@
 
-void generate_key(HCRYPTPROV *hProv, HCRYPTKEY *hKey);
-int get_cert_name(CERT_NAME_BLOB *SubjectBlob, BYTE pbEncodedName[128], DWORD *cbEncodedName);
-PCCERT_CONTEXT find_mycert_in_store(HCERTSTORE *hCertStore);
-PCCERT_CONTEXT create_cert_self_sign(COORD *cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB *SubjectBlob, HCRYPTPROV hProv, HCRYPTKEY hKey);
+void create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT** pCertContext, BYTE pbEncodedName[128],
+						NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey, struct in_addr inaddr);
+int is_certificate_valid(CERT_CONTEXT* pCertContext);
+int get_credantials_handle(CredHandle* credHandle, PCCERT_CONTEXT pCertContext);
+PCCERT_CONTEXT find_mycert_in_store(HCERTSTORE* hCertStore);
