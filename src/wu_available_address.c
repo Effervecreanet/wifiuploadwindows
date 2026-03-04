@@ -115,7 +115,20 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADD
 			else
 				break;
 		}
-		dwUsrChoice = atoi((const char*)&inRec.Event.KeyEvent.uChar.AsciiChar);
+
+		/* Replace atoi on a single keypress with a direct, safe conversion.
+		 * The console input provides a single ASCII character; convert it to
+		 * a numeric value only if it is a digit. This avoids buffer issues
+		 * and unnecessary C runtime parsing overhead.
+		 */
+		{
+			CHAR ch = inRec.Event.KeyEvent.uChar.AsciiChar;
+			if (ch >= '0' && ch <= '9') {
+				dwUsrChoice = (DWORD)(ch - '0');
+			} else {
+				dwUsrChoice = 0; /* treat non-digit as invalid choice */
+			}
+		}
 	} while (dwUsrChoice >= ipAddrTable->dwNumEntries || dwUsrChoice == 0);
 
 	cursorPosition[0].X += sizeof(INF_MSG_CHOICE_QUESTION) + 5;
