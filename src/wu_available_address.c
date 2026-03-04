@@ -80,10 +80,8 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADD
 	DWORD read, written;
 
 
-	ZeroMemory(&inaddr1, sizeof(struct in_addr));
-	CopyMemory(&inaddr1, &((addrRow + 1)->dwAddr), sizeof(DWORD));
-	ZeroMemory(&inaddr2, sizeof(struct in_addr));
-	CopyMemory(&inaddr2, &((addrRow + 2)->dwAddr), sizeof(DWORD));
+	inaddr1.s_addr = (addrRow + 1)->dwAddr;
+	inaddr2.s_addr = (addrRow + 2)->dwAddr;
 
 	ZeroMemory(strIpAddrAvail1, 255);
 	ZeroMemory(strIpAddrAvail2, 255);
@@ -155,8 +153,7 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADD
 		cursorPosition[0].X -= 5;
 	}
 	else {
-		ZeroMemory(inaddr, sizeof(struct in_addr));
-		CopyMemory(inaddr, &(addrRow + 2)->dwAddr, sizeof(DWORD));
+		inaddr->s_addr = (addrRow + 2)->dwAddr;
 
 		cursorPosition[0].X += 5;
 		cursorPosition[0].Y++;
