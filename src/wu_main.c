@@ -66,14 +66,10 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 	case CTRL_CLOSE_EVENT:
 	case CTRL_LOGOFF_EVENT:
 	case CTRL_SHUTDOWN_EVENT:
-		if (g_fplog != NULL)
-			fclose(g_fplog);
-		if (g_fphttpslog != NULL)
-			fclose(g_fphttpslog);
-		if (g_usersocket != NULL && *g_usersocket != 0)
-			closesocket(*g_usersocket);
 		if (g_listensocket != NULL)
 			closesocket(*g_listensocket);
+		if (g_usersocket != NULL && *g_usersocket != 0)
+			closesocket(*g_usersocket);
 		if (g_listenhttpssocket != NULL)
 			closesocket(*g_listenhttpssocket);
 		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
@@ -84,7 +80,11 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 		}
 		if (g_credHandle != NULL && g_ctxtHandle != NULL &&
 			g_tls_sclt != NULL)
-			tls_shutdown(g_credHandle, g_ctxtHandle, g_tls_sclt);
+			tls_shutdown(g_ctxtHandle, g_credHandle, g_tls_sclt);
+		if (g_fplog != NULL)
+			fclose(g_fplog);
+		if (g_fphttpslog != NULL)
+			fclose(g_fphttpslog);
 		if (encryptBuffer != NULL)
 			free(encryptBuffer);
 		WSACleanup();

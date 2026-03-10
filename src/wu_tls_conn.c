@@ -275,6 +275,7 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 	SecBufferDesc secBufferDescOutput;
 	ULONG fContextAttr = ASC_REQ_ALLOCATE_MEMORY | ASC_REQ_STREAM | ASC_REQ_EXTENDED_ERROR | ASC_REQ_REPLAY_DETECT | ASC_REQ_CONFIDENTIALITY;
 	ULONG contextAttr = 0;
+	DWORD ret;
 	int i;
 
 	ZeroMemory(&bufferDesc, sizeof(SecBufferDesc));
@@ -288,8 +289,12 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 	bufferDesc.cBuffers = 1;
 	bufferDesc.pBuffers = &secBuffer[0];
 
-	ApplyControlToken(ctxtHandle, &bufferDesc);
-
+	ret = ApplyControlToken(ctxtHandle, &bufferDesc);
+	if (ret != SEC_E_OK) {
+		closesocket(s_clt);
+		return;
+	}
+ 
 	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 	secBufferDescInput.cBuffers = 4;
@@ -312,8 +317,13 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 	secBufferOutput[2].BufferType = SECBUFFER_EMPTY;
 	secBufferOutput[3].BufferType = SECBUFFER_EMPTY;
 
-	AcceptSecurityContext(credHandle, ctxtHandle, &secBufferDescInput, fContextAttr, 0,
+	ret = AcceptSecurityContext(credHandle , ctxtHandle, &secBufferDescInput, fContextAttr, 0,
 		ctxtHandle, &secBufferDescOutput, &contextAttr, NULL);
+	if (ret != SEC_E_OK) {
+		closesocket(s_clt);
+		return;
+	}
+	
 	for (i = 0; i < 4; i++)
 		if (secBufferOutput[i].BufferType == SECBUFFER_DATA)
 			break;
@@ -355,7 +365,7 @@ tls_handshake(CredHandle *credHandle, int s_clt, SecBufferDesc *secBufferDescInp
 	else {
 		return -1;
 	}
-
+	
 	return 0;
 }
 

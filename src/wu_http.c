@@ -39,7 +39,7 @@ send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
 
 	for (i = 0; i < HEADER_NV_MAX_SIZE && (nv + i)->name.wsite != NULL; i++) {
 		ret = send(s, (nv + i)->name.wsite, (int)strlen((nv + i)->name.wsite), 0);
-		if (ret < 1)
+		if (ret <= 0)
 			return 1;
 
 		*bytesent += ret;
@@ -52,28 +52,29 @@ send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
 
 		if ((nv + i)->value.pv != NULL) {
 			ret = send(s, (nv + i)->value.pv, (int)strlen((nv + i)->value.pv), 0);
-			if (ret < 1)
+			if (ret <= 0)
 				return 1;
 
 			*bytesent += ret;
 		}
 		else {
 			ret = send(s, (nv + i)->value.v, (int)strlen((nv + i)->value.v), 0);
-			if (ret < 1)
+			if (ret <= 0)
 				return 1;
 
 			*bytesent += ret;
 		}
 
 		ret = send(s, "\r\n", 2, 0);
+		if (ret <= 0)
+			return 1;
 
 		*bytesent += ret;
-
-		if (ret != 2)
-			return 1;
 	}
 
 	send(s, "\r\n", 2, 0);
+	if (ret <= 0)
+		return 1;
 
 	*bytesent += ret;
 
@@ -104,7 +105,7 @@ http_send_status(int s_user, int* bytesent, unsigned int status_code) {
 	if (send(s_user, " ", 1, 0) != 1)
 		return -1;
 
-	*bytesent += ret;
+	(*bytesent)++;
 
 	if (status_code == 404) {
 		ret = send(s_user, HTTP_CODE_STATUS_BAD_REQUEST_STR,
@@ -117,7 +118,7 @@ http_send_status(int s_user, int* bytesent, unsigned int status_code) {
 		if (send(s_user, " ", 1, 0) != 1)
 			return -1;
 
-		*bytesent += ret;
+		(*bytesent)++;
 
 		ret = send(s_user, HTTP_STRING_STATUS_BAD_REQUEST,
 			sizeof(HTTP_STRING_STATUS_BAD_REQUEST) - 1, 0);
@@ -134,7 +135,7 @@ http_send_status(int s_user, int* bytesent, unsigned int status_code) {
 		if (send(s_user, " ", 1, 0) != 1)
 			return -1;
 
-		*bytesent += ret;
+		(*bytesent)++;
 
 		ret = send(s_user, HTTP_STRING_STATUS_OK, sizeof(HTTP_STRING_STATUS_OK) - 1, 0);
 		if (ret != sizeof(HTTP_STRING_STATUS_OK) - 1)
@@ -536,8 +537,6 @@ http_serv_resource(struct http_resource* res, int s,
 	size_t pbufferoutlen = 0;
 	char hrmn[6];
 	char* plastBS;
-	int ret;
-
 
 	if (http_send_status(s, bytesent, status_code) < 0)
 		return -1;
@@ -587,8 +586,7 @@ http_serv_resource(struct http_resource* res, int s,
 		send_http_header_image_file(hFile, s, httpnv, bytesent);
 
 		CloseHandle(hFile);
-		ret = 1;
 	}
 
-	return ret;
+	return 0;
 }
