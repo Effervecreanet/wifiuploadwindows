@@ -62,24 +62,27 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 {
     int i;
 
-    switch (dwCtrlType) {
-    case CTRL_CLOSE_EVENT:
-    case CTRL_LOGOFF_EVENT:
-    case CTRL_SHUTDOWN_EVENT:
-        if (g_listensocket)
-            closesocket(g_listensocket);
-        if (g_usersocket)
-            closesocket(g_usersocket);
-        if (g_listenhttpssocket)
-            closesocket(g_listenhttpssocket);
-        if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
-            CloseHandle(g_hConsoleOutput);
-        if (g_hNewFile_tmp != INVALID_HANDLE_VALUE) {
-            CloseHandle(g_hNewFile_tmp);
-            DeleteFileA((LPCSTR)g_sNewFile_tmp);
-        }
-        if (g_credHandle != NULL && g_ctxtHandle != NULL && g_tls_sclt)
-            tls_shutdown(g_ctxtHandle, g_credHandle, g_tls_sclt);
+	switch (dwCtrlType) {
+	case CTRL_CLOSE_EVENT:
+	case CTRL_LOGOFF_EVENT:
+	case CTRL_SHUTDOWN_EVENT:
+		if (g_listensocket)
+			closesocket(g_listensocket);
+		if (g_usersocket)
+			closesocket(g_usersocket);
+		if (g_listenhttpssocket)
+			closesocket(g_listenhttpssocket);
+		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
+			CloseHandle(g_hConsoleOutput);
+		if (g_hNewFile_tmp != INVALID_HANDLE_VALUE) {
+			CloseHandle(g_hNewFile_tmp);
+			DeleteFileA((LPCSTR)g_sNewFile_tmp);
+		}
+		if (g_credHandle != NULL && g_ctxtHandle != NULL && g_tls_sclt) {
+			tls_shutdown(g_ctxtHandle, g_credHandle, g_tls_sclt);
+			DeleteSecurityContext(g_ctxtHandle);
+			FreeCredentialHandle(g_credHandle);
+		}
         if (g_fplog != NULL)
             fclose(g_fplog);
         if (g_fphttpslog != NULL)

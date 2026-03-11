@@ -91,12 +91,33 @@ wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, 
  */
 static void
 quit_wu(int s_user) {
-	closesocket(s_user);
-	closesocket(*g_listensocket);
-	CloseHandle(g_hConsoleOutput);
-	fclose(g_fplog);
+	if (g_listensocket)
+		closesocket(g_listensocket);
+	if (g_usersocket)
+		closesocket(g_usersocket);
+	if (g_listenhttpssocket)
+		closesocket(g_listenhttpssocket);
+	if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
+		CloseHandle(g_hConsoleOutput);
+	if (g_hNewFile_tmp != INVALID_HANDLE_VALUE) {
+		CloseHandle(g_hNewFile_tmp);
+		DeleteFileA((LPCSTR)g_sNewFile_tmp);
+	}
+	if (g_credHandle != NULL && g_ctxtHandle != NULL && g_tls_sclt) {
+		tls_shutdown(g_ctxtHandle, g_credHandle, g_tls_sclt);
+		DeleteSecurityContext(g_ctxtHandle);
+		FreeCredentialHandle(g_credHandle);
+	}
+	if (g_fplog != NULL)
+		fclose(g_fplog);
+	if (g_fphttpslog != NULL)
+		fclose(g_fphttpslog);
+	if (encryptBuffer != NULL)
+		free(encryptBuffer);
+	
 	WSACleanup();
-	ExitProcess(0);
+
+	ExitProcess(TRUE);
 
 	return;
 }
