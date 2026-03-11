@@ -17,18 +17,20 @@ log_https_request(char *ipaddr_httpsclt, struct http_reqline *reqline, int bytes
 	char log_timestr[42];
 	struct tm tmval;
 
-	ZeroMemory(https_logentry, 256);
-	ZeroMemory(log_timestr, 42);
+	ZeroMemory(https_logentry, sizeof(https_logentry));
+	ZeroMemory(log_timestr, sizeof(log_timestr));
 
 	time(&wutime);
 
 	ZeroMemory(&tmval, sizeof(struct tm));
 	localtime_s(&tmval, &wutime);
 
-	strftime(log_timestr, 42, "%d/%b/%Y:%T -600", &tmval);
-	sprintf_s(https_logentry, 256, "%s - - [%s] \"%s %s %s\" 200 %i\n", ipaddr_httpsclt, log_timestr, reqline->method, reqline->resource, reqline->version, bytesent);
+	/* use -0600 (four digits) and avoid format-string issues */
+	strftime(log_timestr, sizeof(log_timestr), "%d/%b/%Y:%T -0600", &tmval);
+	sprintf_s(https_logentry, sizeof(https_logentry), "%s - - [%s] \"%s %s %s\" 200 %i\n",
+		ipaddr_httpsclt, log_timestr, reqline->method, reqline->resource, reqline->version, bytesent);
 
-	fprintf(g_fphttpslog, https_logentry);
+	fprintf(g_fphttpslog, "%s", https_logentry);
 	fflush(g_fphttpslog);
 
 	return;

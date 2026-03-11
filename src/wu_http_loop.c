@@ -116,7 +116,7 @@ static int
 handle_theme_change(struct header_nv* httpnv, int s_user, int* theme) {
 	char cookie[48];
 
-	if (wu_recv_theme(httpnv, s_user, theme) < 0)
+	if (wu_recv_theme(httpnv, s_user, theme) != 0)
 		return -1;
 
 	ZeroMemory(cookie, 48);
@@ -125,7 +125,7 @@ handle_theme_change(struct header_nv* httpnv, int s_user, int* theme) {
 	else
 		strcpy_s(cookie, 48, "theme=light");
 
-	if (apply_theme(s_user, cookie) < 0)
+	if (apply_theme(s_user, cookie) != 0)
 		return -1;
 
 	return 0;

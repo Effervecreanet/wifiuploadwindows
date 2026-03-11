@@ -37,11 +37,11 @@ static void print_tx_speed(struct tx_stats* txstats, COORD coordAverageTX);
  * hFile: File handle.
  */
 static HANDLE
-create_userfile_tmp(COORD* cursorPosition, char* filename, char* userfile_tmp) {
+create_userfile_tmp(COORD* cursorPosition, char* filename, char userfile_tmp[1024]) {
 	char download_dir[1024];
 	HANDLE hFile;
 
-	ZeroMemory(userfile_tmp, FILENAME_MAX_SIZE + 6 + 1024);
+	ZeroMemory(userfile_tmp, 1024);
 
 	build_download_directory(download_dir);
 
@@ -371,7 +371,7 @@ receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct user
 	COORD coordAverageTX;
 	struct http_resource httpres;
 	struct success_info successinfo;
-	char userfile_tmp[FILENAME_MAX_SIZE + 6 + 1024];
+	char userfile_tmp[1024];
 	char* newFile;
 	LARGE_INTEGER len_li;
 	u_int64 sizeNewFile = 0;
@@ -495,7 +495,7 @@ receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct user
 	newFile = _strdup(userfile_tmp);
 	*(strrchr(newFile, '.')) = '\0';
 	MoveFileExA(userfile_tmp, newFile, MOVEFILE_REPLACE_EXISTING);
-	LocalFree(newFile);
+	free(newFile);
 
 	ZeroMemory(&successinfo, sizeof(struct success_info));
 	strcpy_s(successinfo.filename, FILENAME_MAX_SIZE, upstats->filename);

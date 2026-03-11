@@ -42,11 +42,11 @@ extern int* g_tls_sclt;
 SecPkgContext_StreamSizes context_sizes;
 char* encryptBuffer = NULL;
 
-static void accept_sec_conn(CtxtHandle *ctxtHandle, CredHandle *credHandle, int s, int *s_clt, char *ipaddr_httpsclt, COORD cursorPosition[2]);
+static void accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s, int* s_clt, char* ipaddr_httpsclt, COORD cursorPosition[2]);
 
 static void
-accept_sec_conn(CtxtHandle *ctxtHandle, CredHandle *credHandle, int s, int *s_clt,
-				char *ipaddr_httpsclt, COORD cursorPosition[2]) {
+accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s, int* s_clt,
+	char* ipaddr_httpsclt, COORD cursorPosition[2]) {
 	*s_clt = acceptSecure(s, credHandle, ctxtHandle, ipaddr_httpsclt);
 	if (cursorPosition[0].Y > cursorPosition[1].Y + 5) {
 		cursorPosition[0] = cursorPosition[1];
@@ -122,7 +122,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {
 	BYTE pbEncodedName[128];
 	WSADATA wsaData;
-	DWORD err, ret;
+	DWORD err;
+	int ret;
 	int s, s_clt;
 	CERT_CONTEXT* pCertContext;
 	CredHandle credHandle;
@@ -159,19 +160,14 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		show_error_wait_close(&prThread->cursorPosition[0], ERR_MSG_ACQUIRECREDANTIALSHANDLE, NULL, err);
 	}
 
-
 	s = create_socket(&prThread->cursorPosition);
 	bind_socket2(&prThread->cursorPosition, s, prThread->inaddr);
 
-	ZeroMemory(headernv, HEADER_NV_MAX_SIZE * (HEADER_NAME_MAX_SIZE + HEADER_VALUE_MAX_SIZE));
-
 	for (;;) {
-
 		g_credHandle = g_ctxtHandle = NULL;
-		g_tls_sclt = NULL;
+		g_tls_sclt = 0;
 
-		ZeroMemory(ipaddr_httpsclt, 16);
-		accept_sec_conn(&ctxtHandle, &credHandle, s, &s_clt, ipaddr_httpsclt,  prThread->cursorPosition);
+		accept_sec_conn(&ctxtHandle, &credHandle, s, &s_clt, ipaddr_httpsclt, prThread->cursorPosition);
 
 	next_req:
 		bytesent = 0;
@@ -179,6 +175,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		ret = get_https_request(&ctxtHandle, s_clt, &tls_recv_output, &tls_recv_output_size, &prThread->cursorPosition[0],
 			&reqline, headernv, prThread->inaddr);
+
 		if (ret < 0) {
 			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 			if (tls_recv_output != NULL)

@@ -117,6 +117,8 @@ get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int b
 	if (bufferlength == 0)
 		return -1;
 
+	ZeroMemory(headernv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
+
 	do {
 
 		i = 0;

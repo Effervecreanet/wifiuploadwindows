@@ -111,6 +111,10 @@ wu_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int* them
 
 	ZeroMemory(buffer, sizeof("theme=light"));
 	clen = atoi(httpnv[idxclen].value.v);
+
+	if (clen <= 0 || clen >= sizeof("theme=light"))
+		return -1;
+
 	for (i = 0; i < clen; i++) {
 		if (recv(s_user, &buffer[i], 1, 0) != 1)
 			break;
@@ -153,5 +157,5 @@ apply_theme(int susr, char* cookie)
 
 	wu_change_theme_send_hdr(susr, hdrnv);
 
-	return 1;
+	return 0;
 }

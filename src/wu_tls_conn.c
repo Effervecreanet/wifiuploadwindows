@@ -17,14 +17,15 @@
 #include "wu_msg.h"
 
 extern FILE* g_fphttpslog;
+extern int g_tls_sclt;
 extern HANDLE g_hConsoleOutput;
 extern SecPkgContext_StreamSizes context_sizes;
 extern char* encryptBuffer;
 
 static int tls_recv_start(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
 static int tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
-static int tls_handshake(CredHandle *credHandle, int s_clt, SecBufferDesc *secBufferDescInput, SecBuffer secBufferIn[2], unsigned long *fContextAttr,
-							CtxtHandle *ctxNewHandle, SecBufferDesc *secBufferDescOutput);
+static int tls_handshake(CredHandle* credHandle, int s_clt, SecBufferDesc* secBufferDescInput, SecBuffer secBufferIn[2], unsigned long* fContextAttr,
+	CtxtHandle* ctxNewHandle, SecBufferDesc* secBufferDescOutput);
 
 int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int message_size, COORD cursorPosition) {
 	SecBufferDesc bufferDesc;
@@ -259,6 +260,12 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		else
 			show_error_wait_close(cursorPosition, ERR_MSG_DECRYPTMESSAGE, NULL, 0);
 	}
+	else if (secStatus == SEC_E_CONTEXT_EXPIRED) {
+		fprintf(g_fphttpslog, "Client closed the connection\n");
+		fflush(g_fphttpslog);
+		free(read_buf);
+		return -1;
+	}
 	else
 		show_error_wait_close(cursorPosition, ERR_MSG_DECRYPTMESSAGE, NULL, 0);
 
@@ -275,7 +282,7 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 	SecBufferDesc secBufferDescOutput;
 	ULONG fContextAttr = ASC_REQ_ALLOCATE_MEMORY | ASC_REQ_STREAM | ASC_REQ_EXTENDED_ERROR | ASC_REQ_REPLAY_DETECT | ASC_REQ_CONFIDENTIALITY;
 	ULONG contextAttr = 0;
-	DWORD ret;
+	SECURITY_STATUS ret;
 	int i;
 
 	ZeroMemory(&bufferDesc, sizeof(SecBufferDesc));
@@ -294,7 +301,7 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 		closesocket(s_clt);
 		return;
 	}
- 
+
 	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
 	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
 	secBufferDescInput.cBuffers = 4;
@@ -317,13 +324,13 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 	secBufferOutput[2].BufferType = SECBUFFER_EMPTY;
 	secBufferOutput[3].BufferType = SECBUFFER_EMPTY;
 
-	ret = AcceptSecurityContext(credHandle , ctxtHandle, &secBufferDescInput, fContextAttr, 0,
+	ret = AcceptSecurityContext(credHandle, ctxtHandle, &secBufferDescInput, fContextAttr, 0,
 		ctxtHandle, &secBufferDescOutput, &contextAttr, NULL);
 	if (ret != SEC_E_OK) {
 		closesocket(s_clt);
 		return;
 	}
-	
+
 	for (i = 0; i < 4; i++)
 		if (secBufferOutput[i].BufferType == SECBUFFER_DATA)
 			break;
@@ -333,16 +340,19 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 		FreeContextBuffer(secBufferOutput[i].pvBuffer);
 	}
 
+	/*
 	DeleteSecurityContext(ctxtHandle);
+	FreeCredentialHandle(credHandle);
+	*/
 	closesocket(s_clt);
 
 	return;
 }
 
 static int
-tls_handshake(CredHandle *credHandle, int s_clt, SecBufferDesc *secBufferDescInput, SecBuffer secBufferIn[2], unsigned long *fContextAttr,
-	CtxtHandle *ctxNewHandle, SecBufferDesc *secBufferDescOutput) {
-	DWORD err;
+tls_handshake(CredHandle* credHandle, int s_clt, SecBufferDesc* secBufferDescInput, SecBuffer secBufferIn[2], unsigned long* fContextAttr,
+	CtxtHandle* ctxNewHandle, SecBufferDesc* secBufferDescOutput) {
+	SECURITY_STATUS err;
 
 	err = AcceptSecurityContext(credHandle, NULL, secBufferDescInput, *fContextAttr, 0,
 		ctxNewHandle, secBufferDescOutput, fContextAttr, NULL);
@@ -365,7 +375,7 @@ tls_handshake(CredHandle *credHandle, int s_clt, SecBufferDesc *secBufferDescInp
 	else {
 		return -1;
 	}
-	
+
 	return 0;
 }
 
@@ -386,35 +396,37 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 	SecBuffer secBufferIn[2];
 	SecBuffer secBufferIn2[4];
 	SecBuffer secBufferOut[3];
-
-	ZeroMemory(&ctxNewHandle, sizeof(CtxtHandle));
-	ZeroMemory(&ctxNewHandle2, sizeof(CtxtHandle));
-
-	ZeroMemory(BufferIn1, 4096);
-	ZeroMemory(BufferIn2, 4096);
-
-	ZeroMemory(secBufferIn, sizeof(SecBuffer) * 2);
-	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
-	secBufferDescInput.cBuffers = 2;
-	secBufferDescInput.pBuffers = secBufferIn;
-
-	secBufferIn[0].BufferType = SECBUFFER_TOKEN;
-	secBufferIn[0].pvBuffer = BufferIn1;
-	secBufferIn[1].cbBuffer = 4096;
-	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
-	secBufferIn[1].pvBuffer = BufferIn2;
-
-	ZeroMemory(secBufferIn2, sizeof(SecBuffer) * 4);
-	secBufferDescInput2.ulVersion = SECBUFFER_VERSION;
-	secBufferDescInput2.cBuffers = 4;
-	secBufferDescInput2.pBuffers = secBufferIn2;
-
-	secBufferDescOutput.ulVersion = SECBUFFER_VERSION;
-	secBufferDescOutput.cBuffers = 3;
-	secBufferDescOutput.pBuffers = secBufferOut;
-	ZeroMemory(&secBufferOut, sizeof(SecBuffer) * 3);
+	int ret;
 
 	for (;;) {
+
+		ZeroMemory(&ctxNewHandle, sizeof(CtxtHandle));
+		ZeroMemory(&ctxNewHandle2, sizeof(CtxtHandle));
+
+		ZeroMemory(BufferIn1, 4096);
+		ZeroMemory(BufferIn2, 4096);
+
+		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 2);
+		secBufferDescInput.ulVersion = SECBUFFER_VERSION;
+		secBufferDescInput.cBuffers = 2;
+		secBufferDescInput.pBuffers = secBufferIn;
+
+		secBufferIn[0].BufferType = SECBUFFER_TOKEN;
+		secBufferIn[0].pvBuffer = BufferIn1;
+		secBufferIn[1].cbBuffer = 4096;
+		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
+		secBufferIn[1].pvBuffer = BufferIn2;
+
+		ZeroMemory(secBufferIn2, sizeof(SecBuffer) * 4);
+		secBufferDescInput2.ulVersion = SECBUFFER_VERSION;
+		secBufferDescInput2.cBuffers = 4;
+		secBufferDescInput2.pBuffers = secBufferIn2;
+
+		secBufferDescOutput.ulVersion = SECBUFFER_VERSION;
+		secBufferDescOutput.cBuffers = 3;
+		secBufferDescOutput.pBuffers = secBufferOut;
+		ZeroMemory(&secBufferOut, sizeof(SecBuffer) * 3);
+
 		ZeroMemory(BufferIn1, 4096);
 		ZeroMemory(BufferIn2, 4096);
 		ZeroMemory(&sin_clt, sizeof(struct sockaddr_in));
@@ -422,12 +434,18 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 		sinclt_len = sizeof(struct sockaddr_in);
 		s_clt = accept(s, (struct sockaddr*)&sin_clt, &sinclt_len);
 
+		g_tls_sclt = s_clt;
+
+		ZeroMemory(ipaddr_httpsclt, 16);
 		strcpy_s(ipaddr_httpsclt, 16, inet_ntoa(sin_clt.sin_addr));
 
-		secBufferIn[0].cbBuffer = recv(s_clt, BufferIn1, 4096, 0);
-
-		if (secBufferIn[0].cbBuffer <= 0)
+		ret = recv(s_clt, BufferIn1, 4096, 0);
+		if (ret <= 0) {
+			closesocket(s_clt);
 			continue;
+		}
+
+		secBufferIn[0].cbBuffer = (unsigned long)ret;
 
 		if (tls_handshake(credHandle, s_clt, &secBufferDescInput, secBufferIn, &fContextAttr, &ctxNewHandle, &secBufferDescOutput) < 0) {
 			closesocket(s_clt);

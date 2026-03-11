@@ -1,12 +1,17 @@
+#include <WS2tcpip.h>
 #include <Windows.h>
 #include <strsafe.h>
 
 #include "wu_msg.h"
+
+#pragma comment(lib, "ws2_32.lib")
+
 #define LISTEN_PORT 80
 #define LISTEN_HTTPS_PORT 443
 
-extern int* g_listensocket;
-extern int* g_listenhttpssocket;
+extern int g_listensocket;
+extern int g_listenhttpssocket;
+extern int g_usersocket;
 extern HANDLE g_hConsoleOutput;
 
 static void socket_show_error_wait_close(COORD *cusorPosition, const char* message);
@@ -44,7 +49,6 @@ create_socket(COORD* cursorPosition) {
 void
 bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
 	struct sockaddr_in sainServer;
-	char tval = 1;
 
 	ZeroMemory(&sainServer, sizeof(struct sockaddr_in));
 	sainServer.sin_addr = inaddr;
@@ -56,7 +60,7 @@ bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
 
 	listen(s, 10);
 
-	g_listensocket = &s;
+	g_listensocket = s;
 
 	return;
 }
@@ -75,7 +79,7 @@ bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 	
 	listen(s, 100);
 
-	g_listenhttpssocket = &s;
+	g_listenhttpssocket = s;
 
 	return;
 }
@@ -94,13 +98,12 @@ accept_conn(COORD* cursorPosition, int s, char ipaddrstr[16]) {
 			socket_show_error_wait_close(cursorPosition, ERROR_MESSAGE_SOCKET_3);
 		}
 		else {
-			char* ipstr;
-			ipstr = inet_ntoa(sainUser.sin_addr);
-			memcpy(ipaddrstr, ipstr, strlen(ipstr));
+			InetNtop(AF_INET, &sainUser.sin_addr, ipaddrstr, 16);
 			break;
 		}
 	}
 
+	g_usersocket = s_user;
 
 	return s_user;
 }
