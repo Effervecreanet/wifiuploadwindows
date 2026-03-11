@@ -52,7 +52,6 @@ int g_tls_firstsend = 0;
 CtxtHandle *g_ctxtHandle = NULL;
 CredHandle *g_credHandle = NULL;
 extern char* encryptBuffer;
-extern char* decryptBuffer[10];
 
 static DWORD wu_user_interface_part1(COORD cursorPosition[2], struct in_addr* inaddr);
 static void draw_rectangle_in_console(COORD cursPosStart);

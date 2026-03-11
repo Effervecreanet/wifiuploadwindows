@@ -2,6 +2,13 @@
 #include <strsafe.h>
 #include <time.h>
 
+#define SCHANNEL_USE_BLACKLIST
+
+#include <schannel.h>
+
+#define SECURITY_WIN32
+
+#include <sspi.h>
 #include "wu_msg.h"
 #include "wu_main.h"
 #include "wu_socket.h"
@@ -16,10 +23,17 @@
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 extern FILE* g_fplog;
-extern int* g_usersocket;
+extern FILE* g_fphttpslog;
 extern HANDLE g_hConsoleOutput;
 extern HANDLE g_hNewFile_tmp;
-extern int* g_listensocket;
+extern unsigned char g_sNewFile_tmp[1024];
+extern int g_listensocket;
+extern int g_listenhttpssocket;
+extern int g_usersocket;
+extern int g_tls_sclt;
+extern CtxtHandle *g_ctxtHandle;
+extern CredHandle *g_credHandle;
+extern char* encryptBuffer;
 
 static void wu_404_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent);
 static void wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent);
@@ -414,7 +428,7 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, int s, char logentry[25
 	memset(ipaddrstr, 0, 16);
 	s_user = accept_conn(cursorPosition, s, ipaddrstr);
 
-	g_usersocket = &s_user;
+	g_usersocket = s_user;
 
 	ZeroMemory(&reqline, sizeof(struct http_reqline));
 	if (http_recv_reqline(s_user, &reqline) != 0)
