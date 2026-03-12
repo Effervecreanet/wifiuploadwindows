@@ -393,6 +393,8 @@ receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct user
 		return -1;
 
 	content_length = _atoi64((httpnv + ret)->value.v);
+	if (content_length <= 0)
+		return -1;
 
 	if (get_MIMEboundary(httpnv, boundary, &boundarylen) < 0)
 		return -1;

@@ -298,6 +298,8 @@ tls_receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct 
 		return -1;
 
 	content_length = _atoi64((httpnv + ret)->value.v);
+	if (content_length <= 0)
+		return -1;
 
 	if (tls_recv(ctxtHandle, s, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
 		return -1;
