@@ -260,12 +260,6 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 		else
 			show_error_wait_close(cursorPosition, ERR_MSG_DECRYPTMESSAGE, NULL, 0);
 	}
-	else if (secStatus == SEC_E_CONTEXT_EXPIRED) {
-		fprintf(g_fphttpslog, "Client closed the connection\n");
-		fflush(g_fphttpslog);
-		free(read_buf);
-		return -1;
-	}
 	else
 		show_error_wait_close(cursorPosition, ERR_MSG_DECRYPTMESSAGE, NULL, 0);
 
