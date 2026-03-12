@@ -223,11 +223,12 @@ https_serv_texthtml(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, st
 	}
 
 	messageLen = strlen(message);
-	strcat_s(message, 8192 - messageLen, "\r\n");
-	strcat_s(message, 8192 - messageLen - 2, pbufferout);
+	strcat_s(message, 8192, "\r\n");
+	strcat_s(message, 8192, pbufferout);
 
 	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
 
+	messageLen = strlen(message);
 	*bytesent += messageLen;
 
 	free(pbufferout);
@@ -256,7 +257,7 @@ https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struc
 	}
 	
 	messageLen = strlen(message);
-	strcat_s(message, 8192 - messageLen, "\r\n");
+	strcat_s(message, 8192, "\r\n");
 	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
 
 	while (ReadFile(hFile, message, 2048, &read, NULL) != 0 && read) {

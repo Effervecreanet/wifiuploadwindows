@@ -302,8 +302,10 @@ tls_receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct 
 	if (tls_recv(ctxtHandle, s, &tls_recv_output, &tls_recv_output_size, cursorPosition) < 0)
 		return -1;
 	
-	if (get_MIME_filename(upstats, &tls_recv_output, tls_recv_output_size, &MIMElen) != 0)
+	if (get_MIME_filename(upstats, &tls_recv_output, tls_recv_output_size, &MIMElen) != 0) {
+		free(tls_recv_output);
 		return -1;
+	}
 
 	clear_txrx_pane(cursorPosition);
 
@@ -374,8 +376,8 @@ tls_receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct 
 
 	StringCchPrintfA(successinfo.filenameSize, 24, "%llu", sizeNewFile);
 
-	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), " ");
-	strcat_s(successinfo.filenameSize, 24 - strlen(successinfo.filenameSize), units[idxunit]);
+	strcat_s(successinfo.filenameSize, 24, " ");
+	strcat_s(successinfo.filenameSize, 24, units[idxunit]);
 
 	sizeNewFile = sizeNewFileDup;
 	average_speed = 0.0;

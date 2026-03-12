@@ -80,11 +80,11 @@ https_apply_theme(int s_clt, CtxtHandle *ctxtHandle, char* cookie, COORD cursorP
 		strcat_s(buffer, 2048 - strlen(buffer), ": ");
 
 		if (hdrnv[i].value.pv != NULL)
-			strcat_s(buffer, 2048 - strlen(buffer), hdrnv[i].value.pv);
+			strcat_s(buffer, 2048, hdrnv[i].value.pv);
 		else
-			strcat_s(buffer, 2048 - strlen(buffer), hdrnv[i].value.v);
+			strcat_s(buffer, 2048, hdrnv[i].value.v);
 
-		strcat_s(buffer, 2048 - strlen(buffer), "\r\n");
+		strcat_s(buffer, 2048, "\r\n");
 
 	}
 

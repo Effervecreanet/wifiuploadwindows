@@ -432,7 +432,11 @@ int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipa
 		ZeroMemory(&sin_clt, sizeof(struct sockaddr_in));
 
 		sinclt_len = sizeof(struct sockaddr_in);
+
 		s_clt = accept(s, (struct sockaddr*)&sin_clt, &sinclt_len);
+
+		if (s_clt == INVALID_SOCKET)
+			continue;
 
 		g_tls_sclt = s_clt;
 

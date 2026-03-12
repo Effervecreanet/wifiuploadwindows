@@ -140,8 +140,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	int bytesent = 0;
 	int theme = 0;
 	char ipaddr_httpsclt[16];
-	NCRYPT_KEY_HANDLE hKey;
-	NCRYPT_PROV_HANDLE phProvider;
+	NCRYPT_KEY_HANDLE hKey = 0;
+	NCRYPT_PROV_HANDLE phProvider = 0;
 	int header_offset;
 	char* tls_recv_output;
 	unsigned int tls_recv_output_size;
@@ -160,7 +160,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 	ZeroMemory(&credHandle, sizeof(CredHandle));
 	if (get_credantials_handle(&credHandle, pCertContext) < 0) {
-		CertFreeCertificateContext(pCertContext); NCryptFreeObject(phProvider); NCryptFreeObject(hKey);
+		CertFreeCertificateContext(pCertContext); if (phProvider != 0) NCryptFreeObject(phProvider); NCryptFreeObject(hKey);
 		err = GetLastError();
 		show_error_wait_close(&prThread->cursorPosition[0], ERR_MSG_ACQUIRECREDANTIALSHANDLE, NULL, err);
 	}
