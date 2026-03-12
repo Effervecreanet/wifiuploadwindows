@@ -385,8 +385,8 @@ receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct user
 	int ret;
 	int ires;
 
-	ZeroMemory(&httpres, sizeof(struct http_resource));
 
+	ZeroMemory(&httpres, sizeof(struct http_resource));
 
 	ret = nv_find_name_client(httpnv, "Content-Length");
 	if (ret < 0)
