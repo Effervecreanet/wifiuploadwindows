@@ -26,6 +26,12 @@ static int tls_recv_start(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int
 static int tls_recv_add_data_to_extra(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
 static int tls_handshake(CredHandle* credHandle, SOCKET s_clt, SecBufferDesc* secBufferDescInput, SecBuffer secBufferIn[2], unsigned long* fContextAttr,
 	CtxtHandle* ctxNewHandle, SecBufferDesc* secBufferDescOutput);
+static void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, CtxtHandle* ctxNewHandle2, char BufferIn1[4096], char BufferIn2[4096],
+											SecBuffer secBufferIn[2], SecBuffer secBufferIn2[4], SecBuffer secBufferOut[3],
+											SecBufferDesc *secBufferDescInput, SecBufferDesc *secBufferDescInput2, SecBufferDesc *secBufferDescOutput,
+											struct sockaddr_in *sin_clt, int *sinclt_len);
+static void tls_shutdown_schannel(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s_clt);
+
 
 int tls_send(SOCKET s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int message_size, COORD cursorPosition) {
 	SecBufferDesc bufferDesc;
@@ -266,6 +272,33 @@ int tls_recv(CtxtHandle* ctxtHandle, SOCKET s, char** output, unsigned int* outl
 	return 0;
 }
 
+static void
+tls_shutdown_init_schannel_vars(SecBufferDesc * secBufferDescInput, SecBuffer secBufferInput[4], SecBufferDesc * secBufferDescOutput, SecBuffer secBufferOutput[4]) {
+	ZeroMemory(secBufferDescInput, sizeof(SecBufferDesc));
+	secBufferDescInput->ulVersion = SECBUFFER_VERSION;
+	secBufferDescInput->cBuffers = 4;
+	secBufferDescInput->pBuffers = secBufferInput;
+
+	ZeroMemory(secBufferInput, sizeof(SecBuffer) * 4);
+	secBufferInput[0].BufferType = SECBUFFER_EMPTY;
+	secBufferInput[1].BufferType = SECBUFFER_EMPTY;
+	secBufferInput[2].BufferType = SECBUFFER_EMPTY;
+	secBufferInput[3].BufferType = SECBUFFER_EMPTY;
+
+	ZeroMemory(secBufferDescOutput, sizeof(SecBufferDesc));
+	secBufferDescOutput->ulVersion = SECBUFFER_VERSION;
+	secBufferDescOutput->cBuffers = 4;
+	secBufferDescOutput->pBuffers = secBufferOutput;
+
+	ZeroMemory(secBufferOutput, sizeof(SecBuffer) * 4);
+	secBufferOutput[0].BufferType = SECBUFFER_EMPTY;
+	secBufferOutput[1].BufferType = SECBUFFER_EMPTY;
+	secBufferOutput[2].BufferType = SECBUFFER_EMPTY;
+	secBufferOutput[3].BufferType = SECBUFFER_EMPTY;
+
+	return;
+}
+
 void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s_clt) {
 	SecBufferDesc bufferDesc;
 	SecBuffer secBuffer[1];
@@ -296,27 +329,7 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s_clt) 
 		return;
 	}
 
-	ZeroMemory(&secBufferDescInput, sizeof(SecBufferDesc));
-	secBufferDescInput.ulVersion = SECBUFFER_VERSION;
-	secBufferDescInput.cBuffers = 4;
-	secBufferDescInput.pBuffers = secBufferInput;
-
-	ZeroMemory(&secBufferInput, sizeof(SecBuffer) * 4);
-	secBufferInput[0].BufferType = SECBUFFER_EMPTY;
-	secBufferInput[1].BufferType = SECBUFFER_EMPTY;
-	secBufferInput[2].BufferType = SECBUFFER_EMPTY;
-	secBufferInput[3].BufferType = SECBUFFER_EMPTY;
-
-	ZeroMemory(&secBufferDescOutput, sizeof(SecBufferDesc));
-	secBufferDescOutput.ulVersion = SECBUFFER_VERSION;
-	secBufferDescOutput.cBuffers = 4;
-	secBufferDescOutput.pBuffers = secBufferOutput;
-
-	ZeroMemory(&secBufferOutput, sizeof(SecBuffer) * 4);
-	secBufferOutput[0].BufferType = SECBUFFER_EMPTY;
-	secBufferOutput[1].BufferType = SECBUFFER_EMPTY;
-	secBufferOutput[2].BufferType = SECBUFFER_EMPTY;
-	secBufferOutput[3].BufferType = SECBUFFER_EMPTY;
+	tls_shutdown_init_schannel_vars(&secBufferDescInput, secBufferInput, &secBufferDescOutput, secBufferOutput);
 
 	ret = AcceptSecurityContext(credHandle, ctxtHandle, &secBufferDescInput, fContextAttr, 0,
 		ctxtHandle, &secBufferDescOutput, &contextAttr, NULL);
@@ -373,7 +386,7 @@ tls_handshake(CredHandle* credHandle, SOCKET s_clt, SecBufferDesc* secBufferDesc
 	return 0;
 }
 
-void acceptSecure_init_vars(CtxtHandle* ctxNewHandle, CtxtHandle* ctxNewHandle2, char BufferIn1[4096], char BufferIn2[4096],
+void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, CtxtHandle* ctxNewHandle2, char BufferIn1[4096], char BufferIn2[4096],
 							SecBuffer secBufferIn[2], SecBuffer secBufferIn2[4], SecBuffer secBufferOut[3],
 							SecBufferDesc *secBufferDescInput, SecBufferDesc *secBufferDescInput2, SecBufferDesc *secBufferDescOutput,
 							struct sockaddr_in *sin_clt, int *sinclt_len) {
@@ -433,9 +446,9 @@ SOCKET acceptSecure(SOCKET s, CredHandle* credHandle, CtxtHandle* ctxtHandle, ch
 	int ret;
 
 	for (;;) {
-		acceptSecure_init_vars(&ctxNewHandle, &ctxNewHandle2, BufferIn1, BufferIn2, secBufferIn, secBufferIn2,
-								secBufferOut, &secBufferDescInput, &secBufferDescInput2, &secBufferDescOutput,
-								&sin_clt, &sinclt_len);
+		acceptSecure_init_schannel_vars(&ctxNewHandle, &ctxNewHandle2, BufferIn1, BufferIn2, secBufferIn, secBufferIn2,
+										secBufferOut, &secBufferDescInput, &secBufferDescInput2, &secBufferDescOutput,
+										&sin_clt, &sinclt_len);
 
 		s_clt = accept(s, (struct sockaddr*)&sin_clt, &sinclt_len);
 
