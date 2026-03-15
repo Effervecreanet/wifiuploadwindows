@@ -373,6 +373,46 @@ tls_handshake(CredHandle* credHandle, SOCKET s_clt, SecBufferDesc* secBufferDesc
 	return 0;
 }
 
+void acceptSecure_init_vars(CtxtHandle* ctxNewHandle, CtxtHandle* ctxNewHandle2, char BufferIn1[4096], char BufferIn2[4096],
+							SecBuffer secBufferIn[2], SecBuffer secBufferIn2[4], SecBuffer secBufferOut[3],
+							SecBufferDesc *secBufferDescInput, SecBufferDesc *secBufferDescInput2, SecBufferDesc *secBufferDescOutput,
+							struct sockaddr_in *sin_clt, int *sinclt_len) {
+	ZeroMemory(ctxNewHandle, sizeof(CtxtHandle));
+	ZeroMemory(ctxNewHandle2, sizeof(CtxtHandle));
+
+	ZeroMemory(BufferIn1, 4096);
+	ZeroMemory(BufferIn2, 4096);
+
+	ZeroMemory(secBufferIn, sizeof(SecBuffer) * 2);
+	secBufferDescInput->ulVersion = SECBUFFER_VERSION;
+	secBufferDescInput->cBuffers = 2;
+	secBufferDescInput->pBuffers = secBufferIn;
+
+	secBufferIn[0].BufferType = SECBUFFER_TOKEN;
+	secBufferIn[0].pvBuffer = BufferIn1;
+	secBufferIn[1].cbBuffer = 4096;
+	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
+	secBufferIn[1].pvBuffer = BufferIn2;
+
+	ZeroMemory(secBufferIn2, sizeof(SecBuffer) * 4);
+	secBufferDescInput2->ulVersion = SECBUFFER_VERSION;
+	secBufferDescInput2->cBuffers = 4;
+	secBufferDescInput2->pBuffers = secBufferIn2;
+
+	secBufferDescOutput->ulVersion = SECBUFFER_VERSION;
+	secBufferDescOutput->cBuffers = 3;
+	secBufferDescOutput->pBuffers = secBufferOut;
+	ZeroMemory(secBufferOut, sizeof(SecBuffer) * 3);
+
+	ZeroMemory(BufferIn1, 4096);
+	ZeroMemory(BufferIn2, 4096);
+
+	ZeroMemory(sin_clt, sizeof(struct sockaddr_in));
+	*sinclt_len = sizeof(struct sockaddr_in);
+
+	return;
+}
+
 SOCKET acceptSecure(SOCKET s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipaddr_httpsclt[16]) {
 	SOCKET s_clt;
 	ULONG err;
@@ -393,39 +433,9 @@ SOCKET acceptSecure(SOCKET s, CredHandle* credHandle, CtxtHandle* ctxtHandle, ch
 	int ret;
 
 	for (;;) {
-
-		ZeroMemory(&ctxNewHandle, sizeof(CtxtHandle));
-		ZeroMemory(&ctxNewHandle2, sizeof(CtxtHandle));
-
-		ZeroMemory(BufferIn1, 4096);
-		ZeroMemory(BufferIn2, 4096);
-
-		ZeroMemory(secBufferIn, sizeof(SecBuffer) * 2);
-		secBufferDescInput.ulVersion = SECBUFFER_VERSION;
-		secBufferDescInput.cBuffers = 2;
-		secBufferDescInput.pBuffers = secBufferIn;
-
-		secBufferIn[0].BufferType = SECBUFFER_TOKEN;
-		secBufferIn[0].pvBuffer = BufferIn1;
-		secBufferIn[1].cbBuffer = 4096;
-		secBufferIn[1].BufferType = SECBUFFER_EMPTY;
-		secBufferIn[1].pvBuffer = BufferIn2;
-
-		ZeroMemory(secBufferIn2, sizeof(SecBuffer) * 4);
-		secBufferDescInput2.ulVersion = SECBUFFER_VERSION;
-		secBufferDescInput2.cBuffers = 4;
-		secBufferDescInput2.pBuffers = secBufferIn2;
-
-		secBufferDescOutput.ulVersion = SECBUFFER_VERSION;
-		secBufferDescOutput.cBuffers = 3;
-		secBufferDescOutput.pBuffers = secBufferOut;
-		ZeroMemory(&secBufferOut, sizeof(SecBuffer) * 3);
-
-		ZeroMemory(BufferIn1, 4096);
-		ZeroMemory(BufferIn2, 4096);
-		ZeroMemory(&sin_clt, sizeof(struct sockaddr_in));
-
-		sinclt_len = sizeof(struct sockaddr_in);
+		acceptSecure_init_vars(&ctxNewHandle, &ctxNewHandle2, BufferIn1, BufferIn2, secBufferIn, secBufferIn2,
+								secBufferOut, &secBufferDescInput, &secBufferDescInput2, &secBufferDescOutput,
+								&sin_clt, &sinclt_len);
 
 		s_clt = accept(s, (struct sockaddr*)&sin_clt, &sinclt_len);
 
@@ -451,7 +461,6 @@ SOCKET acceptSecure(SOCKET s, CredHandle* credHandle, CtxtHandle* ctxtHandle, ch
 		}
 		else
 			break;
-
 	}
 
 	memcpy(ctxtHandle, &ctxNewHandle, sizeof(CtxtHandle));
