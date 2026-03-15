@@ -21,9 +21,9 @@ extern char g_sNewFile_tmp[1024];
 
 
 static HANDLE create_userfile_tmp(COORD* cursorPosition, char* filename, char* userfile_tmp);
-static errno_t receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen);
+static errno_t receive_MIME_header(struct user_stats* upstats, SOCKET s, unsigned short* MIMElen);
 static int get_MIMEboundary(struct header_nv* httpnv, char boundary[64], unsigned short* boundarylen);
-static int recv_file(HANDLE hFile, int s_user, u_int64* content_length, unsigned short boundarylen);
+static int recv_file(HANDLE hFile, SOCKET s_user, u_int64* content_length, unsigned short boundarylen);
 static void print_tx_speed(struct tx_stats* txstats, COORD coordAverageTX);
 
 /*
@@ -86,7 +86,7 @@ create_userfile_tmp(COORD* cursorPosition, char* filename, char userfile_tmp[102
  * - EINVAL: Fail.
  */
 static errno_t
-receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen)
+receive_MIME_header(struct user_stats* upstats, SOCKET s, unsigned short* MIMElen)
 {
 	int ret;
 	unsigned short i;
@@ -193,7 +193,7 @@ get_MIMEboundary(struct header_nv* httpnv, char boundary[64], unsigned short* bo
  * - Count of bytes received.
  */
 static int
-recv_file(HANDLE hFile, int s_user, u_int64* content_length, unsigned short boundarylen) {
+recv_file(HANDLE hFile, SOCKET s_user, u_int64* content_length, unsigned short boundarylen) {
 	int ret = 0;
 	char buffer[1024];
 	DWORD written;
@@ -358,7 +358,7 @@ chrono(struct success_info* successinfo, DWORD tick_start, u_int64 sizeNewFile) 
  * - 0: Function success.
  */
 int
-receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct user_stats* upstats, int theme, int* bytesent) {
+receive_file(COORD* cursorPosition, struct header_nv* httpnv, SOCKET s, struct user_stats* upstats, int theme, int* bytesent) {
 	unsigned short MIMElen, boundarylen;
 	HANDLE hFile;
 	DWORD written, tick_start, tick_end, tick_diff;

@@ -22,12 +22,12 @@ extern HANDLE g_hConsoleOutput;
 extern SecPkgContext_StreamSizes context_sizes;
 extern char* encryptBuffer;
 
-static int tls_recv_start(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
-static int tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
-static int tls_handshake(CredHandle* credHandle, int s_clt, SecBufferDesc* secBufferDescInput, SecBuffer secBufferIn[2], unsigned long* fContextAttr,
+static int tls_recv_start(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
+static int tls_recv_add_data_to_extra(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
+static int tls_handshake(CredHandle* credHandle, SOCKET s_clt, SecBufferDesc* secBufferDescInput, SecBuffer secBufferIn[2], unsigned long* fContextAttr,
 	CtxtHandle* ctxNewHandle, SecBufferDesc* secBufferDescOutput);
 
-int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int message_size, COORD cursorPosition) {
+int tls_send(SOCKET s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int message_size, COORD cursorPosition) {
 	SecBufferDesc bufferDesc;
 	SecBuffer secBufferOut[3];
 	int ret;
@@ -64,7 +64,7 @@ int tls_send(int s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int mess
 }
 
 static int
-tls_recv_start(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
+tls_recv_start(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
 
 	ret = recv(s, read_buf, 2000, 0);
@@ -86,7 +86,7 @@ tls_recv_start(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) 
 }
 
 static int
-tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
+tls_recv_add_data_to_extra(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
 	ret = recv(s, read_buf + *bytes_read, 2000 - *bytes_read, 0);
 	if (ret <= 0) {
@@ -105,7 +105,7 @@ tls_recv_add_data_to_extra(int s, SecBuffer secBuffers[4], char* read_buf, int* 
 	return 0;
 }
 
-int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen, COORD* cursorPosition) {
+int tls_recv(CtxtHandle* ctxtHandle, SOCKET s, char** output, unsigned int* outlen, COORD* cursorPosition) {
 	SECURITY_STATUS secStatus;
 	SecBufferDesc secBufferDesc;
 	SecBuffer secBuffers[4];
@@ -266,7 +266,7 @@ int tls_recv(CtxtHandle* ctxtHandle, int s, char** output, unsigned int* outlen,
 	return 0;
 }
 
-void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
+void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s_clt) {
 	SecBufferDesc bufferDesc;
 	SecBuffer secBuffer[1];
 	SecBuffer secBufferInput[4];
@@ -344,7 +344,7 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s_clt) {
 }
 
 static int
-tls_handshake(CredHandle* credHandle, int s_clt, SecBufferDesc* secBufferDescInput, SecBuffer secBufferIn[2], unsigned long* fContextAttr,
+tls_handshake(CredHandle* credHandle, SOCKET s_clt, SecBufferDesc* secBufferDescInput, SecBuffer secBufferIn[2], unsigned long* fContextAttr,
 	CtxtHandle* ctxNewHandle, SecBufferDesc* secBufferDescOutput) {
 	SECURITY_STATUS err;
 
@@ -373,8 +373,8 @@ tls_handshake(CredHandle* credHandle, int s_clt, SecBufferDesc* secBufferDescInp
 	return 0;
 }
 
-int acceptSecure(int s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipaddr_httpsclt[16]) {
-	int s_clt;
+SOCKET acceptSecure(SOCKET s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipaddr_httpsclt[16]) {
+	SOCKET s_clt;
 	ULONG err;
 	struct sockaddr_in sin_clt;
 	int sinclt_len = sizeof(struct sockaddr_in);

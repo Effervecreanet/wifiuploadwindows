@@ -24,9 +24,9 @@ extern const struct _http_resources http_resources[];
 
 static int get_request_line(struct http_reqline* reqline, char* BufferIn, int length);
 static int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength, struct in_addr inaddr);
-static int https_serv_texthtml(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+static int https_serv_texthtml(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, struct http_resource *res,
 								char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition);
-static int https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+static int https_serv_image(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, struct http_resource *res,
 							char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition);
 
 /*
@@ -178,7 +178,7 @@ crlfcrlf:
 }
 
 static int
-https_serv_texthtml(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+https_serv_texthtml(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, struct http_resource *res,
 					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
 	DWORD BufferUserNameSize = 254;
 	char BufferUserName[254];
@@ -239,7 +239,7 @@ err:
 }
 
 static int
-https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struct http_resource *res,
+https_serv_image(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, struct http_resource *res,
 					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
 	DWORD read, err;
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
@@ -269,8 +269,9 @@ https_serv_image(CtxtHandle *ctxtHandle, int s, HANDLE hFile, DWORD fsize, struc
 
 	return 0;
 }
+
 int
-get_https_request(CtxtHandle* ctxtHandle, int s_clt, char** tls_recv_output, unsigned int* tls_recv_output_size, COORD* cursorPosition,
+get_https_request(CtxtHandle* ctxtHandle, SOCKET s_clt, char** tls_recv_output, unsigned int* tls_recv_output_size, COORD* cursorPosition,
 	struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE], struct in_addr inaddr) {
 	int  header_offset;
 	int ret;
@@ -297,7 +298,7 @@ get_https_request(CtxtHandle* ctxtHandle, int s_clt, char** tls_recv_output, uns
 }
 
 int
-handle_get_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
+handle_get_request(CtxtHandle* ctxtHandle, SOCKET s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
 	int* bytesent, COORD* cursorPosition) {
 	struct http_resource httplocalres;
 	int theme;
@@ -339,7 +340,7 @@ handle_get_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* reqli
 	return 0;
 }
 
-int handle_post_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
+int handle_post_request(CtxtHandle* ctxtHandle, SOCKET s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
 	int* bytesent, char* https_body, COORD* cursorPosition) {
 	int theme;
 	int ret;
@@ -396,7 +397,7 @@ int handle_post_request(CtxtHandle* ctxtHandle, int s_clt, struct http_reqline* 
  */
 
 int
-https_serv_resource(struct http_resource* res, int s, struct success_info* successinfo, int* bytesent, CtxtHandle* ctxtHandle, COORD cursorPosition) {
+https_serv_resource(struct http_resource* res, SOCKET s, struct success_info* successinfo, int* bytesent, CtxtHandle* ctxtHandle, COORD cursorPosition) {
 	HANDLE hFile;
 	char message[8192];
 	DWORD fsize;

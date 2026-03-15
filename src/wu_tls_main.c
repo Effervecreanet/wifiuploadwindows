@@ -28,10 +28,10 @@
 
 extern FILE* g_fphttpslog;
 extern FILE* g_fplog;
-extern int g_usersocket;
-extern int g_tls_sclt;
-extern int g_listensocket;
-extern int g_listenhttpssocket;
+extern SOCKET g_usersocket;
+extern SOCKET g_tls_sclt;
+extern SOCKET g_listensocket;
+extern SOCKET g_listenhttpssocket;
 extern HANDLE g_hNewFile_tmp;
 extern char* g_sNewFile_tmp;
 extern const struct _http_resources http_resources[];
@@ -43,10 +43,10 @@ extern CtxtHandle* g_ctxtHandle;
 SecPkgContext_StreamSizes context_sizes;
 char* encryptBuffer = NULL;
 
-static void accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s, int* s_clt, char* ipaddr_httpsclt, COORD cursorPosition[2]);
+static void accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s, SOCKET* s_clt, char* ipaddr_httpsclt, COORD cursorPosition[2]);
 
 static void
-accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s, int* s_clt,
+accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s, SOCKET* s_clt,
 	char* ipaddr_httpsclt, COORD cursorPosition[2]) {
 	*s_clt = acceptSecure(s, credHandle, ctxtHandle, ipaddr_httpsclt);
 	if (cursorPosition[0].Y > cursorPosition[1].Y + 5) {
@@ -72,7 +72,7 @@ accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, int s, int* s_cl
 	return;
 }
 void
-https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, int s_user, int* bytesent) {
+https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, SOCKET s_user, int* bytesent) {
 	int ires;
 	struct http_resource httplocalres;
 
@@ -90,7 +90,7 @@ https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* t
 }
 
 void
-https_quit_wu(int s_clt) {
+https_quit_wu(SOCKET s_clt) {
 	if (g_listensocket)
 		closesocket(g_listensocket);
 	if (g_usersocket)
@@ -129,7 +129,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	WSADATA wsaData;
 	DWORD err;
 	int ret;
-	int s, s_clt;
+	SOCKET s, s_clt;
 	CERT_CONTEXT* pCertContext;
 	CredHandle credHandle;
 	CtxtHandle ctxtHandle;

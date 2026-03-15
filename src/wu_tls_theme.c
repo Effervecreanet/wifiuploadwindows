@@ -60,7 +60,7 @@ wu_https_post_theme_hdr_nv(struct header_nv hdrnv[32], char* cookie)
 }
 
 int
-https_apply_theme(int s_clt, CtxtHandle *ctxtHandle, char* cookie, COORD cursorPosition)
+https_apply_theme(SOCKET s_clt, CtxtHandle *ctxtHandle, char* cookie, COORD cursorPosition)
 {
 	struct header_nv hdrnv[32];
 	char buffer[2048];

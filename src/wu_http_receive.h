@@ -10,4 +10,4 @@ struct user_stats {
 
 void print_upload_info(struct tx_stats* txstats, COORD coordAverageTX, COORD* cursorPosition, COORD coordPerCent);
 // void chrono(struct success_info* successinfo, DWORD tick_start, u_int64 sizeNewFile);
-int receive_file(COORD *cursorPosition, struct header_nv *httpnv, int s, struct user_stats *upstats, int theme, int *bytesent);
+int receive_file(COORD *cursorPosition, struct header_nv *httpnv, SOCKET s, struct user_stats *upstats, int theme, int *bytesent);

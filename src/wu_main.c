@@ -41,10 +41,10 @@
 extern struct wu_msg wumsg[];
 FILE* g_fplog;
 FILE* g_fphttpslog;
-int g_listensocket = 0;
-int g_listenhttpssocket = 0;
-int g_usersocket = 0;
-int g_tls_sclt = 0;
+SOCKET g_listensocket = 0;
+SOCKET g_listenhttpssocket = 0;
+SOCKET g_usersocket = 0;
+SOCKET g_tls_sclt = 0;
 HANDLE g_hConsoleOutput;
 HANDLE g_hNewFile_tmp;
 unsigned char g_sNewFile_tmp[1024];
@@ -290,7 +290,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
 	struct paramThread prThread;
 	struct in_addr inaddr;
 	unsigned char i;
-	int s;
+	SOCKET s;
 	struct _stat statbuff;
 	char logentry[256];
 	SYSTEMTIME systime;

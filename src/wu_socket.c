@@ -32,7 +32,7 @@ socket_show_error_wait_close(COORD *cusorPosition, const char* message) {
 	for (;;) Sleep(10000);
 }
 
-int
+SOCKET
 create_socket(COORD* cursorPosition) {
 	int s;
 	INPUT_RECORD inRec;
@@ -47,7 +47,7 @@ create_socket(COORD* cursorPosition) {
 }
 
 void
-bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
+bind_socket(COORD* cursorPosition, SOCKET s, struct in_addr inaddr) {
 	struct sockaddr_in sainServer;
 
 	ZeroMemory(&sainServer, sizeof(struct sockaddr_in));
@@ -66,7 +66,7 @@ bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
 }
 
 void
-bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
+bind_socket2(COORD* cursorPosition, SOCKET s, struct in_addr inaddr) {
 	struct sockaddr_in sainServer;
 
 	ZeroMemory(&sainServer, sizeof(struct sockaddr_in));
@@ -83,9 +83,11 @@ bind_socket2(COORD* cursorPosition, int s, struct in_addr inaddr) {
 
 	return;
 }
-int
-accept_conn(COORD* cursorPosition, int s, char ipaddrstr[16]) {
-	int s_user, sainLen;
+
+SOCKET
+accept_conn(COORD* cursorPosition, SOCKET s, char ipaddrstr[16]) {
+	SOCKET s_user;
+	int sainLen;
 	struct sockaddr_in sainUser;
 
 	ZeroMemory(&sainUser, sizeof(struct sockaddr_in));
