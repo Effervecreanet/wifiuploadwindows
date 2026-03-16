@@ -51,9 +51,9 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 	case CTRL_SHUTDOWN_EVENT:
 		if (g_fplog != NULL)
 			fclose(g_fplog);
-		if (g_usersocket != NULL && *g_usersocket != 0)
+		if (g_usersocket != 0)
 			closesocket(g_usersocket);
-		if (g_listensocket != NULL)
+		if (g_listensocket != 0)
 			closesocket(g_listensocket);
 		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
 			CloseHandle(g_hConsoleOutput);

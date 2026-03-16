@@ -5,7 +5,7 @@
 
 #define LISTEN_PORT 80
 
-extern int* g_listensocket;
+extern SOCKET g_listensocket;
 extern HANDLE g_hConsoleOutput;
 
 /*
@@ -97,7 +97,7 @@ bind_socket(COORD* cursorPosition, SOCKET s, struct in_addr inaddr) {
  * Return value:
  * - s_user: New incoming connection socket.
  */
-int
+SOCKET
 accept_conn(COORD* cursorPosition, int s, char ipaddrstr[16]) {
 	SOCKET s_user;
 	int sainLen;

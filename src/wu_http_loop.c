@@ -16,10 +16,10 @@
 extern const struct _http_resources http_resources[];
 extern struct wu_msg wumsg[];
 extern FILE* g_fplog;
-extern int* g_usersocket;
+extern SOCKET g_usersocket;
 extern HANDLE g_hConsoleOutput;
 extern HANDLE g_hNewFile_tmp;
-extern int* g_listensocket;
+extern SOCKET g_listensocket;
 
 
 /*
@@ -209,7 +209,7 @@ wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, 
 static void
 quit_wu(SOCKET s_user) {
 	closesocket(s_user);
-	closesocket(*g_listensocket);
+	closesocket(g_listensocket);
 	CloseHandle(g_hConsoleOutput);
 	fclose(g_fplog);
 	WSACleanup();
