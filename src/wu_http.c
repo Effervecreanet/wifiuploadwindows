@@ -89,7 +89,7 @@ http_recv_reqline(SOCKET s, struct http_reqline* reqline) {
 	if (i == HTTP_RESSOURCE_MAX_LENGTH || c != ' ')
 		return -1;
 
-	ret = recv(s, (char*) &reqline->version, sizeof("HTTP/1.1") - 1, 0);
+	ret = recv(s, (char*)&reqline->version, sizeof("HTTP/1.1") - 1, 0);
 
 	if (ret != (sizeof("HTTP/1.1") - 1))
 		return -1;

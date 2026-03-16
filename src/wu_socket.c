@@ -98,7 +98,7 @@ bind_socket(COORD* cursorPosition, SOCKET s, struct in_addr inaddr) {
  * - s_user: New incoming connection socket.
  */
 SOCKET
-accept_conn(COORD* cursorPosition, int s, char ipaddrstr[16]) {
+accept_conn(COORD* cursorPosition, SOCKET s, char ipaddrstr[16]) {
 	SOCKET s_user;
 	int sainLen;
 	struct sockaddr_in sainUser;
