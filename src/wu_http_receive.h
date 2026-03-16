@@ -9,5 +9,5 @@ struct user_stats {
 };
 
 int receive_file(COORD* cursorPosition,
-	struct header_nv* httpnv, int s,
+	struct header_nv* httpnv, SOCKET s,
 	struct user_stats* upstats, int theme, int* bytesent);

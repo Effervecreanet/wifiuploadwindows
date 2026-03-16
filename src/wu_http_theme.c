@@ -70,7 +70,7 @@ wu_change_theme_hdr_nv_reply(struct header_nv hdrnv[32], char* cookie)
  * - 0: Function succeded
  */
 int
-wu_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int* theme)
+wu_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], SOCKET s_user, int* theme)
 {
 	int clen;
 	int idxclen, i;
@@ -108,7 +108,7 @@ wu_recv_theme(struct header_nv httpnv[HEADER_NV_MAX_SIZE], int s_user, int* them
  * - hdrnv: Heador pair array
  */
 static void
-wu_change_theme_send_hdr(int susr, struct header_nv hdrnv[32])
+wu_change_theme_send_hdr(SOCKET susr, struct header_nv hdrnv[32])
 {
 	int cnt = 0;
 
@@ -138,7 +138,7 @@ wu_change_theme_send_hdr(int susr, struct header_nv hdrnv[32])
  * - 0: Success.
  */
 int
-apply_theme(int susr, char* cookie)
+apply_theme(SOCKET susr, char* cookie)
 {
 	struct header_nv hdrnv[32];
 

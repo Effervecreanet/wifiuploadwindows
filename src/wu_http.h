@@ -22,10 +22,10 @@ struct success_info {
 	char averagespeed[20];
 };
 
-errno_t redir404(int s);
-int http_recv_reqline(int s, struct http_reqline* reqline);
-int http_recv_headernv(int s, struct header_nv* nv);
+errno_t redir404(SOCKET s);
+int http_recv_reqline(SOCKET s, struct http_reqline* reqline);
+int http_recv_headernv(SOCKET s, struct header_nv* nv);
 int http_match_resource(char* resource);
-int http_serv_resource(struct http_resource* res, int s,
+int http_serv_resource(struct http_resource* res, SOCKET s,
 	struct success_info* successinfo,
 	int* bytesent, unsigned int status_code);

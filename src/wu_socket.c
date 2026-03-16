@@ -16,13 +16,13 @@ extern HANDLE g_hConsoleOutput;
  * Return value:
  * - s: New socket.
  */
-int
+SOCKET
 create_socket(COORD* cursorPosition) {
-	int s;
+	SOCKET s;
 	INPUT_RECORD inRec;
 	DWORD read;
 
-	s = (int)socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
 	if (s == INVALID_SOCKET) {
 		CHAR Buffer[1024];
@@ -51,7 +51,7 @@ create_socket(COORD* cursorPosition) {
  * - inaddr: IP address the socket bind to.
  */
 void
-bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
+bind_socket(COORD* cursorPosition, SOCKET s, struct in_addr inaddr) {
 	struct sockaddr_in sainServer;
 	char tval = 1;
 
@@ -81,7 +81,7 @@ bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
 
 	listen(s, 10);
 
-	g_listensocket = &s;
+	g_listensocket = s;
 
 	return;
 }
@@ -99,14 +99,15 @@ bind_socket(COORD* cursorPosition, int s, struct in_addr inaddr) {
  */
 int
 accept_conn(COORD* cursorPosition, int s, char ipaddrstr[16]) {
-	int s_user, sainLen;
+	SOCKET s_user;
+	int sainLen;
 	struct sockaddr_in sainUser;
 
 	ZeroMemory(&sainUser, sizeof(struct sockaddr_in));
 	sainLen = sizeof(struct sockaddr);
 
 	for (;;) {
-		s_user = (int)accept(s, (struct sockaddr*)&sainUser, &sainLen);
+		s_user = accept(s, (struct sockaddr*)&sainUser, &sainLen);
 
 		if (s_user == INVALID_SOCKET) {
 			CHAR Buffer[1024];

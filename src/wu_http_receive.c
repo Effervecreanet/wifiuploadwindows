@@ -93,7 +93,7 @@ create_userfile_tmp(COORD* cursorPosition,
  * - EINVAL: Fail.
  */
 static int
-receive_MIME_header(struct user_stats* upstats, int s, unsigned short* MIMElen)
+receive_MIME_header(struct user_stats* upstats, SOCKET s, unsigned short* MIMElen)
 {
 	int ret;
 	unsigned short i;
@@ -203,7 +203,7 @@ get_MIMEboundary(struct header_nv* httpnv, char boundary[64], unsigned short* bo
  * - Count of bytes received.
  */
 static int
-recv_file(HANDLE hFile, int s_user, u_int64* content_length, unsigned short boundarylen) {
+recv_file(HANDLE hFile, SOCKET s_user, u_int64* content_length, unsigned short boundarylen) {
 	int ret = 0;
 	char buffer[1024];
 	DWORD written;
@@ -424,7 +424,7 @@ set_content_length(struct header_nv *httpnv, u_int64* content_length) {
  */
 int
 receive_file(COORD* cursorPosition,
-	struct header_nv* httpnv, int s,
+	struct header_nv* httpnv, SOCKET s,
 	struct user_stats* upstats, int theme,
 	int* bytesent) {
 	unsigned short MIMElen, boundarylen;

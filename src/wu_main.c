@@ -29,8 +29,8 @@
 
 extern struct wu_msg wumsg[];
 FILE* g_fplog;
-int* g_listensocket;
-int* g_usersocket;
+SOCKET g_listensocket;
+SOCKET g_usersocket;
 HANDLE g_hConsoleOutput;
 HANDLE g_hNewFile_tmp;
 unsigned char g_sNewFile_tmp[1024];
@@ -52,9 +52,9 @@ HandlerRoutine(_In_ DWORD dwCtrlType)
 		if (g_fplog != NULL)
 			fclose(g_fplog);
 		if (g_usersocket != NULL && *g_usersocket != 0)
-			closesocket(*g_usersocket);
+			closesocket(g_usersocket);
 		if (g_listensocket != NULL)
-			closesocket(*g_listensocket);
+			closesocket(g_listensocket);
 		if (g_hConsoleOutput != INVALID_HANDLE_VALUE)
 			CloseHandle(g_hConsoleOutput);
 		if (g_hNewFile_tmp != INVALID_HANDLE_VALUE) {
@@ -283,13 +283,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
 	HWND consoleWindow;
 	struct in_addr inaddr;
 	unsigned char i;
-	int s;
+	SOCKET s;
 	char logentry[256];
 	char logpath[512];
 	char log_filename[sizeof("log_19700101.txt")];
 	DWORD dwNumEntries;
 
-	g_listensocket = g_usersocket = NULL;
+	g_listensocket = g_usersocket = 0;
 	g_fplog = NULL;
 	g_hNewFile_tmp = g_hConsoleOutput = INVALID_HANDLE_VALUE;
 	inaddr.s_addr = 0;

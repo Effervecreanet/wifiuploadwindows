@@ -54,7 +54,7 @@ time_to_httpdate(char* http_date)
  * - 0: Success
  */
 int
-http_recv_reqline(int s, struct http_reqline* reqline) {
+http_recv_reqline(SOCKET s, struct http_reqline* reqline) {
 	int i, ret;
 	char c;
 
@@ -116,7 +116,7 @@ http_recv_reqline(int s, struct http_reqline* reqline) {
  * 0: Success.
  */
 int
-http_recv_headernv(int s, struct header_nv* httpnv) {
+http_recv_headernv(SOCKET s, struct header_nv* httpnv) {
 	int ret, nb_nv;
 	int idx_name, idx_value;
 	char c;
@@ -219,7 +219,7 @@ create_http_header_nv(struct http_resource* res, struct header_nv* nv, size_t fs
  * - 1: Failure.
  */
 static int
-send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
+send_http_header_nv(struct header_nv* nv, SOCKET s, int* bytesent) {
 	int i;
 	int ret = 0;
 
@@ -278,7 +278,7 @@ send_http_header_nv(struct header_nv* nv, int s, int* bytesent) {
  * - -1: Failure.
  */
 static int
-http_send_status(int s_user, int* bytesent, unsigned int status_code) {
+http_send_status(SOCKET s_user, int* bytesent, unsigned int status_code) {
 	int ret;
 
 	ret = send(s_user, HTTP_VERSION, sizeof(HTTP_VERSION) - 1, 0);
@@ -439,7 +439,7 @@ int make_htmlpage(struct success_info* successinfo, char* resource, char* pbuffe
  * - 2: Send body failed
  */
 static int
-send_http_header_html_content(int s_user, struct header_nv* httpnv, int* bytesent,
+send_http_header_html_content(SOCKET s_user, struct header_nv* httpnv, int* bytesent,
 	char* pbufferout, size_t pbufferoutlen, HANDLE hFile) {
 	int ret = 0;
 
@@ -478,7 +478,7 @@ send_http_header_html_content(int s_user, struct header_nv* httpnv, int* bytesen
  * - 1: Failure
  */
 static int
-send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, int* bytesent) {
+send_http_header_image_file(HANDLE hFile, SOCKET s_user, struct header_nv* httpnv, int* bytesent) {
 	int ret = 0;
 	char buffer[1024];
 	DWORD read;
@@ -515,7 +515,7 @@ send_http_header_image_file(HANDLE hFile, int s_user, struct header_nv* httpnv, 
  * - status_code: HTTP status code response.
  */
 int
-http_serv_resource(struct http_resource* res, int s,
+http_serv_resource(struct http_resource* res, SOCKET s,
 	struct success_info* successinfo,
 	int* bytesent, unsigned int status_code) {
 	HANDLE hFile;
