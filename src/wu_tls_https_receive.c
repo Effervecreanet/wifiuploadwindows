@@ -245,6 +245,7 @@ tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, SOCKET s, u_int64 *received_
 
 	if (*content_length == 0) {
 		WriteFile(hFile, tls_recv_output, tls_recv_output_size - boundarylen - 8, &written, NULL);
+		free(tls_recv_output);
 		return 0;
 	}
 	else
