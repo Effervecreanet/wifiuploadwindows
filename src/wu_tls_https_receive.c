@@ -260,7 +260,7 @@ tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, SOCKET s, u_int64 *received_
 
 
 int
-tls_receive_file(COORD* cursorPosition, struct header_nv* httpnv, int s, struct user_stats* upstats, int theme, int* bytesent, CtxtHandle* ctxtHandle) {
+tls_receive_file(COORD* cursorPosition, struct header_nv* httpnv, SOCKET s, struct user_stats* upstats, int theme, int* bytesent, CtxtHandle* ctxtHandle) {
 	unsigned short MIMElen, boundarylen;
 	HANDLE hFile;
 	DWORD written, tick_start, tick_end, tick_diff;

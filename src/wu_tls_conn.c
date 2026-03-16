@@ -347,10 +347,7 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s_clt) 
 		FreeContextBuffer(secBufferOutput[i].pvBuffer);
 	}
 
-	/*
-	DeleteSecurityContext(ctxtHandle);
-	FreeCredentialHandle(credHandle);
-	*/
+	/* DeleteSecurityContext(ctxtHandle); FreeCredentialHandle(credHandle); */
 	closesocket(s_clt);
 
 	return;
