@@ -1,4 +1,4 @@
-#define CONSOLE_TITLE "Effervecreanet - Wifiupload"
+#define CONSOLE_TITLE "Wifiupload by Effervecreanet"
 #define PROMOTE_EFFERVECREANET CONSOLE_TITLE
 
 #ifdef VERSION_FR
