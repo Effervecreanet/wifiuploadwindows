@@ -277,7 +277,7 @@ print_tx_speed(struct tx_stats* txstats, COORD coordAverageTX) {
  * - coordPerCent: Position of percentage string.
  */
 void
-print_upload_info(struct tx_stats* txstats, COORD coordAverageTX, COORD* cursorPosition, COORD coordPerCent) {
+wcons_upload_info(struct tx_stats* txstats, COORD coordAverageTX, COORD* cursorPosition, COORD coordPerCent) {
 	GetSystemTime(&txstats->current);
 
 	if (txstats->current.wHour > txstats->currentbak.wHour ||
@@ -452,7 +452,7 @@ receive_file(COORD* cursorPosition, struct header_nv* httpnv, SOCKET s, struct u
 		if (ret < 0)
 			break;
 		txstats.received_size += (unsigned int)ret;
-		print_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
+		wcons_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
 
 	}
 

@@ -335,7 +335,7 @@ tls_receive_file(COORD* cursorPosition, struct header_nv* httpnv, SOCKET s, stru
 	free(tls_recv_output);
 
 	while (tls_recv_file(hFile, ctxtHandle, s, &txstats.received_size, &content_length, boundarylen, cursorPosition))
-		print_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
+		wcons_upload_info(&txstats, coordAverageTX, cursorPosition, coordPerCent);
 
 	if (content_length != 0) {
 		CloseHandle(hFile);
