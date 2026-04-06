@@ -37,7 +37,7 @@ extern char* encryptBuffer;
 
 static void wu_404_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, SOCKET s_user, int* bytesent);
 static void wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, SOCKET s_user, int* bytesent);
-static void quit_wu(SOCKET s_user);
+static void quit_wu(void);
 static int handle_theme_change(struct header_nv* httpnv, SOCKET s_user, int* theme);
 static void create_send_resource(struct header_nv* httpnv, SOCKET s_user, int* bytesent, int theme, int resource_index, COORD cursorPosition[2]);
 static int handle_post_request(struct http_reqline* reqline, struct header_nv* httpnv, SOCKET s_user, int* bytesent, int theme, COORD cursorPosition[2]);
@@ -104,7 +104,7 @@ wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, 
  * - Close sockets, close file and close winsock. Exit.
  */
 static void
-quit_wu(SOCKET s_user) {
+quit_wu(void) {
 	if (g_listensocket)
 		closesocket(g_listensocket);
 	if (g_usersocket)
@@ -417,8 +417,7 @@ int
 http_loop(COORD* cursorPosition, struct in_addr* inaddr, SOCKET s, char logentry[256]) {
 	struct http_reqline reqline;
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
-	int s_user;
-	DWORD err;
+	SOCKET s_user;
 	int theme = 0;
 	char ipaddrstr[16];
 	int bytesent;
@@ -453,7 +452,7 @@ http_loop(COORD* cursorPosition, struct in_addr* inaddr, SOCKET s, char logentry
 		else if (strcmp(reqline.resource + 1, "quit") == 0) {
 			create_log_entry(logentry, ipaddrstr, &reqline, bytesent, 200);
 			wu_quit_response(cursorPosition, httpnv, &theme, s_user, &bytesent);
-			quit_wu(s_user);
+			quit_wu();
 		}
 		else if (strcmp(reqline.resource + 1, "openRep") == 0) {
 			show_download_directory();

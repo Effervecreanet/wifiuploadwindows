@@ -17,7 +17,7 @@
 #include "wu_msg.h"
 
 extern FILE* g_fphttpslog;
-extern int g_tls_sclt;
+extern SOCKET g_tls_sclt;
 extern HANDLE g_hConsoleOutput;
 extern SecPkgContext_StreamSizes context_sizes;
 extern char* encryptBuffer;
@@ -30,7 +30,6 @@ static void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, CtxtHandle
 											SecBuffer secBufferIn[2], SecBuffer secBufferIn2[4], SecBuffer secBufferOut[3],
 											SecBufferDesc *secBufferDescInput, SecBufferDesc *secBufferDescInput2, SecBufferDesc *secBufferDescOutput,
 											struct sockaddr_in *sin_clt, int *sinclt_len);
-static void tls_shutdown_schannel(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s_clt);
 
 
 int tls_send(SOCKET s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int message_size, COORD cursorPosition) {

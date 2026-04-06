@@ -182,7 +182,6 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADD
 DWORD available_address_ui(COORD cursorPosition[2], struct in_addr* inaddr) {
 	MIB_IPADDRTABLE ipAddrTable[4];
 	ULONG sizeIpAddrTable = sizeof(MIB_IPADDRTABLE) * 4;
-	DWORD read;
 	int ret;
 
 	ZeroMemory(&ipAddrTable, sizeIpAddrTable);

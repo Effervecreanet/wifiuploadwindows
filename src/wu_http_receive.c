@@ -361,12 +361,10 @@ int
 receive_file(COORD* cursorPosition, struct header_nv* httpnv, SOCKET s, struct user_stats* upstats, int theme, int* bytesent) {
 	unsigned short MIMElen, boundarylen;
 	HANDLE hFile;
-	DWORD written, tick_start, tick_end, tick_diff;
-	char* pboundary;
+	DWORD written, tick_start;
 	char boundary[64];
 	u_int64 content_length;
 	struct tx_stats txstats;
-	char buffer[1024];
 	COORD coordPerCent;
 	COORD coordAverageTX;
 	struct http_resource httpres;

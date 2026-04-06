@@ -9,9 +9,9 @@
 #define LISTEN_PORT 80
 #define LISTEN_HTTPS_PORT 443
 
-extern int g_listensocket;
-extern int g_listenhttpssocket;
-extern int g_usersocket;
+extern SOCKET g_listensocket;
+extern SOCKET g_listenhttpssocket;
+extern SOCKET g_usersocket;
 extern HANDLE g_hConsoleOutput;
 
 static void socket_show_error_wait_close(COORD *cusorPosition, const char* message);
@@ -34,11 +34,9 @@ socket_show_error_wait_close(COORD *cusorPosition, const char* message) {
 
 SOCKET
 create_socket(COORD* cursorPosition) {
-	int s;
-	INPUT_RECORD inRec;
-	DWORD read;
+	SOCKET s;
 
-	s = (int)socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
 	if (s == INVALID_SOCKET)
 		socket_show_error_wait_close(cursorPosition, ERROR_MESSAGE_SOCKET_1);
@@ -94,7 +92,7 @@ accept_conn(COORD* cursorPosition, SOCKET s, char ipaddrstr[16]) {
 	sainLen = sizeof(struct sockaddr);
 
 	for (;;) {
-		s_user = (int)accept(s, (struct sockaddr*)&sainUser, &sainLen);
+		s_user = accept(s, (struct sockaddr*)&sainUser, &sainLen);
 
 		if (s_user == INVALID_SOCKET) {
 			socket_show_error_wait_close(cursorPosition, ERROR_MESSAGE_SOCKET_3);
