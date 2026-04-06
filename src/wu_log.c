@@ -1,12 +1,15 @@
 #include <Windows.h>
+#include <direct.h>
 #include <stdio.h>
 #include <time.h>
 #include <sys\stat.h>
 
 #include "wu_msg.h"
-#include "wu_log.h"
 #include "wu_tls_https_receive.h"
+#include "wu_http_nv.h"
 #include "wu_http.h"
+#include "wu_log.h"
+#include "wu_main.h"
 
 extern FILE* g_fphttpslog;
 
@@ -50,7 +53,6 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 	char userprofile[255 + sizeof(LOG_DIRECTORY)];
 	struct _stat statbuff;
 	SYSTEMTIME systime;
-	DWORD read;
 	int ret;
 
 	ZeroMemory(logpath, 512);
@@ -60,7 +62,7 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 	ret = _stat(logpath, &statbuff);
 	if (ret) {
 		if (_mkdir(logpath)) {
-			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs");
+			write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, "logs", 0);
 			for(;;) Sleep(10000);
 		}
 		else {
@@ -74,7 +76,7 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 			strcat_s(logpath, 512, wYearStr);
 
 			if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
-				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+				write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath, 0);
 				for (;;) Sleep(10000);
 			}
 			else {
@@ -93,7 +95,7 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 					strcat_s(logpath, 512, wMonthStr);
 				}
 				if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
-					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+					write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath, 0);
 					for (;;) Sleep(10000);
 				}
 				else {
@@ -140,7 +142,7 @@ create_log_directory(char logpath[512], char log_filename[sizeof("log_19700101.t
 					}
 
 					if (_stat(logpath, &statbuff) && _mkdir(logpath)) {
-						write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath);
+						write_info_in_console(ERR_MSG_CANNOT_CREATE_LOG_DIRECTORY, logpath, 0);
 						for (;;) Sleep(10000);
 					}
 				}

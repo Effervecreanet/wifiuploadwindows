@@ -2,6 +2,7 @@
 #include <iphlpapi.h>
 
 #include "wu_msg.h"
+#include "wu_main.h"
 
 extern HANDLE g_hConsoleOutput;
 
@@ -30,23 +31,23 @@ write_info_one_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, M
 
 	cursorPosition[0].Y += 2;
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL);
+	write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR, NULL, 0);
 
 	cursorPosition[0].Y += 2;
 	cursorPosition[0].X += 5;
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr);
+	write_info_in_console(INF_FMT_MSG_ONE_AVAILABLE_ADDR_2, pStringIpAddr, 0);
 	cursorPosition[0].X -= 5;
 
 	cursorPosition[0].Y += 2;
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+	write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL, 0);
 
 	cursorPosition[0].Y += 2;
 	cursorPosition[0].X += 5;
 
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(*inaddr));
+	write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(*inaddr), 0);
 
 	SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 	cursorPosition[0].X -= 5;
@@ -89,21 +90,21 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADD
 	cursorPosition[0].Y += 2;
 
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_MSG_TWO_AVAILABLE_ADDR, NULL);
+	write_info_in_console(INF_MSG_TWO_AVAILABLE_ADDR, NULL, 0);
 
 	// cursorPosition[0].X += 4;
 	cursorPosition[0].Y += 2;
 
 	pStringIpAddr1 = inet_ntoa(inaddr1);
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1);
+	write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_1, pStringIpAddr1, 0);
 	cursorPosition[0].Y++;
 	pStringIpAddr2 = inet_ntoa(inaddr2);
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2);
+	write_info_in_console(INF_FMT_MSG_AVAILABLE_ADDR_CHOICE_2, pStringIpAddr2, 0);
 	cursorPosition[0].Y++;
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_MSG_CHOICE_QUESTION, NULL);
+	write_info_in_console(INF_MSG_CHOICE_QUESTION, NULL, 0);
 
 	do {
 		ZeroMemory(&inRec, sizeof(INPUT_RECORD));
@@ -137,7 +138,7 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADD
 	cursorPosition[0].X -= sizeof(INF_MSG_CHOICE_QUESTION) + 5;
 
 	SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-	write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL);
+	write_info_in_console(INF_WIFIUPLOAD_IS_LISTENING_TO, NULL, 0);
 
 	cursorPosition[0].Y++;
 
@@ -148,7 +149,7 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADD
 		cursorPosition[0].X += 5;
 		cursorPosition[0].Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-		write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1));
+		write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr1), 0);
 		SetConsoleTextAttribute(g_hConsoleOutput, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 		cursorPosition[0].X -= 5;
 	}
@@ -158,7 +159,7 @@ ui_two_available_addr(COORD cursorPosition[2], struct in_addr* inaddr, MIB_IPADD
 		cursorPosition[0].X += 5;
 		cursorPosition[0].Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
-		write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2));
+		write_info_in_console(INF_WIFIUPLOAD_HTTP_LISTEN, inet_ntoa(inaddr2), 0);
 		cursorPosition[0].X -= 5;
 	}
 
