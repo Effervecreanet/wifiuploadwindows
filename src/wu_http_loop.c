@@ -151,14 +151,12 @@ wu_404_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, S
 
 	ZeroMemory(&httplocalres, sizeof(struct http_resource));
 	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
 		cursorPosition->Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		for (;;)
+			Sleep(10000);
 	}
 
 	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 404);
@@ -187,14 +185,12 @@ wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, 
 
 	ZeroMemory(&httplocalres, sizeof(struct http_resource));
 	if (create_local_resource(&httplocalres, ires, *theme) != 0) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
 		cursorPosition->Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		for (;;)
+			Sleep(10000);
 	}
 
 	http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);
@@ -283,14 +279,12 @@ create_send_resource(struct header_nv* httpnv, SOCKET s_user, int* bytesent, int
 
 	ZeroMemory(&httplocalres, sizeof(struct http_resource));
 	if (create_local_resource(&httplocalres, resource_index, theme) != 0) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
 		cursorPosition->Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		write_info_in_console(ERR_MSG_CANNOT_GET_RESOURCE, NULL);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		for (;;)
+			Sleep(10000);
 	}
 
 	err = http_serv_resource(&httplocalres, s_user, NULL, bytesent, 200);

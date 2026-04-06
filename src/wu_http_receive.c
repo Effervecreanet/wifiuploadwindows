@@ -53,9 +53,7 @@ create_userfile_tmp(COORD* cursorPosition,
 		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH,
 		NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		INPUT_RECORD inRec;
 		DWORD err;
-		DWORD read;
 
 		cursorPosition->Y += 3;
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
@@ -66,8 +64,8 @@ create_userfile_tmp(COORD* cursorPosition,
 		cursorPosition->Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
+		for (;;)
+			Sleep(10000);
 	}
 
 	g_hNewFile_tmp = hFile;

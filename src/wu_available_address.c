@@ -176,15 +176,12 @@ DWORD available_address_ui(COORD cursorPosition[2], struct in_addr* inaddr) {
 	ret = GetIpAddrTable((PMIB_IPADDRTABLE)&ipAddrTable, &sizeIpAddrTable, TRUE);
 
 	if (ret != NO_ERROR || ipAddrTable[0].dwNumEntries < 2) {
-		INPUT_RECORD inRec;
-		DWORD read;
-
 		cursorPosition[0].Y += 2;
 		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
 		write_info_in_console(ERR_MSG_CONNECTIVITY, NULL);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
+		for (;;)
+			Sleep(10000);
 	}
 	else if (ipAddrTable[0].dwNumEntries == 2) {
 		write_info_one_available_addr(cursorPosition, inaddr, ipAddrTable);
@@ -193,14 +190,12 @@ DWORD available_address_ui(COORD cursorPosition[2], struct in_addr* inaddr) {
 		ui_two_available_addr(cursorPosition, inaddr, ipAddrTable);
 	}
 	else {
-		INPUT_RECORD inRec;
 		cursorPosition[0].Y++;
 		SetConsoleCursorPosition(g_hConsoleOutput, cursorPosition[0]);
 		write_info_in_console(ERR_MSG_TOO_MANY_ADDR, NULL);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
-
-		ExitProcess(4);
+		for (;;)
+			Sleep(10000);
 	}
 
 

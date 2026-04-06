@@ -36,7 +36,8 @@ create_socket(COORD* cursorPosition) {
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		WriteConsoleA(g_hConsoleOutput, Buffer, (DWORD)strlen(Buffer), &written, NULL);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		for (;;)
+			Sleep(10000);
 	}
 
 	return s;
@@ -63,8 +64,6 @@ bind_socket(COORD* cursorPosition, SOCKET s, struct in_addr inaddr) {
 	if (0 != bind(s, (const struct sockaddr*)&sainServer, sizeof(struct sockaddr_in))) {
 		CHAR Buffer[1024];
 		DWORD written;
-		INPUT_RECORD inRec;
-		DWORD read;
 
 		ZeroMemory(Buffer, 1024);
 
@@ -74,7 +73,8 @@ bind_socket(COORD* cursorPosition, SOCKET s, struct in_addr inaddr) {
 		SetConsoleCursorPosition(g_hConsoleOutput, *cursorPosition);
 		WriteConsoleA(g_hConsoleOutput, Buffer, (DWORD)strlen(Buffer), &written, NULL);
 
-		while (ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &inRec, sizeof(INPUT_RECORD), &read));
+		for (;;)
+			Sleep(10000);
 	}
 
 	setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, (char*)&tval, sizeof(char));
