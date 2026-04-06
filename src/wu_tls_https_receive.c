@@ -2,14 +2,7 @@
 #include <Windows.h>
 #include <strsafe.h>
 #include <stdlib.h>
-
-#include "wu_msg.h"
-#include "wu_main.h"
-#include "wu_http_nv.h"
-#include "wu_txstats.h"
-#include "wu_http_loop.h"
-#include "wu_content.h"
-#include "wu_http_receive.h"
+#include <stdint.h>
 
 #define SCHANNEL_USE_BLACKLIST
 
@@ -19,8 +12,16 @@
 
 #include <sspi.h>
 
-#include "wu_tls_https_receive.h"
+
+#include "wu_msg.h"
+#include "wu_main.h"
+#include "wu_http_nv.h"
+#include "wu_txstats.h"
+#include "wu_http_loop.h"
+#include "wu_content.h"
 #include "wu_http.h"
+#include "wu_http_receive.h"
+#include "wu_tls_https_receive.h"
 
 
 extern const struct _http_resources http_resources[];

@@ -1,7 +1,9 @@
 #include <Windows.h>
 #include <time.h>
 #include <stdio.h>
+#include <stdint.h>
 
+#include "wu_txstats.h"
 #include "wu_http_nv.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"

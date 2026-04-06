@@ -25,7 +25,7 @@ extern FILE* g_fphttpslog;
 
 static void generate_key(NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey);
 static int get_cert_name(CERT_NAME_BLOB* SubjectBlob, BYTE pbEncodedName[128], DWORD* cbEncodedName);
-static PCCERT_CONTEXT create_cert_self_sign(COORD* cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey);
+static PCCERT_CONTEXT create_cert_self_sign(BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey);
 static void inaddr2octaddr(BYTE ipAddr[4], struct in_addr inaddr2oct);
 
 static void
@@ -76,7 +76,12 @@ find_mycert_in_store(HCERTSTORE* hCertStore) {
 		for (;;) Sleep(10000);
 	}
 
-	while (pCertContext = CertEnumCertificatesInStore(*hCertStore, pCertContext)) {
+	for (;;) {
+		pCertContext = CertEnumCertificatesInStore(*hCertStore, pCertContext);
+
+		if (pCertContext == NULL)
+			break;
+
 		CertGetNameString(pCertContext, CERT_NAME_RDN_TYPE, 0, NULL, namestr, 128);
 		if (strcmp(namestr, CERT_STR) == 0)
 			return pCertContext;
@@ -86,7 +91,7 @@ find_mycert_in_store(HCERTSTORE* hCertStore) {
 }
 
 static PCCERT_CONTEXT
-create_cert_self_sign(COORD* cursorPosition, BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey) {
+create_cert_self_sign(BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey) {
 	CERT_EXTENSION Extensions[1];
 	CERT_EXTENSIONS CertExtensions;
 	PCCERT_CONTEXT pCertContext;
@@ -213,7 +218,7 @@ create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT*
 		for (;;) Sleep(10000);
 	}
 
-	*pCertContext = (CERT_CONTEXT*)create_cert_self_sign(cursorPosition, ipAddr, &SubjectBlob, *phProvider, *hKey);
+	*pCertContext = (CERT_CONTEXT*)create_cert_self_sign(ipAddr, &SubjectBlob, *phProvider, *hKey);
 
 	if (FALSE == CertAddCertificateContextToStore(hCertStore, *pCertContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL)) {
 		NCryptFreeObject(*phProvider);

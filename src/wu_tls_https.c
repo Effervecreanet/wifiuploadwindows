@@ -1,13 +1,7 @@
 #include <Windows.h>
 #include <strsafe.h>
 #include <stdio.h>
-
-#include "wu_http_receive.h"
-#include "wu_http.h"
-#include "wu_tls_https.h"
-#include "wu_http_nv.h"
-#include "wu_msg.h"
-#include "wu_content.h"
+#include <stdint.h>
 
 #define SCHANNEL_USE_BLACKLIST
 
@@ -16,6 +10,15 @@
 #define SECURITY_WIN32
 
 #include <sspi.h>
+
+#include "wu_txstats.h"
+#include "wu_http_receive.h"
+#include "wu_http.h"
+#include "wu_http_nv.h"
+#include "wu_tls_https.h"
+#include "wu_msg.h"
+#include "wu_content.h"
+
 
 extern FILE* g_fphttpslog;
 extern int g_tls_firstsend;
@@ -318,7 +321,7 @@ handle_get_request(CtxtHandle* ctxtHandle, SOCKET s_clt, struct http_reqline* re
 	}
 	else if (strcmp(reqline->resource + 1, "quit") == 0) {
 		https_wu_quit_response(cursorPosition, headernv, &theme, s_clt, bytesent);
-		https_quit_wu(s_clt);
+		https_quit_wu();
 	}
 	else if (strcmp(reqline->resource + 1, "openRep") == 0) {
 		show_download_directory();

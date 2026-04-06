@@ -1,7 +1,9 @@
 #include <Windows.h>
 #include <strsafe.h>
 #include <time.h>
+#include <stdint.h>
 
+#include "wu_txstats.h"
 #include "wu_http_nv.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"
@@ -533,7 +535,6 @@ http_serv_resource(struct http_resource* res, SOCKET s,
 	DWORD fsize, read, err;
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
 	char* pbufferin = NULL, * pbufferout = NULL;
-	char BufferUserName[254];
 	size_t pbufferoutlen = 0;
 	char hrmn[6];
 	char* plastBS;
@@ -578,8 +579,6 @@ http_serv_resource(struct http_resource* res, SOCKET s,
 		CloseHandle(hFile);
 	}
 	else if (strcmp(res->type, "image/png") == 0 || strcmp(res->type, "image/x-icon") == 0) {
-		char buffer[1024];
-
 		ZeroMemory(httpnv, sizeof(struct header_nv) * HEADER_NV_MAX_SIZE);
 		create_http_header_nv(res, httpnv, fsize, 1);
 

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <conio.h>
 #include <direct.h>
+#include <stdint.h>
 #include <locale.h>
 #include <sys\stat.h>
 
@@ -17,15 +18,18 @@
 
 #include <sspi.h>
 
+#include "wu_txstats.h"
+#include "wu_http_nv.h"
+#include "wu_tls_conn.h"
 #include "wu_tls_main.h"
 #include "wu_msg.h"
 #include "wu_main.h"
-#include "wu_log.h"
-#include "wu_socket.h"
-#include "wu_http_nv.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"
+#include "wu_log.h"
+#include "wu_socket.h"
 #include "wu_http_loop.h"
+#include "wu_available_address.h"
 
 
 #pragma comment(lib, "ws2_32.lib")
@@ -59,8 +63,6 @@ static void draw_rectangle_in_console(COORD cursPosStart);
 BOOL WINAPI
 HandlerRoutine(_In_ DWORD dwCtrlType)
 {
-    int i;
-
 	switch (dwCtrlType) {
 	case CTRL_CLOSE_EVENT:
 	case CTRL_LOGOFF_EVENT:
@@ -278,12 +280,8 @@ draw_rectangle_in_console(COORD cursPosStart) {
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
-	DWORD written, read, ret;
+	DWORD ret;
 	WSADATA wsaData;
-	MIB_IPADDRTABLE ipAddrTable[4];
-	ULONG sizeIpAddrTable = sizeof(MIB_IPADDRTABLE) * 4;
-	CONSOLE_CURSOR_INFO cursorInfo;
-	CHAR dd[1024];
 	COORD cursorPosition[2];
 	HWND consoleWindow;
 	HANDLE hThread1;
@@ -291,14 +289,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
 	struct in_addr inaddr;
 	unsigned char i;
 	SOCKET s;
-	struct _stat statbuff;
 	char logentry[256];
-	SYSTEMTIME systime;
 	char logpath[512];
 	char logpath_https[512];
 	char log_filename[sizeof("log_19700101.txt")];
 	char loghttps_filename[sizeof("loghttps_19700101.txt")];
-	char userprofile[255 + sizeof(LOG_DIRECTORY)];
 	DWORD dwNumEntries;
 
 	g_fphttpslog = g_fplog = NULL;

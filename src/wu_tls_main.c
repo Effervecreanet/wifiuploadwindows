@@ -6,6 +6,7 @@
 #include <tchar.h>
 #include <stdio.h>
 #include <time.h>
+#include <stdint.h>
 
 #define SCHANNEL_USE_BLACKLIST
 
@@ -15,16 +16,20 @@
 
 #include <sspi.h>
 
-#include "wu_main.h"
 #include "wu_msg.h"
+#include "wu_main.h"
+#include "wu_txstats.h"
+#include "wu_http_nv.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"
-#include "wu_http_nv.h"
+#include "wu_http_loop.h"
 #include "wu_content.h"
 #include "wu_tls_main.h"
 #include "wu_tls_x509.h"
 #include "wu_tls_conn.h"
 #include "wu_tls_https.h"
+#include "wu_socket.h"
+#include "wu_log.h"
 
 extern FILE* g_fphttpslog;
 extern FILE* g_fplog;
@@ -90,7 +95,7 @@ https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* t
 }
 
 void
-https_quit_wu(SOCKET s_clt) {
+https_quit_wu(void) {
 	if (g_listensocket)
 		closesocket(g_listensocket);
 	if (g_usersocket)
@@ -126,7 +131,6 @@ https_quit_wu(SOCKET s_clt) {
 DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {
 	BYTE pbEncodedName[128];
-	WSADATA wsaData;
 	DWORD err;
 	int ret;
 	SOCKET s, s_clt;
@@ -134,11 +138,9 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	CredHandle credHandle;
 	CtxtHandle ctxtHandle;
 	HCERTSTORE hCertStore;
-	int i;
 	struct http_reqline reqline;
 	struct header_nv headernv[HEADER_NV_MAX_SIZE];
 	int bytesent = 0;
-	int theme = 0;
 	char ipaddr_httpsclt[16];
 	NCRYPT_KEY_HANDLE hKey = 0;
 	NCRYPT_PROV_HANDLE phProvider = 0;
@@ -167,8 +169,8 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 	g_credHandle = &credHandle;
 
-	s = create_socket(&prThread->cursorPosition);
-	bind_socket2(&prThread->cursorPosition, s, prThread->inaddr);
+	s = create_socket((COORD*)&prThread->cursorPosition);
+	bind_socket2((COORD*)&prThread->cursorPosition, s, prThread->inaddr);
 
 	for (;;) {
 		g_tls_sclt = 0;
@@ -203,7 +205,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		}
 		else if (strcmp(reqline.method, "POST") == 0) {
 			ret = handle_post_request(&ctxtHandle, s_clt, &reqline, headernv, &bytesent, tls_recv_output + header_offset,
-				&prThread->cursorPosition);
+				(COORD*)&prThread->cursorPosition);
 			if (ret < 0) {
 				tls_shutdown(&ctxtHandle, &credHandle, s_clt);
 				free(tls_recv_output);
