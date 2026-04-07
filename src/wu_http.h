@@ -15,12 +15,6 @@ struct http_resource {
 	char type[HTTP_TYPE_MAX_LENGTH];
 };
 
-struct success_info {
-	char filename[FILENAME_MAX_SIZE];
-	char filenameSize[24];
-	char elapsedTime[24];
-	char averagespeed[20];
-};
 
 errno_t redir404(int s);
 int time_to_httpdate(char* http_date);

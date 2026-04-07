@@ -9,5 +9,5 @@ struct user_stats {
 };
 
 void wcons_upload_info(struct tx_stats* txstats, COORD coordAverageTX, COORD* cursorPosition, COORD coordPerCent);
-// void chrono(struct success_info* successinfo, DWORD tick_start, u_int64 sizeNewFile);
+void chrono(struct success_info* successinfo, DWORD tick_start, uint64_t sizeNewFile);
 int receive_file(COORD *cursorPosition, struct header_nv *httpnv, SOCKET s, struct user_stats *upstats, int theme, int *bytesent);
