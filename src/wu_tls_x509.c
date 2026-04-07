@@ -193,7 +193,7 @@ inaddr2octaddr(BYTE ipAddr[4], struct in_addr inaddr2oct) {
 }
 
 void
-create_certificate(COORD cursorPosition[2], HCERTSTORE hCertStore, CERT_CONTEXT** pCertContext, BYTE pbEncodedName[128], NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey, struct in_addr inaddr) {
+create_certificate(HCERTSTORE hCertStore, CERT_CONTEXT** pCertContext, BYTE pbEncodedName[128], NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey, struct in_addr inaddr) {
 	CERT_NAME_BLOB SubjectBlob;
 	DWORD cbEncodedName = 128;
 	time_t wutime;

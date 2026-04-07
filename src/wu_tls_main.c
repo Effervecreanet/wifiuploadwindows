@@ -76,6 +76,7 @@ accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s, SOCKET
 
 	return;
 }
+
 void
 https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, SOCKET s_user, int* bytesent) {
 	int ires;
@@ -155,7 +156,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	}
 	else {
 	createcert:
-		create_certificate(prThread->cursorPosition, hCertStore, &pCertContext, pbEncodedName, &phProvider, &hKey, prThread->inaddr);
+		create_certificate(hCertStore, &pCertContext, pbEncodedName, &phProvider, &hKey, prThread->inaddr);
 	}
 
 	CertCloseStore(hCertStore, 0);

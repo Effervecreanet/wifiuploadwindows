@@ -9,4 +9,4 @@ struct user_stats {
 };
 */
 
-// int tls_receive_file(COORD *cursorPosition, struct header_nv *httpnv, int s, struct user_stats *upstats, int theme, int *bytesent, CtxtHandle *ctxtHandle);
+int tls_receive_file(COORD *cursorPosition, struct header_nv *httpnv, SOCKET s, struct user_stats *upstats, int theme, int *bytesent, CtxtHandle *ctxtHandle);

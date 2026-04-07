@@ -2,10 +2,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "wu_http_receive.h"
-#include "wu_http.h"
-#include "wu_http_nv.h"
+#include <stdint.h>
 
 #define SCHANNEL_USE_BLACKLIST
 
@@ -14,6 +11,13 @@
 #define SECURITY_WIN32
 
 #include <sspi.h>
+
+#include "wu_txstats.h"
+#include "wu_http_nv.h"
+#include "wu_http_receive.h"
+#include "wu_http.h"
+#include "wu_tls_conn.h"
+
 
 extern FILE *g_fphttpslog;
 
@@ -90,16 +94,16 @@ https_apply_theme(SOCKET s_clt, CtxtHandle *ctxtHandle, char* cookie, COORD curs
 
 	strcat_s(buffer, 2048 - strlen(buffer), "\r\n");
 
-	if (tls_send(s_clt, ctxtHandle, buffer, strlen(buffer), cursorPosition) < 0)
+	if (tls_send(s_clt, ctxtHandle, buffer, (unsigned int)strlen(buffer), cursorPosition) < 0)
 		return -1;
 
 	return 0;
 }
+
 int
 get_theme_param(struct header_nv *headernv, char *bufferIn, int *theme) {
 	int idxclen;
 	int clen;
-	int res;
 
 	idxclen = nv_find_name_client(headernv, "Content-Length");
 	if (idxclen < 0) 

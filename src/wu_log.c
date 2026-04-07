@@ -1,12 +1,14 @@
 #include <Windows.h>
 #include <direct.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <time.h>
 #include <sys\stat.h>
 
+#include "wu_txstats.h"
 #include "wu_msg.h"
-#include "wu_tls_https_receive.h"
 #include "wu_http_nv.h"
+#include "wu_http_receive.h"
 #include "wu_http.h"
 #include "wu_log.h"
 #include "wu_main.h"

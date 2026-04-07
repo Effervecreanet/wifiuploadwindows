@@ -12,12 +12,18 @@
 #include <sspi.h>
 
 #include "wu_txstats.h"
+#include "wu_http_nv.h"
 #include "wu_http_receive.h"
 #include "wu_http.h"
-#include "wu_http_nv.h"
 #include "wu_tls_https.h"
 #include "wu_msg.h"
 #include "wu_content.h"
+#include "wu_tls_conn.h"
+#include "wu_http_loop.h"
+#include "wu_main.h"
+#include "wu_tls_main.h"
+#include "wu_tls_theme.h"
+#include "wu_tls_https_receive.h"
 
 
 extern FILE* g_fphttpslog;
@@ -30,7 +36,7 @@ static int get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* bu
 static int https_serv_texthtml(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, struct http_resource *res,
 								char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition);
 static int https_serv_image(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, struct http_resource *res,
-							char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition);
+							char message[8192], int *bytesent, COORD cursorPosition);
 
 /*
  * Function description:
@@ -191,7 +197,7 @@ https_serv_texthtml(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize,
 	char* plastBS;
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
 	size_t pbufferoutlen = 0;
-	int messageLen;
+	size_t messageLen;
 	int i;
 
 	ZeroMemory(BufferUserName, 254);
@@ -229,10 +235,10 @@ https_serv_texthtml(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize,
 	strcat_s(message, 8192, "\r\n");
 	strcat_s(message, 8192, pbufferout);
 
-	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
+	tls_send(s, ctxtHandle, message, (unsigned int)strlen(message), cursorPosition);
 
 	messageLen = strlen(message);
-	*bytesent += messageLen;
+	*bytesent += (int)messageLen;
 
 	free(pbufferout);
 err:
@@ -243,8 +249,8 @@ err:
 
 static int
 https_serv_image(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, struct http_resource *res,
-					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
-	DWORD read, err;
+					char message[8192], int *bytesent, COORD cursorPosition) {
+	DWORD read;
 	struct header_nv httpnv[HEADER_NV_MAX_SIZE];
 	size_t messageLen;
 	int i;
@@ -261,7 +267,7 @@ https_serv_image(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, st
 	
 	messageLen = strlen(message);
 	strcat_s(message, 8192, "\r\n");
-	tls_send(s, ctxtHandle, message, strlen(message), cursorPosition);
+	tls_send(s, ctxtHandle, message, (unsigned int)strlen(message), cursorPosition);
 
 	while (ReadFile(hFile, message, 2048, &read, NULL) != 0 && read) {
 		tls_send(s, ctxtHandle, message, read, cursorPosition);
@@ -317,7 +323,7 @@ handle_get_request(CtxtHandle* ctxtHandle, SOCKET s_clt, struct http_reqline* re
 		if (create_local_resource(&httplocalres, ires, theme) != 0)
 			show_error_wait_close(cursorPosition, ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
-		https_serv_resource(&httplocalres, s_clt, NULL, bytesent, ctxtHandle, cursorPosition);
+		https_serv_resource(&httplocalres, s_clt, NULL, bytesent, ctxtHandle, *cursorPosition);
 	}
 	else if (strcmp(reqline->resource + 1, "quit") == 0) {
 		https_wu_quit_response(cursorPosition, headernv, &theme, s_clt, bytesent);
@@ -337,7 +343,7 @@ handle_get_request(CtxtHandle* ctxtHandle, SOCKET s_clt, struct http_reqline* re
 		if (create_local_resource(&httplocalres, ires, theme) != 0)
 			show_error_wait_close(cursorPosition, ERR_MSG_CANNOT_GET_RESOURCE, NULL, 0);
 
-		https_serv_resource(&httplocalres, s_clt, NULL, bytesent, ctxtHandle, cursorPosition);
+		https_serv_resource(&httplocalres, s_clt, NULL, bytesent, ctxtHandle, *cursorPosition);
 	}
 
 	return 0;
@@ -422,8 +428,7 @@ https_serv_resource(struct http_resource* res, SOCKET s, struct success_info* su
 			return -1;
 	}
 	else if (strcmp(res->type, "image/png") == 0 || strcmp(res->type, "image/x-icon") == 0) {
-		ret = https_serv_image(ctxtHandle, s, hFile, fsize, res, message,
-			successinfo, bytesent, cursorPosition);
+		ret = https_serv_image(ctxtHandle, s, hFile, fsize, res, message, bytesent, cursorPosition);
 		if (ret < 0)
 			return -1;
 	}

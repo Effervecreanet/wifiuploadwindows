@@ -17,11 +17,13 @@
 #include "wu_main.h"
 #include "wu_http_nv.h"
 #include "wu_txstats.h"
-#include "wu_http_loop.h"
 #include "wu_content.h"
-#include "wu_http.h"
 #include "wu_http_receive.h"
+#include "wu_http.h"
 #include "wu_tls_https_receive.h"
+#include "wu_http_loop.h"
+#include "wu_tls_conn.h"
+#include "wu_tls_https.h"
 
 
 extern const struct _http_resources http_resources[];
@@ -104,8 +106,6 @@ get_MIME_boundarylen(struct header_nv* httpnv, unsigned short* boundarylen)
 static errno_t
 get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int req_buffer_size, unsigned short* MIMElen)
 {
-	int ret;
-	unsigned short i;
 	char* p_MIME_filename;
 	char* p_quote;
 	char* p_MIMEend;
@@ -122,7 +122,7 @@ get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int re
 	}
 
 	*(p_MIMEend + 3) = '\0';
-	*MIMElen = strlen(buffer);
+	*MIMElen = (unsigned short)strlen(buffer);
 	*(p_MIMEend + 3) = '\n';
 
 	p_MIME_filename = strstr(buffer, "filename=\"");
@@ -265,9 +265,7 @@ int
 tls_receive_file(COORD* cursorPosition, struct header_nv* httpnv, SOCKET s, struct user_stats* upstats, int theme, int* bytesent, CtxtHandle* ctxtHandle) {
 	unsigned short MIMElen, boundarylen;
 	HANDLE hFile;
-	DWORD written, tick_start, tick_end, tick_diff;
-	char* pboundary;
-	char boundary[64];
+	DWORD written, tick_start;
 	u_int64 content_length;
 	struct tx_stats txstats;
 	COORD coordPerCent;

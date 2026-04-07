@@ -8,6 +8,6 @@ struct user_stats {
   char averagespeed[32];
 };
 
-void print_upload_info(struct tx_stats* txstats, COORD coordAverageTX, COORD* cursorPosition, COORD coordPerCent);
+void wcons_upload_info(struct tx_stats* txstats, COORD coordAverageTX, COORD* cursorPosition, COORD coordPerCent);
 // void chrono(struct success_info* successinfo, DWORD tick_start, u_int64 sizeNewFile);
 int receive_file(COORD *cursorPosition, struct header_nv *httpnv, SOCKET s, struct user_stats *upstats, int theme, int *bytesent);

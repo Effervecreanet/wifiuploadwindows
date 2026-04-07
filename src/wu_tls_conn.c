@@ -15,6 +15,7 @@
 #include <sspi.h>
 
 #include "wu_msg.h"
+#include "wu_main.h"
 
 extern FILE* g_fphttpslog;
 extern SOCKET g_tls_sclt;
@@ -60,7 +61,7 @@ int tls_send(SOCKET s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int m
 
 	ret = EncryptMessage(ctxtHandle, 0, &bufferDesc, 0);
 	if (ret != 0)
-		show_error_wait_close(cursorPosition, ERR_MSG_ENCRYPTMESSAGE, NULL, 0);
+		show_error_wait_close(&cursorPosition, ERR_MSG_ENCRYPTMESSAGE, NULL, 0);
 
 	if (send(s_clt, encryptBuffer, secBufferOut[0].cbBuffer + secBufferOut[1].cbBuffer + secBufferOut[2].cbBuffer, 0) < 0)
 		return -1;
@@ -424,15 +425,12 @@ void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, CtxtHandle* ctxNe
 
 SOCKET acceptSecure(SOCKET s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipaddr_httpsclt[16]) {
 	SOCKET s_clt;
-	ULONG err;
 	struct sockaddr_in sin_clt;
 	int sinclt_len = sizeof(struct sockaddr_in);
 	CtxtHandle ctxNewHandle, ctxNewHandle2;
 	ULONG fContextAttr = ASC_REQ_ALLOCATE_MEMORY | ASC_REQ_STREAM | ASC_REQ_EXTENDED_ERROR | ASC_REQ_REPLAY_DETECT | ASC_REQ_CONFIDENTIALITY;
-	ULONG contextAttr = 0;
 	char BufferIn1[4096];
 	char BufferIn2[4096];
-	char BufferOut1[4096];
 	SecBufferDesc secBufferDescInput;
 	SecBufferDesc secBufferDescInput2;
 	SecBufferDesc secBufferDescOutput;
