@@ -204,8 +204,6 @@ int tls_recv(CtxtHandle* ctxtHandle, SOCKET s, char** output, unsigned int* outl
 
 
 	secStatus = DecryptMessage(ctxtHandle, &secBufferDesc, 0, NULL);
-	fprintf(g_fphttpslog, "CCC %x\n", secStatus);
-	fflush(g_fphttpslog);
 	if (secStatus == SEC_E_OK) {
 		int i;
 		int data_index = -1;
