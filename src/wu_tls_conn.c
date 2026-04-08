@@ -100,7 +100,7 @@ static int
 tls_recv_start(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
 
-	ret = recv(s, read_buf, 2000, 0);
+	ret = recv(s, read_buf, 20000, 0);
 	if (ret <= 0) {
 		free(read_buf);
 		return -1;
@@ -136,7 +136,7 @@ tls_recv_start(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_rea
 static int
 tls_recv_add_data_to_extra(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
-	ret = recv(s, read_buf + *bytes_read, 2000 - *bytes_read, 0);
+	ret = recv(s, read_buf + *bytes_read, 20000 - *bytes_read, 0);
 	if (ret <= 0) {
 		free(read_buf);
 		return -1;
@@ -180,7 +180,7 @@ int tls_recv(CtxtHandle* ctxtHandle, SOCKET s, char** output, unsigned int* outl
 	int try_count = 0;
 	int ret = 0;
 
-	read_buf = (char*)malloc(2000);
+	read_buf = (char*)malloc(20000);
 	if (read_buf == NULL)
 		show_error_wait_close(cursorPosition, ERR_MSG_MEMORY_ALLOC, NULL, 0);
 
@@ -191,7 +191,7 @@ int tls_recv(CtxtHandle* ctxtHandle, SOCKET s, char** output, unsigned int* outl
 	secBufferDesc.cBuffers = 4;
 	secBufferDesc.pBuffers = secBuffers;
 
-	if (extra_buf != NULL && extra_len > 0 && extra_len < 2000) {
+	if (extra_buf != NULL && extra_len > 0 && extra_len < 20000) {
 		memcpy(read_buf, extra_buf, extra_len);
 		bytes_read = extra_len;
 		tls_recv_add_data_to_extra(s, secBuffers, read_buf, &bytes_read);
