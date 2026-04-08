@@ -103,6 +103,7 @@ get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
 	return count;
 }
 
+
 /*
  * Function description:
  *  - Parse user http header name/value pairs. Store http header name/value
@@ -116,6 +117,7 @@ get_request_line(struct http_reqline* reqline, char* BufferIn, int length)
  *  -1: Function failure. NAME or VALUE size out of bounds. Or invalid characters.
  *   0: Number of byte parsed.
  */
+
 static int
 get_header_nv(struct header_nv headernv[HEADER_NV_MAX_SIZE], char* buffer, int bufferlength, struct in_addr inaddr)
 {
@@ -186,6 +188,22 @@ crlfcrlf:
 	return headerlen;
 }
 
+/*
+ * Function description:
+ * - Read text/html file, format data and send HTTP header and content to client.
+ * Arguments:
+ * - ctxtHandle: Security context handle used in EncryptMessage() function.
+ * - s: Client socket to send message to.
+ * - hFile: Handle of file to read text/html data.
+ * - fsize: Size of file in bytes.
+ * - res: Http resource corresponding to file. It is used to create http header.
+ * - message: Buffer witch contains http header and http content to send.
+ * - successinfo: Used in make_htmlpage() function to format html page with success
+ *   upload information.
+ * - bytesent: Pointer to int to update with number of bytes sent to client.
+ * - cursorPosition: Console cursor position where wu writes schannel error if any.
+ */
+
 static int
 https_serv_texthtml(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, struct http_resource *res,
 					char message[8192], struct success_info *successinfo, int *bytesent, COORD cursorPosition) {
@@ -247,6 +265,21 @@ err:
 	return 0;
 }
 
+
+/*
+ * Function description:
+ * - Read image file and send HTTP header and content to client.
+ * Arguments:
+ * - ctxtHandle: Security context handle used in EncryptMessage() function.
+ * - s: Client socket to send message to.
+ * - hFile: Handle of file to read image data.
+ * - fsize: Size of file in byte ('Content-Length').
+ * - res: Http resource corresponding to file. It is used to create http header.
+ * - message: Buffer witch contains http header and http content to send.
+ * - bytesent: Pointer to int to update with number of bytes sent to client.
+ * - cursorPosition: Console cursor position where wu writes schannel error if any.
+ */
+
 static int
 https_serv_image(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, struct http_resource *res,
 					char message[8192], int *bytesent, COORD cursorPosition) {
@@ -279,6 +312,27 @@ https_serv_image(CtxtHandle *ctxtHandle, SOCKET s, HANDLE hFile, DWORD fsize, st
 	return 0;
 }
 
+
+/*
+ * Function description:
+ * - Receive and parse user http request. Get http method, http ressource, http version and
+ *   http header name/value pairs.
+ * Arguments:
+ * - ctxtHandle: Security context handle used in DecryptMessage() function.
+ * - s_clt: Client socket to receive message from.
+ * - tls_recv_output: Pointer to buffer to store decrypted data. Buffer will be allocated in this function.
+ * - tls_recv_output_size: Pointer to unsigned int to store decrypted data length in bytes.
+ * - cursorPosition: Console cursor position where wu writes schannel error if any.
+ * - reqline: Structure to store user http method, ressource and version.
+ * - headernv: Structure that contains http header name/value pairs.
+ * - inaddr: Client IP address. It is used to check "Host" header value.
+ * - Return value:
+ * Return Value:
+ * - -1: Failure. It can be caused by recv() failure, if recv() return 0 (connection closed by client).
+ *       Or Schannel error. Or http request parsing failure.
+ * - >=0: Number of byte parsed in http request (request line and header name/value pairs).
+ */
+
 int
 get_https_request(CtxtHandle* ctxtHandle, SOCKET s_clt, char** tls_recv_output, unsigned int* tls_recv_output_size, COORD* cursorPosition,
 	struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE], struct in_addr inaddr) {
@@ -305,6 +359,22 @@ get_https_request(CtxtHandle* ctxtHandle, SOCKET s_clt, char** tls_recv_output, 
 
 	return header_offset;
 }
+
+
+/*
+ * Function description:
+ * - Handle user HTTP GET request: match wanted resource, load resource, format resource if it is a html
+ *   page and send http header and content to client.
+ * Arguments:
+ * - ctxtHandle: Security context handle used in EncryptMessage() function.
+ * - s_clt: Client socket to send message to.
+ * - reqline: Structure that contains user http method, ressource and version.
+ * - headernv: Structure that contains http header name/value pairs.
+ * - bytesent: Pointer to int to update with number of bytes sent to client.
+ * - cursorPosition: Console cursor position where wu writes schannel error if any.
+ * Return value:
+ * 0: Success
+ */
 
 int
 handle_get_request(CtxtHandle* ctxtHandle, SOCKET s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
@@ -348,6 +418,24 @@ handle_get_request(CtxtHandle* ctxtHandle, SOCKET s_clt, struct http_reqline* re
 
 	return 0;
 }
+
+
+/*
+ * Function description:
+ * - Handle user HTTP POST request: two case: resource is "/theme" or resource is "/upload". Handle
+ *   these two cases by changing theme or receiving uploaded file.
+ * Arguments:
+ * - ctxtHandle: Security context handle used in EncryptMessage() function.
+ * - s_clt: Client socket to send message to.
+ * - reqline: Structure that contains user http method, ressource and version.
+ * - headernv: Structure that contains http header name/value pairs.
+ * - bytesent: Pointer to int to update with number of bytes sent to client.
+ * - https_body: Pointer to buffer that contains http body. It is used in "/theme" case to get theme
+ *   parameter and in "/upload" case to receive uploaded file.
+ * - cursorPosition: Console cursor position where wu writes schannel error if any.
+ * Return value:
+ * 0: Success
+ */
 
 int handle_post_request(CtxtHandle* ctxtHandle, SOCKET s_clt, struct http_reqline* reqline, struct header_nv headernv[HEADER_NV_MAX_SIZE],
 	int* bytesent, char* https_body, COORD* cursorPosition) {

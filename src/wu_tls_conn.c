@@ -476,20 +476,22 @@ tls_handshake(CredHandle* credHandle, SOCKET s_clt, SecBufferDesc* secBufferDesc
 	return 0;
 }
 
+
 /*
  * Functon description:
  * - Initialize Schannel variables for AcceptSecurityContext() function in acceptSecure() function.
  * Arguments:
  * - ctxNewHandle: Pointer to CtxtHandle to initialize for AcceptSecurityContext() function output.
- * - ctxNewHandle2: Pointer to CtxtHandle to initialize for AcceptSecurityContext() function output in case
-                    of second AcceptSecurityContext() call in acceptSecure() function.
  * - BufferIn1: Buffer to initialize for AcceptSecurityContext() function input. It will be used in secBufferIn[0].pvBuffer.
  * - BufferIn2: Buffer to initialize for AcceptSecurityContext() function input in case of second AcceptSecurityContext()
  *              call in acceptSecure() function. It will be used in secBufferIn[1].pvBuffer.
  * - SecBufferIn: SecBuffer buffers to initialize for AcceptSecurityContext().
- * - SecBufferIn2: SecBuffer
- * 
+ * - secBufferDescInput: Pointer to SecBufferDesc to initialize for AcceptSecurityContext() function input.
+ * - secBufferDescOutput: Pointer to SecBufferDesc to initialize for AcceptSecurityContext() function output.
+ * - sin_clt: Pointer to sockaddr_in structure to initialize for accept() function.
+ * - sinclt_len: Pointer to int to initialize with size of sockaddr_in structure for accept() function.
  */
+
 void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, char BufferIn1[4096], char BufferIn2[4096],
 							SecBuffer secBufferIn[2], SecBuffer secBufferOut[3],
 							SecBufferDesc *secBufferDescInput, SecBufferDesc *secBufferDescOutput,
@@ -520,6 +522,19 @@ void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, char BufferIn1[40
 
 	return;
 }
+
+
+/*
+ * Function description:
+ * - Accept a connection on a socket, perform TLS handshake and establish Schannel connection with client.
+ * Arguments:
+ * - s: Socket to accept connection on.
+ * - credHandle: Credential handle used in AcceptSecurityContext() function.
+ * - ctxtHandle: Pointer to CtxtHandle to initialize with Schannel connection context handle established with client.
+ * - ipaddr_httpsclt: Buffer to store client IP address string.
+ * Return value:
+ * - Socket of accepted connection with established Schannel connection.
+ */
 
 SOCKET acceptSecure(SOCKET s, CredHandle* credHandle, CtxtHandle* ctxtHandle, char ipaddr_httpsclt[16]) {
 	SOCKET s_clt;

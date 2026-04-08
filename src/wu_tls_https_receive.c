@@ -48,6 +48,15 @@ static int tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, SOCKET s, u_int64
 
 
 
+/*
+ * Function description:
+ * - Create a temporary file in download directory used until full transfer of uploaded file.
+ * Arguments:
+ * - cursorPosition: Console cursor position where wu writes errors if any.
+ * Return value:
+ * - Handle of created file.
+ */
+
 static HANDLE
 create_userfile_tmp(COORD* cursorPosition,
 	char* filename,
@@ -80,6 +89,19 @@ create_userfile_tmp(COORD* cursorPosition,
 	return hFile;
 }
 
+
+/*
+ * Function description:
+ * - Parse "Content-Type" header, find boundary parameter and get its length.
+ * Arguments:
+ * - httpnv: Structure that contains http header name/value pairs.
+ * - boundarylen: Pointer to unsigned short to store boundary length in bytes.
+ * Return value:
+ * 0: Success
+ * -1: Failure. It can be caused by "Content-Type" header not found, boundary
+ *     parameter not found in "Content-Type" header,
+ */
+
 static int
 get_MIME_boundarylen(struct header_nv* httpnv, unsigned short* boundarylen)
 {
@@ -102,6 +124,20 @@ get_MIME_boundarylen(struct header_nv* httpnv, unsigned short* boundarylen)
 
 	return 0;
 }
+
+
+/*
+ * Function description:
+ * - Parse MIME header in http body, find filename parameter and get its value. Store filename in upstats structure.
+ * Arguments:
+ * - upstats: Structure where wu stores upload transfert statistics. Filename is stored in this structure.
+ * - req_buffer: Pointer to buffer that contains http body. It is used to parse MIME header.
+ * - req_buffer_size: Size of req_buffer in bytes.
+ * - MIMElen: Pointer to unsigned short to store MIME header length in bytes.i
+ * Return value:
+ * - 0: Success
+ * - -1: Failure. It can be caused by MIME header not found in http body, filename parameter not found in MIME header.
+ */
 
 static errno_t
 get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int req_buffer_size, unsigned short* MIMElen)
@@ -161,6 +197,14 @@ get_MIME_filename(struct user_stats* upstats, char** req_buffer, unsigned int re
 	return 0;
 }
 
+
+/*
+ * Function description:
+ * - User interface function: write first character of progress bar in console, set its attributes and increment cursor position.
+ * Arguments:
+ * - cursorPosition: Console cursor position where wu writes progress bar.
+ */
+
 static void
 wcons_pbar_first_char(COORD* cursorPosition) {
 	DWORD written;
@@ -173,6 +217,12 @@ wcons_pbar_first_char(COORD* cursorPosition) {
 	return;
 }
 
+/*
+ * Function description:
+ * - User interface function: write last character of progress bar in console when transfer is 100% complete.
+ * Arguments:
+ * - cursorPosition: Console cursor position where wu writes progress bar.
+ */
 static void
 wcons_pbar_last_char(COORD* cursorPosition) {
 	DWORD written;
@@ -184,6 +234,14 @@ wcons_pbar_last_char(COORD* cursorPosition) {
 
 	return;
 }
+
+/*
+ * Function description:
+ * - User interface function: write filename of uploaded file in console.
+ * Arguments:
+ * - cursorPosition: Console cursor position where wu writes filename.
+ * - filename: Name of uploaded file to write in console.
+ */
 
 static void
 wcons_ui_file_line(COORD* cursorPosition, char* filename) {
@@ -202,6 +260,14 @@ wcons_ui_file_line(COORD* cursorPosition, char* filename) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Initialize txstats (transfer statistics) structure before receiving file content.
+ * Arguments:
+ * - txstats: Pointer to structure to initialize.
+ * - content_length: Size of file to receive in byte. It is used to initialize total_size member of txstats structure
+                     and calculate one_percent member.
+ */
 static void
 init_tx_stats(struct tx_stats* txstats, u_int64 content_length) {
 	ZeroMemory(txstats, sizeof(struct tx_stats));
@@ -215,6 +281,15 @@ init_tx_stats(struct tx_stats* txstats, u_int64 content_length) {
 	return;
 }
 
+
+/*
+ * Function description:
+ * - User interface function: write "0%" in console when transfer start.
+ * Arguments:
+ * - CursorPosition: Console cursor position where wu writes "0%".
+ * - coordPerCent: Pointer to COORD structure to store console cursor position of percentage display in console.
+ */
+
 static void
 wcons_zero_percent(COORD* cursorPosition, COORD *coordPerCent) {
 	coordPerCent->X = cursorPosition->X + 52;
@@ -226,12 +301,38 @@ wcons_zero_percent(COORD* cursorPosition, COORD *coordPerCent) {
 	return;
 }
 
+
+/*
+ * Function description:
+ * - User interface function: write "100%" in console when transfer is complete.
+ * Arguments:
+ * - coordPerCent: COORD structure that contains console cursor position of percentage display in console.
+ */
+
 static void
 wcons_cent_percent(COORD coordPerCent) {
 	SetConsoleCursorPosition(g_hConsoleOutput, coordPerCent);
 	write_info_in_console(INF_CENT_PERCENT, NULL, 0);
 	return;
 }
+
+
+/*
+ * Function description:
+ * - Receive file content from client and write it in file. This function is called in a loop until full file is received.
+ * Arguments:
+ * - hFile: Handle of file where function writes received data.
+ * - ctxtHandle: Security context handle used in DecryptMessage() function.
+ * - s: Client socket to receive message from.
+ * - received_size: Pointer to u_int64 to update with number of bytes received and written in file.
+ * - content_length: Pointer to u_int64 that contains remaining size of file to receive in byte. It is updated in this function.
+ * - boundarylen: Length of MIME boundary in byte. It is used to remove MIME boundary from last received data when transfer is complete.
+ * - cursorPosition: Console cursor position where wu writes schannel error if any.
+ * Return value:
+ * - -1: Failure. It can be caused by recv() failure, if recv() return 0 (connection closed by client) or if DecryptMessage() failure.
+ * - 0: Full file received and written in file.
+ * - 1: File not fully received. More data to receive and write in file.
+ */
 
 static int
 tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, SOCKET s, u_int64 *received_size, u_int64 *content_length, unsigned short boundarylen, COORD *cursorPosition) {
@@ -260,6 +361,23 @@ tls_recv_file(HANDLE hFile, CtxtHandle *ctxtHandle, SOCKET s, u_int64 *received_
 }
 
 
+/*
+ * Function description:
+ * - Receive uploaded file from client and write it in file. Parse MIME body header to get filename.
+ *   Update user interface in console during transfer and show/send upload success page when transfer is complete.
+ * Arguments:
+ * - cursorPosition: Console cursor position where wu writes info or errors.
+ * - httpnv: Structure that contains http header name/value pairs. It is used to get "Content-Length" header value and "Content-Type" header value.
+ * - s: Client socket to receive message from.
+ * - upstats: Structure where wu stores upload transfert statistics. Filename is stored in this structure.
+ * - theme: User theme. It is used to send upload success page with the same theme as user choice.
+ * - bytesent: Pointer to int to update with number of bytes sent to client.
+ * - ctxtHandle: Security context handle used in DecryptMessage() and EncryptMessage() functions.
+ * Return value:
+ * - -1: Failure. It can be caused by "Content-Length" header not found, "Content-Type" header not found, MIME header parsing failure, Schannel
+ *       error, recv() failure or if recv() return 0 (connection closed by client).
+ * - 0: Success.
+ */
 
 int
 tls_receive_file(COORD* cursorPosition, struct header_nv* httpnv, SOCKET s, struct user_stats* upstats, int theme, int* bytesent, CtxtHandle* ctxtHandle) {
