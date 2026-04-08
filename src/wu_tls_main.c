@@ -168,6 +168,10 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		show_error_wait_close(&prThread->cursorPosition[0], ERR_MSG_ACQUIRECREDANTIALSHANDLE, NULL, err);
 	}
 
+	CertFreeCertificateContext(pCertContext);
+	NCryptFreeObject(phProvider);
+	NCryptFreeObject(hKey);
+
 	g_credHandle = &credHandle;
 
 	s = create_socket((COORD*)&prThread->cursorPosition);
@@ -220,12 +224,4 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		goto next_req;
 	}
 
-	CertFreeCertificateContext(pCertContext);
-	NCryptFreeObject(phProvider);
-	NCryptFreeObject(hKey);
-
-	WSACleanup();
-
-
-	return 0;
 }

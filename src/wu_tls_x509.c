@@ -197,7 +197,7 @@ create_certificate(HCERTSTORE hCertStore, CERT_CONTEXT** pCertContext, BYTE pbEn
 	CERT_NAME_BLOB SubjectBlob;
 	DWORD cbEncodedName = 128;
 	time_t wutime;
-	struct tm *tmval;
+	struct tm tmval;
 	char log_timestr[64];
 	BYTE ipAddr[4];
 
@@ -205,8 +205,8 @@ create_certificate(HCERTSTORE hCertStore, CERT_CONTEXT** pCertContext, BYTE pbEn
 
 	ZeroMemory(log_timestr, 64);
 	time(&wutime);
-	tmval = (struct tm*)localtime(&wutime);
-	strftime(log_timestr, 64, "%d/%b/%Y:%T -0600", tmval);
+	localtime_s(&tmval, &wutime);
+	strftime(log_timestr, 64, "%d/%b/%Y:%T -0600", &tmval);
 	fprintf(g_fphttpslog, "%s -- Create certificate or replace existing one\n", log_timestr);
 	fflush(g_fphttpslog);
 	generate_key(phProvider, hKey);

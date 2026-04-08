@@ -410,7 +410,7 @@ https_serv_resource(struct http_resource* res, SOCKET s, struct success_info* su
 	HANDLE hFile;
 	char message[8192];
 	DWORD fsize;
-	int ret;
+	int ret = 0;
 
 	ZeroMemory(message, 8192);
 	sprintf_s(message, 8192, "%s %s %s\r\n", HTTP_VERSION, HTTP_CODE_STATUS_OK_STR, HTTP_STRING_STATUS_OK);

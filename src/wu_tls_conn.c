@@ -1,6 +1,7 @@
 #define _WIN32_WINNT 0x0601
 
 #include <WinSock2.h>
+#include <Ws2tcpip.h>
 #include <Windows.h>
 #include <winternl.h>
 #include <wincrypt.h>
@@ -452,7 +453,7 @@ SOCKET acceptSecure(SOCKET s, CredHandle* credHandle, CtxtHandle* ctxtHandle, ch
 		g_tls_sclt = s_clt;
 
 		ZeroMemory(ipaddr_httpsclt, 16);
-		strcpy_s(ipaddr_httpsclt, 16, inet_ntoa(sin_clt.sin_addr));
+		inet_ntop(AF_INET, &sin_clt.sin_addr, ipaddr_httpsclt, 16);
 
 		ret = recv(s_clt, BufferIn1, 4096, 0);
 		if (ret <= 0) {
