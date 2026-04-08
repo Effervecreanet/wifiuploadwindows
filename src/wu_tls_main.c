@@ -170,7 +170,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 	BYTE pbEncodedName[128];
 	DWORD err;
 	int ret;
-	SOCKET s, s_clt;
+	SOCKET s_https, s_https_clt;
 	CERT_CONTEXT* pCertContext;
 	CredHandle credHandle;
 	CtxtHandle ctxtHandle;
@@ -210,25 +210,26 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 	g_credHandle = &credHandle;
 
-	s = create_socket((COORD*)&prThread->cursorPosition);
-	bind_socket2((COORD*)&prThread->cursorPosition, s, prThread->inaddr);
+	s_https = create_socket((COORD*)&prThread->cursorPosition);
+	bind_socket2((COORD*)&prThread->cursorPosition, s_https, prThread->inaddr);
 
 	for (;;) {
 		g_tls_sclt = 0;
 
-		accept_sec_conn(&ctxtHandle, &credHandle, s, &s_clt, ipaddr_httpsclt, prThread->cursorPosition);
+		accept_sec_conn(&ctxtHandle, &credHandle, s_https, &s_https_clt, ipaddr_httpsclt, prThread->cursorPosition);
 
 		g_ctxtHandle = &ctxtHandle;
+		g_tls_sclt = s_https_clt;
 
 	next_req:
 		bytesent = 0;
 		tls_recv_output = NULL;
 
-		ret = get_https_request(&ctxtHandle, s_clt, &tls_recv_output, &tls_recv_output_size, &prThread->cursorPosition[0],
+		ret = get_https_request(&ctxtHandle, s_https_clt, &tls_recv_output, &tls_recv_output_size, &prThread->cursorPosition[0],
 			&reqline, headernv, prThread->inaddr);
 
 		if (ret < 0) {
-			tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+			tls_shutdown(&ctxtHandle, &credHandle, s_https_clt);
 			if (tls_recv_output != NULL)
 				free(tls_recv_output);
 			continue;
@@ -237,18 +238,18 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		header_offset = ret;
 
 		if (strcmp(reqline.method, "GET") == 0) {
-			ret = handle_get_request(&ctxtHandle, s_clt, &reqline, headernv, &bytesent, &prThread->cursorPosition[0]);
+			ret = handle_get_request(&ctxtHandle, s_https_clt, &reqline, headernv, &bytesent, &prThread->cursorPosition[0]);
 			if (ret < 0) {
-				tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+				tls_shutdown(&ctxtHandle, &credHandle, s_https_clt);
 				free(tls_recv_output);
 				continue;
 			}
 		}
 		else if (strcmp(reqline.method, "POST") == 0) {
-			ret = handle_post_request(&ctxtHandle, s_clt, &reqline, headernv, &bytesent, tls_recv_output + header_offset,
+			ret = handle_post_request(&ctxtHandle, s_https_clt, &reqline, headernv, &bytesent, tls_recv_output + header_offset,
 				(COORD*)&prThread->cursorPosition);
 			if (ret < 0) {
-				tls_shutdown(&ctxtHandle, &credHandle, s_clt);
+				tls_shutdown(&ctxtHandle, &credHandle, s_https_clt);
 				free(tls_recv_output);
 				continue;
 			}
