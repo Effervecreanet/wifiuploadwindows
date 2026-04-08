@@ -50,6 +50,17 @@ char* encryptBuffer = NULL;
 
 static void accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s, SOCKET* s_clt, char* ipaddr_httpsclt, COORD cursorPosition[2]);
 
+
+/*
+ * Function description:
+ * - Accept TLS connection. Update UI in console and global variables used for TLS connection when connection is established.
+ * Arguments:
+ * - ctxtHandle: Pointer to CtxtHandle to initialize with Schannel connection context handle established with client.
+ * - credHandle: Credential handle used in AcceptSecurityContext() function.
+ * - s: Socket to accept connection on.
+ * - s_clt: Pointer to socket to store accepted connection socket with established Schannel connection.
+ */
+
 static void
 accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s, SOCKET* s_clt,
 	char* ipaddr_httpsclt, COORD cursorPosition[2]) {
@@ -77,6 +88,18 @@ accept_sec_conn(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s, SOCKET
 	return;
 }
 
+
+/*
+ * Function description:
+ * - Create and send "exit app" html page.
+ * Arguments:
+ * - cursorPosition: Console cursor position where wu writes info or errors.
+ * - httpnv: Structure that contains http header name/value pairs.
+ * - theme: Theme to be used to create http resource of "exit app" page.
+ * - s_user: Client socket to send message to.
+ * - bytesent: Pointer to int to update with number of bytes sent to client.
+ */
+
 void
 https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* theme, SOCKET s_user, int* bytesent) {
 	int ires;
@@ -94,6 +117,12 @@ https_wu_quit_response(COORD cursorPosition[2], struct header_nv* httpnv, int* t
 
 	return;
 }
+
+
+/*
+ * Function description:
+ * - Close sockets, free handles and buffers, close log files and exit process.
+ */
 
 void
 https_quit_wu(void) {
@@ -128,6 +157,13 @@ https_quit_wu(void) {
 	return;
 }
 
+
+/*
+ * Function description:
+ * - Main HTTPS loop where GET and POST requests are received and handled.
+ * Arguments:
+ * - prThread: Pointer to struct paramThread that contains thread parameters such as console cursor position and IP address to bind.
+ */
 
 DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 {

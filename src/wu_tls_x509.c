@@ -28,6 +28,15 @@ static int get_cert_name(CERT_NAME_BLOB* SubjectBlob, BYTE pbEncodedName[128], D
 static PCCERT_CONTEXT create_cert_self_sign(BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey);
 static void inaddr2octaddr(BYTE ipAddr[4], struct in_addr inaddr2oct);
 
+
+/*
+ * Function description:
+ * - Generate a RSA key pair to use in a self-signed certificate.
+ * Arguments:
+ * - phProvider: Pointer to NCRYPT_PROV_HANDLE to update with handle of provider where key is generated.
+ * - hKey: RSA key pair.
+ */
+
 static void
 generate_key(NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey) {
 	LPCWSTR strkeyname = L"wifiupload_key";
@@ -53,6 +62,16 @@ generate_key(NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey) {
 	return;
 }
 
+
+/*
+ * Function description:
+ * - Get encoded subject name to use in certificate creation.
+ * Arguments:
+ * - subjectBlob: Pointer to CERT_NAME_BLOB to update with encoded subject name.
+ * - pbEncodedName: Buffer to store encoded subject name.
+ * - cbEncodedName: Pointer to DWORD to update with size of encoded subject name.
+ */
+
 static int
 get_cert_name(CERT_NAME_BLOB* SubjectBlob, BYTE pbEncodedName[128], DWORD* cbEncodedName) {
 
@@ -64,6 +83,16 @@ get_cert_name(CERT_NAME_BLOB* SubjectBlob, BYTE pbEncodedName[128], DWORD* cbEnc
 
 	return 0;
 }
+
+
+/*
+ * Function description:
+ * - Search for a previously created certificate with CERT_STR in "MY" system certificate store.
+ * Arguments:
+ * - Certificate store handle to search in.
+ * Return value:
+ * - Handle of found certificate or NULL if certificate not found.
+ */
 
 PCCERT_CONTEXT
 find_mycert_in_store(HCERTSTORE* hCertStore) {
@@ -89,6 +118,20 @@ find_mycert_in_store(HCERTSTORE* hCertStore) {
 
 	return NULL;
 }
+
+
+/*
+ * Function description:
+ * - Gather certificate information such as subject name and subject alternative name, create a self-signed
+ *   certificate with this information and return it.
+ * Arguments:
+ * - ipAddr: IP address to put in subject alternative name extension of certificate.
+ * - SubjectBlob: Pointer to CERT_NAME_BLOB that contains encoded subject name.
+ * - hProv: Handle of provider where key is generated. It is used in certificate creation.
+ * - hKey: Handle of key to use in certificate creation.
+ * Return value:
+ * - Handle of created certificate.
+ */
 
 static PCCERT_CONTEXT
 create_cert_self_sign(BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_HANDLE hProv, NCRYPT_KEY_HANDLE hKey) {
@@ -149,6 +192,18 @@ create_cert_self_sign(BYTE ipAddr[4], CERT_NAME_BLOB* SubjectBlob, NCRYPT_PROV_H
 	return pCertContext;
 }
 
+
+/*
+ * Function description:
+ * - Acquire a handle of credentials to use in schannel functions such as AcceptSecurityContext().
+ * Arguments:
+ * - credHandle: Pointer to CredHandle to update with handle of credentials.
+ * - pCertContext: Handle of certificate to use in credentials.
+ * Return value:
+ * - 0: Success
+ * - -1: Failure. It can be caused by AcquireCredentialsHandle() failure.
+ */
+
 int get_credantials_handle(CredHandle* credHandle, PCCERT_CONTEXT pCertContext) {
 	SCH_CREDENTIALS schCredentials;
 
@@ -164,6 +219,17 @@ int get_credantials_handle(CredHandle* credHandle, PCCERT_CONTEXT pCertContext) 
 	return 0;
 }
 
+
+/*
+ * Function description:
+ * - Check if certificate is still valid (not expired) by comparing current time with certificate expiration time.
+ * Arguments:
+ * - pCertContext: Handle of certificate to check.
+ * Return value:
+ * - 0: Certificate is valid.
+ * - -1: Certificate is expired.
+ */
+
 int
 is_certificate_valid(CERT_CONTEXT* pCertContext) {
 	SYSTEMTIME sysTimeNow;
@@ -176,6 +242,15 @@ is_certificate_valid(CERT_CONTEXT* pCertContext) {
 
 	return 0;
 }
+
+
+/*
+ * Function description:
+ * - Convert an IPv4 address in struct in_addr format to a BYTE array format to use it in certificate creation.
+ * Arguments:
+ * - ipAddr: BYTE array to update with IP address octets.
+ * - inaddr2oct: struct in_addr that contains IP address to convert.
+ */
 
 static void
 inaddr2octaddr(BYTE ipAddr[4], struct in_addr inaddr2oct) {
@@ -191,6 +266,20 @@ inaddr2octaddr(BYTE ipAddr[4], struct in_addr inaddr2oct) {
 
 	return;
 }
+
+
+/*
+ * Function description:
+ * - Create a self-signed certificate with CERT_STR in subject name and client IP address in subject alternative name.
+ *   Add this certificate to "MY" system certificate store. Update certificate handle, provider handle and key handle used for certificate creation.
+ * Arguments:
+ * - hCertStore: Certificate store handle to add certificate in.
+ * - pCertContext: Pointer to CERT_CONTEXT* to update with handle of created certificate.
+ * - pbEncodedName: Buffer to store encoded subject name to use in certificate creation.
+ * - phProvider: Pointer to NCRYPT_PROV_HANDLE to update with handle of provider where key is generated. It is used in certificate creation.
+ * - hKey: Pointer to NCRYPT_KEY_HANDLE to update with handle of key to use in certificate creation.
+ * - inaddr: Client IP address to put in subject alternative name extension of certificate.
+ */
 
 void
 create_certificate(HCERTSTORE hCertStore, CERT_CONTEXT** pCertContext, BYTE pbEncodedName[128], NCRYPT_PROV_HANDLE* phProvider, NCRYPT_KEY_HANDLE* hKey, struct in_addr inaddr) {

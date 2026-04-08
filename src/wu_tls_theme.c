@@ -23,6 +23,16 @@ extern FILE *g_fphttpslog;
 
 static void wu_https_post_theme_hdr_nv(struct header_nv hdrnv[32], char* cookie);
 
+
+/*
+ * Function description:
+ * - Build header pairs name/value with "Set-Cookie" which contains theme. Header HTTP_HEADER_LOCATION
+ *   is set to "/" to redirect user to home page after theme change.
+ * Arguments:
+ * - hdrnv: Array of header pairs.
+ * - cookie: Contains theme information ("light" or "dark")
+ */
+
 static void
 wu_https_post_theme_hdr_nv(struct header_nv hdrnv[32], char* cookie)
 {
@@ -63,6 +73,20 @@ wu_https_post_theme_hdr_nv(struct header_nv hdrnv[32], char* cookie)
 	return;
 }
 
+
+/*
+ * Function description:
+ * - Send back header pairs of name/value to apply theme change and redirect user to home page.
+ * Arguments:
+ * - s_clt: User socket to send message to.
+ * - ctxtHandle: Security context handle, used in tls_send() function.
+ * - cookie: Contains theme information ("light" or "dark") to build header pairs.
+ * - cursorPosition: Console cursor position where wu writes schannel error if any.
+ * Return value:
+ * -1: Function failed (tls_send() failed).
+ * 0: Function succeeded.
+ */
+
 int
 https_apply_theme(SOCKET s_clt, CtxtHandle *ctxtHandle, char* cookie, COORD cursorPosition)
 {
@@ -99,6 +123,19 @@ https_apply_theme(SOCKET s_clt, CtxtHandle *ctxtHandle, char* cookie, COORD curs
 
 	return 0;
 }
+
+
+/*
+ * Function description:
+ * - Parse http body to get theme parameter the user spplied in POST request to change theme.
+ * Arguments:
+ * - headernv: Structure that contains http header name/value pairs. It is used to get "Content-Length" header value.
+ * - bufferIn: Buffer that contains http body data.
+ * - theme: Pointer to int to update with theme value. It is set to 1 if theme is "light" and set to 0 if theme is "dark".
+ * Return value:
+ * - -1: Function failed. It can be caused by "Content-Length" header not found or if theme parameter is not "light" or "dark".
+ * - 0: Function succeeded.
+ */
 
 int
 get_theme_param(struct header_nv *headernv, char *bufferIn, int *theme) {
