@@ -28,11 +28,24 @@ static int tls_recv_start(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int
 static int tls_recv_add_data_to_extra(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read);
 static int tls_handshake(CredHandle* credHandle, SOCKET s_clt, SecBufferDesc* secBufferDescInput, SecBuffer secBufferIn[2], unsigned long* fContextAttr,
 	CtxtHandle* ctxNewHandle, SecBufferDesc* secBufferDescOutput);
-static void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, CtxtHandle* ctxNewHandle2, char BufferIn1[4096], char BufferIn2[4096],
-											SecBuffer secBufferIn[2], SecBuffer secBufferIn2[4], SecBuffer secBufferOut[3],
-											SecBufferDesc *secBufferDescInput, SecBufferDesc *secBufferDescInput2, SecBufferDesc *secBufferDescOutput,
+static void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, char BufferIn1[4096], char BufferIn2[4096],
+											SecBuffer secBufferIn[2], SecBuffer secBufferOut[3],
+											SecBufferDesc *secBufferDescInput, SecBufferDesc *secBufferDescOutput,
 											struct sockaddr_in *sin_clt, int *sinclt_len);
 
+
+/*
+ * Function description:
+ * - Encrypt a message and send it to client.
+ * - Arguments:
+ * - s_clt: Client socket to send message to.
+ * - ctxtHandle: Security context handle used in EncryptMessage() function.
+ * - message: Message to encrypt and send.
+ * - message_size: Size of message in bytes.
+ * - cursorPosition: Console cursor position where wu writes schannel error if any.
+ * Return value:
+ * - 0: Success
+ */
 
 int tls_send(SOCKET s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int message_size, COORD cursorPosition) {
 	SecBufferDesc bufferDesc;
@@ -70,6 +83,19 @@ int tls_send(SOCKET s_clt, CtxtHandle* ctxtHandle, char* message, unsigned int m
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Receive first TLS message from client and prepare secBuffers for DecryptMessage() function.
+ * Arguments:
+ * - s: Client socket to receive message from.
+ * - secBuffers: Array of 4 SecBuffer to prepare for DecryptMessage() function.
+ * - read_buf: Buffer to store received message. It will be used in secBuffers[0].pvBuffer.
+ * - bytes_read: Number of bytes received and stored in read_buf.
+ * Return value:
+ * - 0: Success
+ * - -1: Failure. It can be caused by recv() failure or if recv() return 0 (connection closed by client).
+ */
+
 static int
 tls_recv_start(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
@@ -92,6 +118,21 @@ tls_recv_start(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_rea
 	return 0;
 }
 
+/*
+ * Functon description:
+ * - If a TLS extra message is pending after DecryptMessage() function, receive more data
+ *   from client and add it to secBuffers for next DecryptMessage() call.
+ * Arguments:
+ * - s: Client socket to receive message from.
+ * - secBuffers: Array of 4 SecBuffer to prepare for DecryptMessage() function.
+ * - read_buf: Buffer to store received message. It will be used in secBuffers[0].pvBuffer.
+ * - bytes_read: Number of bytes received and stored in read_buf. It will be updated with
+ *   number of bytes received in this function.
+ * Return value:
+ * - 0: Success
+ * - -1: Failure. It can be caused by recv() failure or if recv() return 0 (connection closed by client).
+ */
+
 static int
 tls_recv_add_data_to_extra(SOCKET s, SecBuffer secBuffers[4], char* read_buf, int* bytes_read) {
 	int ret;
@@ -112,6 +153,20 @@ tls_recv_add_data_to_extra(SOCKET s, SecBuffer secBuffers[4], char* read_buf, in
 	return 0;
 }
 
+/*
+ * Function description:
+ * - Receive a TLS message from client, decrypt it and store decrypted data in output buffer.
+ * Arguments:
+ * - ctxtHandle: Security context handle used in DecryptMessage() function.
+ * - s: Client socket to receive message from.
+ * - output: Pointer to buffer to store decrypted data. Buffer will be allocated in this function.
+ * - outlen: Pointer to unsigned int to store decrypted data length in bytes.
+ * - cursorPosition: Console cursor position where wu writes schannel error if any.
+ * Return value:
+ * - 0: Success
+ * - -1: Failure. It can be caused by recv() failure, if recv() return 0 (connection closed by client)
+         or if DecryptMessage() failure.
+ */
 int tls_recv(CtxtHandle* ctxtHandle, SOCKET s, char** output, unsigned int* outlen, COORD* cursorPosition) {
 	SECURITY_STATUS secStatus;
 	SecBufferDesc secBufferDesc;
@@ -273,6 +328,17 @@ int tls_recv(CtxtHandle* ctxtHandle, SOCKET s, char** output, unsigned int* outl
 	return 0;
 }
 
+
+/*
+ * Function decription:
+ * - Initialize Schannel shutdown variables for AcceptSecurityContext() function.
+ * Arguments:
+ * - secBufferDescInput: Pointer to SecBufferDesc to initialize for AcceptSecurityContext() function input.
+ * - secBufferInput: Array of 4 SecBuffer to initialize for AcceptSecurityContext() function input.
+ * - secBufferDescOutput: Pointer to SecBufferDesc to initialize for AcceptSecurityContext() function output.
+ * - secBufferOutput: Array of 4 SecBuffer to initialize for AcceptSecurityContext() function output.
+ */
+
 static void
 tls_shutdown_init_schannel_vars(SecBufferDesc * secBufferDescInput, SecBuffer secBufferInput[4], SecBufferDesc * secBufferDescOutput, SecBuffer secBufferOutput[4]) {
 	ZeroMemory(secBufferDescInput, sizeof(SecBufferDesc));
@@ -299,6 +365,16 @@ tls_shutdown_init_schannel_vars(SecBufferDesc * secBufferDescInput, SecBuffer se
 
 	return;
 }
+
+
+/*
+ * Function description:
+ * - Shutdown Schannel connection with client and close client socket.
+ * Arguments:
+ * - ctxtHandle: Security context handle used in ApplyControlToken() and AcceptSecurityContext() functions.
+ * - credHandle: Credential handle used in AcceptSecurityContext() function.
+ * - s_clt: Client socket to close at the end of function.
+ */
 
 void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s_clt) {
 	SecBufferDesc bufferDesc;
@@ -354,6 +430,22 @@ void tls_shutdown(CtxtHandle* ctxtHandle, CredHandle* credHandle, SOCKET s_clt) 
 	return;
 }
 
+/*
+ * Function description:
+ * - Perform TLS handshake with client and establish Schannel connection.
+ * Arguments:
+ * - credHandle: Credential handle used in AcceptSecurityContext() function.
+ * - s_clt: Client socket to perform handshake with.
+ * - secBufferDescInput: Pointer to SecBufferDesc to initialize for AcceptSecurityContext() function input.
+ * - secBufferIn: Array of 2 SecBuffer to initialize for AcceptSecurityContext() function input.
+ * - fContextAttr: Pointer to unsigned long to initialize for AcceptSecurityContext() function input and updated with output context attributes.
+ * - ctxNewHandle: Pointer to CtxtHandle to initialize for AcceptSecurityContext() function output.
+ * - secBufferDescOutput: Pointer to SecBufferDesc to initialize for AcceptSecurityContext() function output.
+ * Return value:
+ * - 0: Success
+ * - -1: Failure. It can be caused by AcceptSecurityContext() failure, recv() failure or if recv() return 0 (connection closed by client).
+ * 
+ */
 static int
 tls_handshake(CredHandle* credHandle, SOCKET s_clt, SecBufferDesc* secBufferDescInput, SecBuffer secBufferIn[2], unsigned long* fContextAttr,
 	CtxtHandle* ctxNewHandle, SecBufferDesc* secBufferDescOutput) {
@@ -384,12 +476,25 @@ tls_handshake(CredHandle* credHandle, SOCKET s_clt, SecBufferDesc* secBufferDesc
 	return 0;
 }
 
-void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, CtxtHandle* ctxNewHandle2, char BufferIn1[4096], char BufferIn2[4096],
-							SecBuffer secBufferIn[2], SecBuffer secBufferIn2[4], SecBuffer secBufferOut[3],
-							SecBufferDesc *secBufferDescInput, SecBufferDesc *secBufferDescInput2, SecBufferDesc *secBufferDescOutput,
+/*
+ * Functon description:
+ * - Initialize Schannel variables for AcceptSecurityContext() function in acceptSecure() function.
+ * Arguments:
+ * - ctxNewHandle: Pointer to CtxtHandle to initialize for AcceptSecurityContext() function output.
+ * - ctxNewHandle2: Pointer to CtxtHandle to initialize for AcceptSecurityContext() function output in case
+                    of second AcceptSecurityContext() call in acceptSecure() function.
+ * - BufferIn1: Buffer to initialize for AcceptSecurityContext() function input. It will be used in secBufferIn[0].pvBuffer.
+ * - BufferIn2: Buffer to initialize for AcceptSecurityContext() function input in case of second AcceptSecurityContext()
+ *              call in acceptSecure() function. It will be used in secBufferIn[1].pvBuffer.
+ * - SecBufferIn: SecBuffer buffers to initialize for AcceptSecurityContext().
+ * - SecBufferIn2: SecBuffer
+ * 
+ */
+void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, char BufferIn1[4096], char BufferIn2[4096],
+							SecBuffer secBufferIn[2], SecBuffer secBufferOut[3],
+							SecBufferDesc *secBufferDescInput, SecBufferDesc *secBufferDescOutput,
 							struct sockaddr_in *sin_clt, int *sinclt_len) {
 	ZeroMemory(ctxNewHandle, sizeof(CtxtHandle));
-	ZeroMemory(ctxNewHandle2, sizeof(CtxtHandle));
 
 	ZeroMemory(BufferIn1, 4096);
 	ZeroMemory(BufferIn2, 4096);
@@ -405,18 +510,10 @@ void acceptSecure_init_schannel_vars(CtxtHandle* ctxNewHandle, CtxtHandle* ctxNe
 	secBufferIn[1].BufferType = SECBUFFER_EMPTY;
 	secBufferIn[1].pvBuffer = BufferIn2;
 
-	ZeroMemory(secBufferIn2, sizeof(SecBuffer) * 4);
-	secBufferDescInput2->ulVersion = SECBUFFER_VERSION;
-	secBufferDescInput2->cBuffers = 4;
-	secBufferDescInput2->pBuffers = secBufferIn2;
-
 	secBufferDescOutput->ulVersion = SECBUFFER_VERSION;
 	secBufferDescOutput->cBuffers = 3;
 	secBufferDescOutput->pBuffers = secBufferOut;
 	ZeroMemory(secBufferOut, sizeof(SecBuffer) * 3);
-
-	ZeroMemory(BufferIn1, 4096);
-	ZeroMemory(BufferIn2, 4096);
 
 	ZeroMemory(sin_clt, sizeof(struct sockaddr_in));
 	*sinclt_len = sizeof(struct sockaddr_in);
@@ -428,21 +525,19 @@ SOCKET acceptSecure(SOCKET s, CredHandle* credHandle, CtxtHandle* ctxtHandle, ch
 	SOCKET s_clt;
 	struct sockaddr_in sin_clt;
 	int sinclt_len = sizeof(struct sockaddr_in);
-	CtxtHandle ctxNewHandle, ctxNewHandle2;
+	CtxtHandle ctxNewHandle;
 	ULONG fContextAttr = ASC_REQ_ALLOCATE_MEMORY | ASC_REQ_STREAM | ASC_REQ_EXTENDED_ERROR | ASC_REQ_REPLAY_DETECT | ASC_REQ_CONFIDENTIALITY;
 	char BufferIn1[4096];
 	char BufferIn2[4096];
 	SecBufferDesc secBufferDescInput;
-	SecBufferDesc secBufferDescInput2;
 	SecBufferDesc secBufferDescOutput;
 	SecBuffer secBufferIn[2];
-	SecBuffer secBufferIn2[4];
 	SecBuffer secBufferOut[3];
 	int ret;
 
 	for (;;) {
-		acceptSecure_init_schannel_vars(&ctxNewHandle, &ctxNewHandle2, BufferIn1, BufferIn2, secBufferIn, secBufferIn2,
-										secBufferOut, &secBufferDescInput, &secBufferDescInput2, &secBufferDescOutput,
+		acceptSecure_init_schannel_vars(&ctxNewHandle, BufferIn1, BufferIn2, secBufferIn,
+										secBufferOut, &secBufferDescInput, &secBufferDescOutput,
 										&sin_clt, &sinclt_len);
 
 		s_clt = accept(s, (struct sockaddr*)&sin_clt, &sinclt_len);

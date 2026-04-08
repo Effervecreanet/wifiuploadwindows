@@ -117,6 +117,15 @@ build_download_directory(char dd[1024]) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Write in console information or error message.
+ * Arguments:
+ * - id: Id of message to write. See wu_msg.h for more details.
+ * - p: Pointer to data used in message formatting. See wu_msg.h for more details.
+ * - err: Error code used in message formatting. See wu_msg.h for more details.
+ */
+
 void
 write_info_in_console(enum idmsg id, void* p, DWORD err) {
 	DWORD written;
@@ -146,6 +155,16 @@ write_info_in_console(enum idmsg id, void* p, DWORD err) {
 	return;
 }
 
+/*
+ * Function description:
+ * - Show error message in console and wait user to close the program.
+ * Arguments:
+ * - cursorPosition: Console cursor position where wu writes info or errors.
+ * - id: Id of message to write. See wu_msg.h for more details.
+ * - p: Pointer to data used in message formatting. See wu_msg.h for more details.
+ * - err: Error code used in message formatting. See wu_msg.h for more details.
+ */
+
 void
 show_error_wait_close(COORD *cursorPosition, enum idmsg id, const void* p, DWORD err) {
 	/* Show text error in console */
@@ -158,6 +177,14 @@ show_error_wait_close(COORD *cursorPosition, enum idmsg id, const void* p, DWORD
 
 	return;
 }
+
+/*
+ * Function description:
+ * - Clear tx/rx pane in console. Tx/rx pane is the rectangle bottom part of
+ *   console where wu writes information about upload/download transfert.
+ * Arguments:
+ * - cursorPosition: Console cursor position where wu writes info or errors.
+ */
 
 void
 clear_txrx_pane(COORD* cursorPosition) {
@@ -176,6 +203,17 @@ clear_txrx_pane(COORD* cursorPosition) {
 
 	return;
 }
+
+/*
+ * Function description:
+ * - Write software information and wifiupload start information in console.
+ *   Also get available address and write them in console.
+ * Arguments:
+ * - cursorPosition: Console cursor position where wu writes info.
+ * - inaddr: IPv4 address wifiupload will listen to.
+ * Return value:
+ * - Number of available address. (not used)
+ */
 
 static DWORD
 wu_user_interface_part1(COORD cursorPosition[2], struct in_addr* inaddr) {
@@ -214,6 +252,13 @@ wu_user_interface_part1(COORD cursorPosition[2], struct in_addr* inaddr) {
 	return dwNumEntries;
 }
 
+/*
+ * Function description:
+ * - Draw a rectangle on the bottom part of console. Upload/download information and
+ *   progress bar are written in this rectangle.
+ * Arguments:
+ * - cursPosStart: Console cursor position where rectangle left upper start.
+ */
 static void
 draw_rectangle_in_console(COORD cursPosStart) {
 	COORD cursPosEnd;
