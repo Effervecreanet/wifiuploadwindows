@@ -199,9 +199,11 @@ int tls_recv(CtxtHandle* ctxtHandle, SOCKET s, char** output, unsigned int* outl
 		extra_buf = NULL;
 		extra_len = 0;
 	}
-	else if (tls_recv_start(s, secBuffers, read_buf, &bytes_read) < 0)
-		return -1;
-
+	else {
+		ret = tls_recv_start(s, secBuffers, read_buf, &bytes_read);
+		if (ret < 0)
+			return -1;
+	}
 
 	secStatus = DecryptMessage(ctxtHandle, &secBufferDesc, 0, NULL);
 	if (secStatus == SEC_E_OK) {

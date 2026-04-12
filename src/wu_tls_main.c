@@ -204,6 +204,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 		show_error_wait_close(&prThread->cursorPosition[0], ERR_MSG_ACQUIRECREDANTIALSHANDLE, NULL, err);
 	}
 
+			Sleep(1000);
 	CertFreeCertificateContext(pCertContext);
 	NCryptFreeObject(phProvider);
 	NCryptFreeObject(hKey);
@@ -220,7 +221,7 @@ DWORD WINAPI wu_tls_loop(struct paramThread* prThread)
 
 		g_ctxtHandle = &ctxtHandle;
 		g_tls_sclt = s_https_clt;
-
+		
 	next_req:
 		bytesent = 0;
 		tls_recv_output = NULL;
